@@ -70,39 +70,40 @@ function App() {
     };
   }, []);
 
-  // After userNation and tiles load, mark capital tile, then scroll to it
   useEffect(() => {
-    if (!userNation || tiles.length === 0) return;
+    if (!userNation || !tiles || !mapScrollRef.current) return;
 
-    // Mark capital tile in tiles array (to trigger re-render with capital highlight)
-    const updatedTiles = tiles.map(tile => ({
-      ...tile,
-      is_capital:
-        tile.id === userNation.capital_tile_id
-    }));
-
-    // Only update if tiles differ to avoid infinite loop
-    const tilesChanged = updatedTiles.some(
-      (t, i) => t.is_capital !== tiles[i].is_capital
+    // Find capital tile (must match userNation coordinates and flagged is_capital)
+    const capitalTile = tiles.find(
+      (t) =>
+        t.x === userNation.capital_tile_x &&
+        t.y === userNation.capital_tile_y &&
+        t.is_capital
     );
-    if (tilesChanged) {
-      setTiles(updatedTiles);
-    }
+    if (!capitalTile) return;
 
-    // Scroll to capital tile DOM element
-    const tileEl = document.getElementById(`tile-${userNation.capital_tile_id}`);
-    const mapEl = mapRef.current;
-    if (tileEl && mapEl) {
-      const tileRect = tileEl.getBoundingClientRect();
-      const mapRect = mapEl.getBoundingClientRect();
-      mapEl.scrollTo({
-        left: tileEl.offsetLeft - mapRect.width / 2 + tileRect.width / 2,
-        top: tileEl.offsetTop - mapRect.height / 2 + tileRect.height / 2,
-        behavior: "smooth",
-      });
+    const container = mapScrollRef.current;
+
+    // Calculate pixel position (y is horizontal axis, x is vertical)
+    const capitalPixelX = capitalTile.y * TILE_SIZE;
+    const capitalPixelY = capitalTile.x * TILE_SIZE;
+
+    // Center scroll container on capital tile
+    container.scrollTo({
+      left: capitalPixelX - container.clientWidth / 2 + TILE_SIZE / 2,
+      top: capitalPixelY - container.clientHeight / 2 + TILE_SIZE / 2,
+      behavior: 'smooth',
+    });
+
+    // Highlight the capital tile after scrolling
+    const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
+    if (tileEl) {
+      tileEl.classList.add('capital-highlight');
+      setTimeout(() => {
+        tileEl.classList.remove('capital-highlight');
+      }, 1500); // duration matches CSS animation
     }
   }, [userNation, tiles]);
-
 
 
   async function checkUserNation(userId) {
