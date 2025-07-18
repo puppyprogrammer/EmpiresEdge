@@ -8,7 +8,10 @@ const supabaseKey =
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 function App() {
+  // Ref for the scroll container to control scroll position
   const mapScrollRef = useRef(null);
+
+  // Tile size in px, adjust if different in your CSS
   const TILE_SIZE = 32;
 
   const [tiles, setTiles] = useState(null);
@@ -26,6 +29,7 @@ function App() {
   const [userNation, setUserNation] = useState(null);
 
   useEffect(() => {
+    // Force sign out on app load to clear stale sessions
     supabase.auth.signOut().then(() => {
       setSession(null);
       setUserNation(null);
@@ -46,6 +50,7 @@ function App() {
       }
     });
 
+    // Initialize tiles array
     const sampleTiles = [];
     for (let i = 0; i < 10000; i++) {
       sampleTiles.push({
@@ -67,23 +72,39 @@ function App() {
 
   useEffect(() => {
     if (!userNation || !tiles || !mapScrollRef.current) return;
+
+    // Find capital tile (must match userNation coordinates and flagged is_capital)
     const capitalTile = tiles.find(
       (t) =>
         t.x === userNation.capital_tile_x &&
-        t.y === userNation.capital_tile_y
+        t.y === userNation.capital_tile_y &&
+        t.is_capital
     );
     if (!capitalTile) return;
 
     const container = mapScrollRef.current;
+
+    // Calculate pixel position (y is horizontal axis, x is vertical)
     const capitalPixelX = capitalTile.y * TILE_SIZE;
     const capitalPixelY = capitalTile.x * TILE_SIZE;
 
+    // Center scroll container on capital tile
     container.scrollTo({
       left: capitalPixelX - container.clientWidth / 2 + TILE_SIZE / 2,
       top: capitalPixelY - container.clientHeight / 2 + TILE_SIZE / 2,
       behavior: 'smooth',
     });
+
+    // Highlight the capital tile after scrolling
+    const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
+    if (tileEl) {
+      tileEl.classList.add('capital-highlight');
+      setTimeout(() => {
+        tileEl.classList.remove('capital-highlight');
+      }, 1500); // duration matches CSS animation
+    }
   }, [userNation, tiles]);
+
 
   async function checkUserNation(userId) {
     try {
@@ -263,16 +284,99 @@ function App() {
     setShowNationModal(false);
   }
 
-  const isUserCapitalTile = (tile) =>
-    tile.x === userNation?.capital_tile_x &&
-    tile.y === userNation?.capital_tile_y &&
-    tile.owner === userNation?.id;
-
   return (
     <div className="app-container">
       <header className="app-header">
         <div className="header-title">Empire’s Edge</div>
-        {/* ...login/register/logout unchanged... */}
+
+        {!session && !showRegister && (
+          <form className="login-form" onSubmit={handleLogin}>
+            <input
+              type="email"
+              placeholder="Email"
+              className="input"
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              className="input"
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
+              required
+            />
+            <button type="submit" className="button">
+              LOGIN
+            </button>
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                setShowRegister(true);
+                setError(null);
+              }}
+              style={{ marginLeft: '0.5rem' }}
+            >
+              REGISTER
+            </button>
+          </form>
+        )}
+
+        {!session && showRegister && (
+          <form className="login-form" onSubmit={handleRegister}>
+            <input
+              type="email"
+              placeholder="Email"
+              className="input"
+              value={registerEmail}
+              onChange={(e) => setRegisterEmail(e.target.value)}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Username"
+              className="input"
+              value={registerUsername}
+              onChange={(e) => setRegisterUsername(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              className="input"
+              value={registerPassword}
+              onChange={(e) => setRegisterPassword(e.target.value)}
+              required
+            />
+            <button type="submit" className="button">
+              REGISTER
+            </button>
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                setShowRegister(false);
+                setError(null);
+              }}
+              style={{ marginLeft: '0.5rem' }}
+            >
+              BACK TO LOGIN
+            </button>
+          </form>
+        )}
+
+        {session && (
+          <div className="user-info">
+            <span className="username">
+              {session.user.user_metadata?.username || session.user.email}
+            </span>
+            <button className="button" onClick={handleLogout}>
+              LOGOUT
+            </button>
+          </div>
+        )}
       </header>
 
       {error && <div className="error-box">{error}</div>}
@@ -309,16 +413,12 @@ function App() {
             {tiles.map((tile) => (
               <div
                 key={tile.id}
-                className={`tile ${tile.type}`}
-                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
-                  tile.resource || 'None'
-                }, Owner: ${tile.owner || 'None'}`}
-                style={{
-                  borderColor: isUserCapitalTile(tile) ? 'yellow' : undefined,
-                  borderWidth: isUserCapitalTile(tile) ? 2 : 0,
-                  borderStyle: isUserCapitalTile(tile) ? 'solid' : undefined,
-                }}
+                className={`tile ${tile.type} ${tile.is_capital ? "capital-highlight" : ""}`}
+                data-x={tile.x}
+                data-y={tile.y}
+                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}`}
               />
+
             ))}
           </div>
         </div>
