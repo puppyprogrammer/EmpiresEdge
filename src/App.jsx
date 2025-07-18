@@ -85,12 +85,26 @@ function App() {
       let allTiles = [];
       let from = 0;
       const limit = 1000; // Fetch 1,000 rows per request
-      const totalRows = 10000; // Known total rows
+
+      // First request to get the total count
+      const { count, error: countError } = await supabase
+        .from('tiles')
+        .select('id, x, y, type, resource, owner, is_capital', { count: 'exact', head: true })
+        .order('x', { ascending: true })
+        .order('y', { ascending: true });
+
+      if (countError) {
+        setError('Failed to fetch tile count: ' + countError.message);
+        setTiles([]);
+        return;
+      }
+
+      const totalRows = count || 10000; // Default to 10,000 if count fails
 
       while (from < totalRows) {
-        const { data, error, count } = await supabase
+        const { data, error } = await supabase
           .from('tiles')
-          .select('id, x, y, type, resource, owner, is_capital', { count: 'exact' })
+          .select('id, x, y, type, resource, owner, is_capital')
           .order('x', { ascending: true })
           .order('y', { ascending: true })
           .range(from, from + limit - 1);
@@ -105,7 +119,7 @@ function App() {
         from += limit;
       }
 
-      console.log('Number of tiles fetched:', allTiles.length, 'Total rows in table:', count);
+      console.log('Number of tiles fetched:', allTiles.length, 'Total rows in table:', totalRows);
       setTiles(allTiles);
     } catch (err) {
       setError('Error fetching tiles: ' + err.message);
