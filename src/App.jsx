@@ -2,24 +2,39 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import './index.css';
 
-// Hardcoded Supabase credentials — **only safe if you use RLS on your tables!**
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseKey =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 function App() {
+  // Map state
   const [tiles, setTiles] = useState(null);
   const [error, setError] = useState(null);
 
+  // Auth state
   const [session, setSession] = useState(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loadingAuth, setLoadingAuth] = useState(false);
-  const [authError, setAuthError] = useState(null);
+
+  // UI state for showing register form or login form
+  const [showRegister, setShowRegister] = useState(false);
+
+  // Login form inputs
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+
+  // Register form inputs
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerUsername, setRegisterUsername] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
 
   useEffect(() => {
-    // Load tiles data (replace with your real fetch later)
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+
+    const { subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    // Load tiles (dummy sample for now)
     const sampleTiles = [];
     for (let i = 0; i < 10000; i++) {
       sampleTiles.push({
@@ -33,92 +48,140 @@ function App() {
     }
     setTiles(sampleTiles);
 
-    // Get current session
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-    });
-
-    // Listen to auth changes
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
     return () => {
-      listener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
-  const handleRegister = async () => {
-    setLoadingAuth(true);
-    setAuthError(null);
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) setAuthError(error.message);
-    else alert('Check your email for confirmation.');
-    setLoadingAuth(false);
-  };
+  async function handleLogin(e) {
+    e.preventDefault();
+    setError(null);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: loginPassword,
+    });
+    if (error) setError(error.message);
+    else {
+      setLoginEmail('');
+      setLoginPassword('');
+    }
+  }
 
-  const handleLogin = async () => {
-    setLoadingAuth(true);
-    setAuthError(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setAuthError(error.message);
-    setLoadingAuth(false);
-  };
+  async function handleRegister(e) {
+    e.preventDefault();
+    setError(null);
+    const { error } = await supabase.auth.signUp({
+      email: registerEmail,
+      password: registerPassword,
+      options: {
+        data: {
+          username: registerUsername,
+        },
+      },
+    });
+    if (error) setError(error.message);
+    else {
+      alert('Registration successful! Please check your email to confirm.');
+      setRegisterEmail('');
+      setRegisterPassword('');
+      setRegisterUsername('');
+      setShowRegister(false); // Switch back to login after register
+    }
+  }
 
-  const handleLogout = async () => {
+  async function handleLogout() {
     await supabase.auth.signOut();
     setSession(null);
-    setEmail('');
-    setPassword('');
-  };
+  }
 
   return (
     <div className="app-container">
       <header className="app-header">
         <div className="header-title">Empire’s Edge</div>
 
-        {!session ? (
-          <form
-            className="login-form"
-            onSubmit={e => e.preventDefault()}
-          >
+        {!session && !showRegister && (
+          <form className="login-form" onSubmit={handleLogin}>
             <input
               type="email"
               placeholder="Email"
               className="input"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              disabled={loadingAuth}
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              required
             />
             <input
               type="password"
               placeholder="Password"
               className="input"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              disabled={loadingAuth}
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
+              required
             />
-            <button
-              type="button"
-              className="button"
-              onClick={handleLogin}
-              disabled={loadingAuth}
-            >
+            <button type="submit" className="button">
               LOGIN
             </button>
-            <span className="divider">|</span>
             <button
               type="button"
               className="button"
-              onClick={handleRegister}
-              disabled={loadingAuth}
+              onClick={() => {
+                setShowRegister(true);
+                setError(null);
+              }}
+              style={{ marginLeft: '0.5rem' }}
             >
               REGISTER
             </button>
           </form>
-        ) : (
+        )}
+
+        {!session && showRegister && (
+          <form className="login-form" onSubmit={handleRegister}>
+            <input
+              type="email"
+              placeholder="Email"
+              className="input"
+              value={registerEmail}
+              onChange={(e) => setRegisterEmail(e.target.value)}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Username"
+              className="input"
+              value={registerUsername}
+              onChange={(e) => setRegisterUsername(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              className="input"
+              value={registerPassword}
+              onChange={(e) => setRegisterPassword(e.target.value)}
+              required
+            />
+            <button type="submit" className="button">
+              REGISTER
+            </button>
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                setShowRegister(false);
+                setError(null);
+              }}
+              style={{ marginLeft: '0.5rem' }}
+            >
+              BACK TO LOGIN
+            </button>
+          </form>
+        )}
+
+        {session && (
           <div className="user-info">
-            <span className="username">{session.user.email}</span>
+            <span className="username">
+              {session.user.user_metadata?.username || session.user.email}
+            </span>
             <button className="button" onClick={handleLogout}>
               LOGOUT
             </button>
@@ -126,7 +189,6 @@ function App() {
         )}
       </header>
 
-      {authError && <div className="error-box">{authError}</div>}
       {error && <div className="error-box">{error}</div>}
 
       {tiles && tiles.length > 0 && (
