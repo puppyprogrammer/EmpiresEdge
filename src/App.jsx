@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import './index.css';
+import { User, LogOut } from 'lucide-react';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
 const supabaseKey =
@@ -29,19 +30,9 @@ function App() {
   const [startY, setStartY] = useState(0);
 
   useEffect(() => {
-    supabase.auth.signOut().then(() => {
-      setSession(null);
-      setUserNation(null);
-      setShowNationModal(false);
-
-      supabase.auth.getSession().then(({ data }) => {
-        setSession(data.session);
-        if (data.session) checkUserNation(data.session.user.id);
-      }).catch(err => {
-        console.error('Error getting session:', err);
-      });
-    }).catch(err => {
-      console.error('Error signing out:', err);
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      if (data.session) checkUserNation(data.session.user.id);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -59,6 +50,7 @@ function App() {
       if (subscription) subscription.unsubscribe();
     };
   }, []);
+
 
   useEffect(() => {
     if (!userNation || !tiles || !mapScrollRef.current) return;
@@ -429,14 +421,14 @@ function App() {
           </form>
         )}
 
-        {session && (
-        <div className="flex items-center gap-4 text-white">
-          <User className="w-6 h-6" title="Profile" />
-          <button onClick={handleLogout} className="hover:text-red-400" title="Log Out">
-            <LogOut className="w-6 h-6" />
-          </button>
-        </div>
-      )}
+        {session?.user && (
+          <div className="session-icons">
+            <User className="icon" title="Profile" />
+            <button onClick={handleLogout} title="Log out">
+              <LogOut className="icon" />
+            </button>
+          </div>
+        )}
       </header>
 
       {error && <div className="error-box">{error}</div>}
