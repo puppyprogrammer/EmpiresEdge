@@ -57,10 +57,7 @@ function App() {
     if (!userNation || !tiles || !mapScrollRef.current) return;
 
     const capitalTile = tiles.find(
-      (t) =>
-        t.x === userNation.capital_tile_x &&
-        t.y === userNation.capital_tile_y &&
-        t.is_capital
+      (t) => t.x === userNation.capital_tile_x && t.y === userNation.capital_tile_y && t.is_capital
     );
     if (!capitalTile) return;
 
@@ -84,26 +81,26 @@ function App() {
   }, [userNation, tiles]);
 
   async function fetchTiles() {
-  try {
-    const { data, error, count } = await supabase
-      .from('tiles')
-      .select('id, x, y, type, resource, owner, is_capital', { count: 'exact' })
-      .order('x', { ascending: true })
-      .order('y', { ascending: true })
-      .range(0, 9999); // Fetch all 10,000 rows (0-based index)
+    try {
+      const { data, error, count } = await supabase
+        .from('tiles')
+        .select('id, x, y, type, resource, owner, is_capital', { count: 'exact' })
+        .order('x', { ascending: true })
+        .order('y', { ascending: true })
+        .range(0, 9999); // Fetch all 10,000 rows
 
-    if (error) {
-      setError('Failed to fetch tiles: ' + error.message);
+      if (error) {
+        setError('Failed to fetch tiles: ' + error.message);
+        setTiles([]);
+      } else {
+        console.log('Number of tiles fetched:', data.length, 'Total rows in table:', count);
+        setTiles(data);
+      }
+    } catch (err) {
+      setError('Error fetching tiles: ' + err.message);
       setTiles([]);
-    } else {
-      console.log('Number of tiles fetched:', data.length, 'Total rows in table:', count);
-      setTiles(data);
     }
-  } catch (err) {
-    setError('Error fetching tiles: ' + err.message);
-    setTiles([]);
   }
-}
 
   async function checkUserNation(userId) {
     try {
@@ -388,17 +385,20 @@ function App() {
       )}
 
       {tiles && tiles.length > 0 && (
-        <div className="map-scroll-container" ref={mapScrollRef}>
-          <div className="map-grid">
-            {tiles.map((tile) => (
-              <div
-                key={tile.id}
-                className={`tile ${tile.type} ${tile.is_capital ? 'capital-highlight' : ''}`}
-                data-x={tile.x}
-                data-y={tile.y}
-                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
-              />
-            ))}
+        <div>
+          <div>Rendered tiles: {tiles.length}</div>
+          <div className="map-scroll-container" ref={mapScrollRef}>
+            <div className="map-grid">
+              {tiles.map((tile) => (
+                <div
+                  key={tile.id}
+                  className={`tile ${tile.type} ${tile.is_capital ? 'capital-highlight' : ''}`}
+                  data-x={tile.x}
+                  data-y={tile.y}
+                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
