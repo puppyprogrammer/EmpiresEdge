@@ -112,14 +112,14 @@ html {
 /* Map area */
 .map-scroll-container {
   flex: 1;
-  overflow: auto;
+  overflow: hidden; /* Hide scrollbars, rely on drag */
   width: 100%;
   height: calc(100vh - 60px); /* Adjust based on header height */
   padding: 8px;
   box-sizing: border-box;
   position: relative;
   scroll-behavior: smooth;
-  touch-action: none; /* Prevent default touch scrolling for better drag */
+  touch-action: none; /* Prevent default touch scrolling */
   cursor: grab; /* Visual cue for dragging */
 }
 
@@ -127,6 +127,12 @@ html {
   cursor: grabbing; /* Change cursor during drag */
 }
 
+/* Ensure container captures events */
+.map-scroll-container {
+  pointer-events: auto;
+}
+
+/* Map grid */
 .map-grid {
   display: grid;
   grid-template-columns: repeat(100, 32px);
@@ -136,6 +142,7 @@ html {
   height: 3398px; /* (100 * 32px) + (99 * 2px) */
   margin: auto;
   box-sizing: content-box;
+  pointer-events: none; /* Allow container to handle drag */
 }
 
 /* Tile styles */
@@ -145,6 +152,7 @@ html {
   border-radius: 4px;
   box-sizing: border-box;
   transition: box-shadow 0.2s ease, border 0.2s ease;
+  pointer-events: auto; /* Restore interaction for tiles (e.g., tooltips) */
 }
 
 .tile.grass {

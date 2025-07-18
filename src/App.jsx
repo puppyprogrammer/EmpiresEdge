@@ -90,7 +90,7 @@ function App() {
         setIsDragging(true);
         setStartX(e.pageX - container.offsetLeft);
         setStartY(e.pageY - container.offsetTop);
-        e.preventDefault(); // Prevent text selection
+        e.preventDefault(); // Prevent text selection and default behavior
       }
     };
 
@@ -99,11 +99,11 @@ function App() {
 
       const currentX = e.pageX - container.offsetLeft;
       const currentY = e.pageY - container.offsetTop;
-      const diffX = currentX - startX;
-      const diffY = currentY - startY;
+      const diffX = currentX - startX; // Invert direction to match preference
+      const diffY = currentY - startY; // Invert direction to match preference
 
-      container.scrollLeft -= diffX;
-      container.scrollTop -= diffY;
+      container.scrollLeft += diffX; // Invert by adding instead of subtracting
+      container.scrollTop += diffY;  // Invert by adding instead of subtracting
 
       setStartX(currentX);
       setStartY(currentY);
