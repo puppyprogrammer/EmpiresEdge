@@ -3,7 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import './index.css';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
+const supabaseKey =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
       }
     });
 
+    // Load sample tiles into state for UI
     const sampleTiles = [];
     for (let i = 0; i < 10000; i++) {
       sampleTiles.push({
@@ -102,6 +104,7 @@ function App() {
     return candidates[idx];
   }
 
+  // Update local tiles state to reflect new ownership & capital
   function assignNationTiles(capitalTile, nationId) {
     const updatedTiles = [...tiles];
     const capitalIdx = updatedTiles.findIndex((t) => t.id === capitalTile.id);
@@ -135,6 +138,7 @@ function App() {
     }
 
     try {
+      // Insert nation into DB
       const { data: nationData, error: insertError } = await supabase
         .from('nations')
         .insert([
@@ -154,7 +158,39 @@ function App() {
         return;
       }
 
+      // Update capital tile in DB
+      const { error: capTileErr } = await supabase
+        .from('tiles')
+        .update({ owner: nationData.id, is_capital: true })
+        .eq('x', capitalTile.x)
+        .eq('y', capitalTile.y);
+
+      if (capTileErr) {
+        setError('Failed to update capital tile: ' + capTileErr.message);
+        return;
+      }
+
+      // Update surrounding tiles in DB (distance 1)
+      const surroundingTiles = tilesWithinDistance(capitalTile, 1, tiles).filter(
+        (t) => !(t.x === capitalTile.x && t.y === capitalTile.y)
+      );
+
+      for (const tile of surroundingTiles) {
+        const { error: updateErr } = await supabase
+          .from('tiles')
+          .update({ owner: nationData.id })
+          .eq('x', tile.x)
+          .eq('y', tile.y);
+
+        if (updateErr) {
+          setError('Failed to update surrounding tile: ' + updateErr.message);
+          return;
+        }
+      }
+
+      // Update local state for UI
       assignNationTiles(capitalTile, nationData.id);
+
       setUserNation(nationData);
       setShowNationModal(false);
       setNationName('');
@@ -211,20 +247,79 @@ function App() {
 
         {!session && !showRegister && (
           <form className="login-form" onSubmit={handleLogin}>
-            <input type="email" placeholder="Email" className="input" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
-            <input type="password" placeholder="Password" className="input" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
-            <button type="submit" className="button">LOGIN</button>
-            <button type="button" className="button" onClick={() => { setShowRegister(true); setError(null); }} style={{ marginLeft: '0.5rem' }}>REGISTER</button>
+            <input
+              type="email"
+              placeholder="Email"
+              className="input"
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              className="input"
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
+              required
+            />
+            <button type="submit" className="button">
+              LOGIN
+            </button>
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                setShowRegister(true);
+                setError(null);
+              }}
+              style={{ marginLeft: '0.5rem' }}
+            >
+              REGISTER
+            </button>
           </form>
         )}
 
         {!session && showRegister && (
           <form className="login-form" onSubmit={handleRegister}>
-            <input type="email" placeholder="Email" className="input" value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} required />
-            <input type="text" placeholder="Username" className="input" value={registerUsername} onChange={(e) => setRegisterUsername(e.target.value)} required />
-            <input type="password" placeholder="Password" className="input" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} required />
-            <button type="submit" className="button">REGISTER</button>
-            <button type="button" className="button" onClick={() => { setShowRegister(false); setError(null); }} style={{ marginLeft: '0.5rem' }}>BACK TO LOGIN</button>
+            <input
+              type="email"
+              placeholder="Email"
+              className="input"
+              value={registerEmail}
+              onChange={(e) => setRegisterEmail(e.target.value)}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Username"
+              className="input"
+              value={registerUsername}
+              onChange={(e) => setRegisterUsername(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              className="input"
+              value={registerPassword}
+              onChange={(e) => setRegisterPassword(e.target.value)}
+              required
+            />
+            <button type="submit" className="button">
+              REGISTER
+            </button>
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                setShowRegister(false);
+                setError(null);
+              }}
+              style={{ marginLeft: '0.5rem' }}
+            >
+              BACK TO LOGIN
+            </button>
           </form>
         )}
 
@@ -233,7 +328,9 @@ function App() {
             <span className="username">
               {session.user.user_metadata?.username || session.user.email}
             </span>
-            <button className="button" onClick={handleLogout}>LOGOUT</button>
+            <button className="button" onClick={handleLogout}>
+              LOGOUT
+            </button>
           </div>
         )}
       </header>
@@ -244,12 +341,24 @@ function App() {
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Create Your Nation</h2>
-            <input type="text" placeholder="Nation Name" value={nationName} onChange={(e) => setNationName(e.target.value)} className="input" />
+            <input
+              type="text"
+              placeholder="Nation Name"
+              value={nationName}
+              onChange={(e) => setNationName(e.target.value)}
+              className="input"
+            />
             <label>
               Pick Nation Color:{' '}
-              <input type="color" value={nationColor} onChange={(e) => setNationColor(e.target.value)} />
+              <input
+                type="color"
+                value={nationColor}
+                onChange={(e) => setNationColor(e.target.value)}
+              />
             </label>
-            <button className="button" onClick={handleStartGame}>Start Game</button>
+            <button className="button" onClick={handleStartGame}>
+              Start Game
+            </button>
           </div>
         </div>
       )}
@@ -261,7 +370,9 @@ function App() {
               <div
                 key={tile.id}
                 className={`tile ${tile.type}`}
-                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
+                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${
+                  tile.owner || 'None'
+                }`}
                 style={{
                   borderColor: tile.is_capital ? 'yellow' : undefined,
                   borderWidth: tile.is_capital ? 2 : 0,
