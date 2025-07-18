@@ -82,20 +82,31 @@ function App() {
 
   async function fetchTiles() {
     try {
-      const { data, error, count } = await supabase
-        .from('tiles')
-        .select('id, x, y, type, resource, owner, is_capital', { count: 'exact' })
-        .order('x', { ascending: true })
-        .order('y', { ascending: true })
-        .range(0, 9999); // Fetch all 10,000 rows
+      let allTiles = [];
+      let from = 0;
+      const limit = 1000; // Fetch 1,000 rows per request
+      const totalRows = 10000; // Known total rows
 
-      if (error) {
-        setError('Failed to fetch tiles: ' + error.message);
-        setTiles([]);
-      } else {
-        console.log('Number of tiles fetched:', data.length, 'Total rows in table:', count);
-        setTiles(data);
+      while (from < totalRows) {
+        const { data, error, count } = await supabase
+          .from('tiles')
+          .select('id, x, y, type, resource, owner, is_capital', { count: 'exact' })
+          .order('x', { ascending: true })
+          .order('y', { ascending: true })
+          .range(from, from + limit - 1);
+
+        if (error) {
+          setError('Failed to fetch tiles: ' + error.message);
+          setTiles([]);
+          return;
+        }
+
+        allTiles = [...allTiles, ...data];
+        from += limit;
       }
+
+      console.log('Number of tiles fetched:', allTiles.length, 'Total rows in table:', count);
+      setTiles(allTiles);
     } catch (err) {
       setError('Error fetching tiles: ' + err.message);
       setTiles([]);
