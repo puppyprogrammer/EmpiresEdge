@@ -72,13 +72,22 @@ function App() {
                 gridTemplateColumns: 'repeat(100, 1fr)', // 100 columns
               }}
             >
-              {tiles.map((tile) => (
-                <div
-                  key={tile.id}
-                  className={getTileClass(tile.type)}
-                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
-                />
-              ))}
+              {tiles.map((tile) => {
+                let tileClass = "w-8 h-8";
+
+                if (tile.type === 'grass') tileClass += " bg-green-500";
+                else if (tile.type === 'forest') tileClass += " bg-green-700";
+                else tileClass += " bg-gray-500";
+
+                return (
+                  <div
+                    key={tile.id}
+                    className={tileClass}
+                    title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
+                  />
+                );
+              })}
+
             </div>
           </div>
         </>
