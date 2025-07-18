@@ -24,6 +24,9 @@ function App() {
   const [nationName, setNationName] = useState('');
   const [nationColor, setNationColor] = useState('#2563eb');
   const [userNation, setUserNation] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [startY, setStartY] = useState(0);
 
   useEffect(() => {
     supabase.auth.signOut().then(() => {
@@ -74,9 +77,54 @@ function App() {
     const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
     if (tileEl) {
       tileEl.classList.add('capital-highlight');
-      // Removed setTimeout to keep the highlight permanent
+      // Highlight remains permanent
     }
   }, [userNation, tiles]);
+
+  useEffect(() => {
+    const container = mapScrollRef.current;
+    if (!container) return;
+
+    const handleMouseDown = (e) => {
+      if (e.button === 0) { // Left click
+        setIsDragging(true);
+        setStartX(e.pageX - container.offsetLeft);
+        setStartY(e.pageY - container.offsetTop);
+        e.preventDefault(); // Prevent text selection
+      }
+    };
+
+    const handleMouseMove = (e) => {
+      if (!isDragging) return;
+
+      const currentX = e.pageX - container.offsetLeft;
+      const currentY = e.pageY - container.offsetTop;
+      const diffX = currentX - startX;
+      const diffY = currentY - startY;
+
+      container.scrollLeft -= diffX;
+      container.scrollTop -= diffY;
+
+      setStartX(currentX);
+      setStartY(currentY);
+    };
+
+    const handleMouseUpOrLeave = () => {
+      setIsDragging(false);
+    };
+
+    container.addEventListener('mousedown', handleMouseDown);
+    container.addEventListener('mousemove', handleMouseMove);
+    container.addEventListener('mouseup', handleMouseUpOrLeave);
+    container.addEventListener('mouseleave', handleMouseUpOrLeave);
+
+    return () => {
+      container.removeEventListener('mousedown', handleMouseDown);
+      container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('mouseup', handleMouseUpOrLeave);
+      container.removeEventListener('mouseleave', handleMouseUpOrLeave);
+    };
+  }, [isDragging]);
 
   async function fetchTiles() {
     try {
