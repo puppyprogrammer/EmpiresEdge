@@ -84,25 +84,26 @@ function App() {
   }, [userNation, tiles]);
 
   async function fetchTiles() {
-    try {
-      const { data, error } = await supabase
-        .from('tiles')
-        .select('id, x, y, type, resource, owner, is_capital')
-        .order('x', { ascending: true })
-        .order('y', { ascending: true });
+  try {
+    const { data, error, count } = await supabase
+      .from('tiles')
+      .select('id, x, y, type, resource, owner, is_capital', { count: 'exact' })
+      .order('x', { ascending: true })
+      .order('y', { ascending: true })
+      .range(0, 9999); // Fetch all 10,000 rows (0-based index)
 
-      if (error) {
-        setError('Failed to fetch tiles: ' + error.message);
-        setTiles([]);
-      } else {
-        console.log('Number of tiles fetched:', data.length); // Add this line
-        setTiles(data);
-      }
-    } catch (err) {
-      setError('Error fetching tiles: ' + err.message);
+    if (error) {
+      setError('Failed to fetch tiles: ' + error.message);
       setTiles([]);
+    } else {
+      console.log('Number of tiles fetched:', data.length, 'Total rows in table:', count);
+      setTiles(data);
     }
+  } catch (err) {
+    setError('Error fetching tiles: ' + err.message);
+    setTiles([]);
   }
+}
 
   async function checkUserNation(userId) {
     try {
