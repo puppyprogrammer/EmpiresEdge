@@ -24,6 +24,9 @@ function App() {
   const [nationName, setNationName] = useState('');
   const [nationColor, setNationColor] = useState('#2563eb');
   const [userNation, setUserNation] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [startY, setStartY] = useState(0);
 
   useEffect(() => {
     supabase.auth.signOut().then(() => {
@@ -34,10 +37,14 @@ function App() {
       supabase.auth.getSession().then(({ data }) => {
         setSession(data.session);
         if (data.session) checkUserNation(data.session.user.id);
+      }).catch(err => {
+        console.error('Error getting session:', err);
       });
+    }).catch(err => {
+      console.error('Error signing out:', err);
     });
 
-    const { subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) checkUserNation(session.user.id);
       else {
@@ -49,7 +56,7 @@ function App() {
     fetchTiles();
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription) subscription.unsubscribe(); // Safe unsubscribe
     };
   }, []);
 
@@ -77,6 +84,62 @@ function App() {
       // Highlight remains permanent
     }
   }, [userNation, tiles]);
+
+  useLayoutEffect(() => {
+    if (!tiles || !mapScrollRef.current) {
+      console.log('Tiles not loaded or container ref is null');
+      return;
+    }
+
+    const container = mapScrollRef.current;
+    console.log('Attaching event listeners to:', container);
+
+    const handleMouseDown = (e) => {
+      if (e.button === 0) { // Left click
+        console.log('Mouse down at:', e.pageX, e.pageY);
+        setIsDragging(true);
+        setStartX(e.pageX - container.offsetLeft);
+        setStartY(e.pageY - container.offsetTop);
+        e.preventDefault(); // Prevent text selection and default behavior
+        e.stopPropagation(); // Prevent event from bubbling to tiles
+      }
+    };
+
+    const handleMouseMove = (e) => {
+      if (!isDragging) return;
+
+      console.log('Dragging, scroll:', container.scrollLeft, container.scrollTop);
+      const currentX = e.pageX - container.offsetLeft;
+      const currentY = e.pageY - container.offsetTop;
+      const diffX = currentX - startX;
+      const diffY = currentY - startY;
+
+      container.scrollLeft += diffX; // Invert direction
+      container.scrollTop += diffY;  // Invert direction
+
+      setStartX(currentX);
+      setStartY(currentY);
+    };
+
+    const handleMouseUpOrLeave = () => {
+      if (isDragging) {
+        console.log('Mouse up or leave');
+        setIsDragging(false);
+      }
+    };
+
+    container.addEventListener('mousedown', handleMouseDown);
+    container.addEventListener('mousemove', handleMouseMove);
+    container.addEventListener('mouseup', handleMouseUpOrLeave);
+    container.addEventListener('mouseleave', handleMouseUpOrLeave);
+
+    return () => {
+      container.removeEventListener('mousedown', handleMouseDown);
+      container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('mouseup', handleMouseUpOrLeave);
+      container.removeEventListener('mouseleave', handleMouseUpOrLeave);
+    };
+  }, [tiles]); // Depend on tiles to re-run when map is ready
 
   async function fetchTiles() {
     try {
@@ -423,62 +486,6 @@ function App() {
               ))}
             </div>
           </div>
-          { /* Drag logic moved here */ }
-          {useLayoutEffect(() => {
-            const container = mapScrollRef.current;
-            if (!container) {
-              console.log('Container ref is null');
-              return;
-            }
-
-            console.log('Attaching event listeners to:', container);
-
-            const handleMouseDown = (e) => {
-              if (e.button === 0) { // Left click
-                console.log('Mouse down at:', e.pageX, e.pageY);
-                setIsDragging(true);
-                setStartX(e.pageX - container.offsetLeft);
-                setStartY(e.pageY - container.offsetTop);
-                e.preventDefault(); // Prevent text selection and default behavior
-                e.stopPropagation(); // Prevent event from bubbling to tiles
-              }
-            };
-
-            const handleMouseMove = (e) => {
-              if (!isDragging) return;
-
-              console.log('Dragging, scroll:', container.scrollLeft, container.scrollTop);
-              const currentX = e.pageX - container.offsetLeft;
-              const currentY = e.pageY - container.offsetTop;
-              const diffX = currentX - startX;
-              const diffY = currentY - startY;
-
-              container.scrollLeft += diffX; // Invert direction
-              container.scrollTop += diffY;  // Invert direction
-
-              setStartX(currentX);
-              setStartY(currentY);
-            };
-
-            const handleMouseUpOrLeave = () => {
-              if (isDragging) {
-                console.log('Mouse up or leave');
-                setIsDragging(false);
-              }
-            };
-
-            container.addEventListener('mousedown', handleMouseDown);
-            container.addEventListener('mousemove', handleMouseMove);
-            container.addEventListener('mouseup', handleMouseUpOrLeave);
-            container.addEventListener('mouseleave', handleMouseUpOrLeave);
-
-            return () => {
-              container.removeEventListener('mousedown', handleMouseDown);
-              container.removeEventListener('mousemove', handleMouseMove);
-              container.removeEventListener('mouseup', handleMouseUpOrLeave);
-              container.removeEventListener('mouseleave', handleMouseUpOrLeave);
-            };
-          }, [isDragging])}
         </div>
       )}
 
