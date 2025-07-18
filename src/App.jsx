@@ -430,15 +430,13 @@ function App() {
         )}
 
         {session && (
-          <div className="user-info">
-            <span className="username">
-              {session.user.user_metadata?.username || session.user.email}
-            </span>
-            <button className="button" onClick={handleLogout}>
-              LOGOUT
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-4 text-white">
+          <User className="w-6 h-6" title="Profile" />
+          <button onClick={handleLogout} className="hover:text-red-400" title="Log Out">
+            <LogOut className="w-6 h-6" />
+          </button>
+        </div>
+      )}
       </header>
 
       {error && <div className="error-box">{error}</div>}
