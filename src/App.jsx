@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import './index.css';
 
@@ -81,7 +81,7 @@ function App() {
     }
   }, [userNation, tiles]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = mapScrollRef.current;
     if (!container) {
       console.log('Container ref is null');
