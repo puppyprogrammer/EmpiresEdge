@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import './index.css';
 
@@ -8,6 +8,12 @@ const supabaseKey =
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 function App() {
+  // Ref for the scroll container to control scroll position
+  const mapScrollRef = useRef(null);
+
+  // Tile size in px, adjust if different in your CSS
+  const TILE_SIZE = 32;
+
   const [tiles, setTiles] = useState(null);
   const [error, setError] = useState(null);
   const [session, setSession] = useState(null);
@@ -29,7 +35,6 @@ function App() {
       setUserNation(null);
       setShowNationModal(false);
 
-      // After sign out, get session and check user nation if any
       supabase.auth.getSession().then(({ data }) => {
         setSession(data.session);
         if (data.session) checkUserNation(data.session.user.id);
@@ -45,6 +50,7 @@ function App() {
       }
     });
 
+    // Initialize tiles array
     const sampleTiles = [];
     for (let i = 0; i < 10000; i++) {
       sampleTiles.push({
@@ -63,6 +69,33 @@ function App() {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Scroll to center the user's capital tile after userNation & tiles load
+  useEffect(() => {
+    if (!userNation || !tiles || !mapScrollRef.current) return;
+
+    // Find capital tile (must match userNation coordinates and flagged is_capital)
+    const capitalTile = tiles.find(
+      (t) =>
+        t.x === userNation.capital_tile_x &&
+        t.y === userNation.capital_tile_y &&
+        t.is_capital
+    );
+    if (!capitalTile) return;
+
+    const container = mapScrollRef.current;
+
+    // Calculate pixel position (y is horizontal axis, x is vertical)
+    const capitalPixelX = capitalTile.y * TILE_SIZE;
+    const capitalPixelY = capitalTile.x * TILE_SIZE;
+
+    // Center scroll container on capital tile
+    container.scrollTo({
+      left: capitalPixelX - container.clientWidth / 2 + TILE_SIZE / 2,
+      top: capitalPixelY - container.clientHeight / 2 + TILE_SIZE / 2,
+      behavior: 'smooth', // optional smooth scrolling
+    });
+  }, [userNation, tiles]);
 
   async function checkUserNation(userId) {
     try {
@@ -366,15 +399,15 @@ function App() {
       )}
 
       {tiles && tiles.length > 0 && (
-        <div className="map-scroll-container">
+        <div className="map-scroll-container" ref={mapScrollRef}>
           <div className="map-grid">
             {tiles.map((tile) => (
               <div
                 key={tile.id}
                 className={`tile ${tile.type}`}
-                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${
-                  tile.owner || 'None'
-                }`}
+                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
+                  tile.resource || 'None'
+                }, Owner: ${tile.owner || 'None'}`}
                 style={{
                   borderColor: tile.is_capital ? 'yellow' : undefined,
                   borderWidth: tile.is_capital ? 2 : 0,
