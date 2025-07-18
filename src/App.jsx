@@ -74,9 +74,7 @@ function App() {
     const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
     if (tileEl) {
       tileEl.classList.add('capital-highlight');
-      setTimeout(() => {
-        tileEl.classList.remove('capital-highlight');
-      }, 1500);
+      // Removed setTimeout to keep the highlight permanent
     }
   }, [userNation, tiles]);
 
