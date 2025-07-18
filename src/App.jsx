@@ -1,93 +1,111 @@
-import { createClient } from '@supabase/supabase-js';
-import { useEffect, useState } from 'react';
-import './index.css';
-
-const supabase = createClient(
-  'https://kbiaueussvcshwlvaabu.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U'
-);
+import { useState, useEffect } from 'react';
 
 function App() {
-  const [tiles, setTiles] = useState(null); // null = loading
+  const [tiles, setTiles] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchTiles = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('tiles')
-          .select('id, x, y, type, resource, owner');
-
-        if (error) {
-          setError('Supabase error: ' + error.message);
-        } else if (!data || data.length === 0) {
-          setError('No tiles returned. Check if Supabase "tiles" table has rows and is publicly readable.');
-          setTiles([]);
-        } else {
-          setTiles(data);
-        }
-      } catch (err) {
-        setError('Unexpected fetch error: ' + err.message);
-      }
-    };
-
-    fetchTiles();
+    // For test, hardcode some tiles or fetch real data here
+    const sampleTiles = [];
+    for (let i = 0; i < 1000; i++) {
+      sampleTiles.push({
+        id: i,
+        x: Math.floor(i / 100),
+        y: i % 100,
+        type: i % 3 === 0 ? 'grass' : i % 3 === 1 ? 'forest' : 'mountain',
+        resource: null,
+        owner: null,
+      });
+    }
+    setTiles(sampleTiles);
   }, []);
 
-  const getTileClass = (type) => {
+  const getTileStyle = (type) => {
+    let bgColor;
     switch (type) {
       case 'grass':
-        return 'w-8 h-8 bg-green-500';
+        bgColor = '#22c55e';
+        break;
       case 'forest':
-        return 'w-8 h-8 bg-green-700';
+        bgColor = '#166534';
+        break;
       default:
-        return 'w-8 h-8 bg-gray-500';
+        bgColor = '#6b7280';
     }
+    return {
+      width: '32px',
+      height: '32px',
+      backgroundColor: bgColor,
+    };
   };
 
   return (
-    <div className="flex flex-col justify-center items-center h-screen bg-gray-800 text-white p-4 space-y-4">
-      <h1 className="text-3xl font-bold">Empire’s Edge</h1>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        backgroundColor: '#1f2937',
+        color: 'white',
+        padding: '16px',
+      }}
+    >
+      <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>Empire’s Edge</h1>
 
       {tiles === null && !error && (
-        <div className="text-yellow-400 text-lg">Loading map data...</div>
+        <div style={{ color: '#facc15', fontSize: '1.125rem' }}>
+          Loading map data...
+        </div>
       )}
 
       {error && (
-        <div className="text-red-400 text-lg bg-red-950 p-4 rounded-xl border border-red-600 max-w-lg">
+        <div
+          style={{
+            color: '#f87171',
+            backgroundColor: '#4b0000',
+            padding: '1rem',
+            borderRadius: '0.75rem',
+            border: '1px solid #dc2626',
+            maxWidth: '32rem',
+            fontSize: '1.125rem',
+          }}
+        >
           {error}
         </div>
       )}
 
       {tiles && tiles.length > 0 && (
         <>
-          <div className="text-green-300 text-sm">Loaded {tiles.length} tiles.</div>
+          <div style={{ color: '#86efac', fontSize: '0.875rem' }}>
+            Loaded {tiles.length} tiles.
+          </div>
           <div
-            className="overflow-auto border border-gray-700"
-            style={{ width: '800px', height: '800px' }}
+            style={{
+              overflow: 'auto',
+              border: '1px solid #374151',
+              width: '800px',
+              height: '800px',
+              marginTop: '8px',
+            }}
           >
             <div
-              className="grid gap-0.5"
               style={{
-                gridTemplateColumns: 'repeat(100, 2rem)', // match tile width 2rem = w-8
+                display: 'grid',
+                gridTemplateColumns: 'repeat(100, 1fr)',
+                gap: '2px',
               }}
             >
-              {tiles.map((tile) => {
-                let tileClass = "w-8 h-8";
-
-                if (tile.type === 'grass') tileClass += " bg-green-500";
-                else if (tile.type === 'forest') tileClass += " bg-green-700";
-                else tileClass += " bg-gray-500";
-
-                return (
-                  <div
-                    key={tile.id}
-                    className={tileClass}
-                    title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
-                  />
-                );
-              })}
-
+              {tiles.map((tile) => (
+                <div
+                  key={tile.id}
+                  style={getTileStyle(tile.type)}
+                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
+                    tile.resource || 'None'
+                  }, Owner: ${tile.owner || 'None'}`}
+                />
+              ))}
             </div>
           </div>
         </>

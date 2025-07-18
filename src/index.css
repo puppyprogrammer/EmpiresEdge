@@ -1,4 +1,129 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* custom global styles here */
 
+body {
+  margin: 0;
+  background-color: #1f2937; /* Tailwind's gray-800 equivalent */
+  color: white;
+  font-family: system-ui, sans-serif;
+}
+
+/* Utility classes for your tiles */
+.w-8 {
+  width: 2rem; /* 8 * 0.25rem */
+}
+
+.h-8 {
+  height: 2rem;
+}
+
+/* Background colors */
+.bg-green-500 {
+  background-color: #22c55e; /* Tailwind green-500 */
+}
+
+.bg-green-700 {
+  background-color: #15803d; /* Tailwind green-700 */
+}
+
+.bg-gray-500 {
+  background-color: #6b7280; /* Tailwind gray-500 */
+}
+
+/* Additional styles you were using */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.h-screen {
+  height: 100vh;
+}
+
+.p-4 {
+  padding: 1rem;
+}
+
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+.text-3xl {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.text-yellow-400 {
+  color: #facc15;
+}
+
+.text-lg {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.text-red-400 {
+  color: #f87171;
+}
+
+.bg-red-950 {
+  background-color: #4b0000;
+}
+
+.rounded-xl {
+  border-radius: 0.75rem;
+}
+
+.border {
+  border: 1px solid currentColor;
+}
+
+.border-red-600 {
+  border-color: #dc2626;
+}
+
+.max-w-lg {
+  max-width: 32rem;
+}
+
+.text-green-300 {
+  color: #86efac;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.border-gray-700 {
+  border-color: #374151;
+}
+
+.grid {
+  display: grid;
+  gap: 0.125rem; /* 0.5 * 0.25rem */
+}
+
+/* Custom grid template columns for your map */
+.grid-100-cols {
+  grid-template-columns: repeat(100, 1fr);
+}
+
+.overflow-auto {
+  overflow: auto;
+}
