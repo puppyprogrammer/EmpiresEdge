@@ -15,7 +15,7 @@ function App() {
   // Auth state
   const [session, setSession] = useState(null);
 
-  // UI state for showing register form or login form
+  // UI state for showing register or login forms
   const [showRegister, setShowRegister] = useState(false);
 
   // Login form inputs
@@ -27,11 +27,27 @@ function App() {
   const [registerUsername, setRegisterUsername] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
 
+  // Nation creation popup
+  const [showNationModal, setShowNationModal] = useState(false);
+  const [nationName, setNationName] = useState('');
+  const [nationColor, setNationColor] = useState('#2563eb'); // default blue
+
+  // Store user's nation if any
+  const [userNation, setUserNation] = useState(null);
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      if (data.session) checkUserNation(data.session.user.id);
+    });
 
     const { subscription } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) checkUserNation(session.user.id);
+      else {
+        setUserNation(null);
+        setShowNationModal(false);
+      }
     });
 
     // Load tiles (dummy sample for now)
@@ -44,6 +60,7 @@ function App() {
         type: i % 3 === 0 ? 'grass' : i % 3 === 1 ? 'forest' : 'mountain',
         resource: null,
         owner: null,
+        is_capital: false,
       });
     }
     setTiles(sampleTiles);
@@ -52,6 +69,129 @@ function App() {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Check if logged-in user has a nation
+  async function checkUserNation(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('nations')
+        .select('*')
+        .eq('owner', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        setError(error.message);
+        return;
+      }
+
+      if (data) {
+        setUserNation(data);
+        setShowNationModal(false);
+      } else {
+        // No nation found — show nation creation modal
+        setUserNation(null);
+        setShowNationModal(true);
+      }
+    } catch (err) {
+      setError('Failed to check nation: ' + err.message);
+    }
+  }
+
+  // Get tiles within distance of a given tile (manhattan distance)
+  function tilesWithinDistance(centerTile, distance, tilesArr) {
+    return tilesArr.filter(
+      (t) =>
+        Math.abs(t.x - centerTile.x) + Math.abs(t.y - centerTile.y) <= distance
+    );
+  }
+
+  // Find a random tile for capital at least 3 tiles from any capital
+  function findCapitalTile() {
+    const capitalTiles = tiles.filter((t) => t.is_capital);
+    const minDistance = 3;
+
+    const candidates = tiles.filter((tile) => {
+      return capitalTiles.every(
+        (cap) =>
+          Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
+      );
+    });
+
+    if (candidates.length === 0) return null;
+
+    // Randomly pick one candidate tile
+    const idx = Math.floor(Math.random() * candidates.length);
+    return candidates[idx];
+  }
+
+  // Assign ownership to capital tile + neighbors within 1 tile radius
+  function assignNationTiles(capitalTile, nationId) {
+    const updatedTiles = [...tiles];
+    const capitalIdx = updatedTiles.findIndex((t) => t.id === capitalTile.id);
+
+    if (capitalIdx === -1) return;
+
+    // Mark capital tile
+    updatedTiles[capitalIdx].owner = nationId;
+    updatedTiles[capitalIdx].is_capital = true;
+
+    // Surrounding tiles radius 1 (8 neighbors + self)
+    updatedTiles.forEach((tile) => {
+      const dist =
+        Math.abs(tile.x - capitalTile.x) + Math.abs(tile.y - capitalTile.y);
+      if (dist <= 1) {
+        tile.owner = nationId;
+      }
+    });
+
+    setTiles(updatedTiles);
+  }
+
+  async function handleStartGame() {
+    if (!nationName.trim()) {
+      setError('Nation name is required');
+      return;
+    }
+    setError(null);
+
+    // Find capital tile
+    const capitalTile = findCapitalTile();
+    if (!capitalTile) {
+      setError('No available tile to place capital.');
+      return;
+    }
+
+    try {
+      // Insert new nation
+      const { data: nationData, error: insertError } = await supabase
+        .from('nations')
+        .insert([
+          {
+            name: nationName.trim(),
+            color: nationColor,
+            owner: session.user.id,
+            capital_tile_id: capitalTile.id,
+          },
+        ])
+        .select()
+        .single();
+
+      if (insertError) {
+        setError('Failed to create nation: ' + insertError.message);
+        return;
+      }
+
+      // Assign ownership on tiles
+      assignNationTiles(capitalTile, nationData.id);
+
+      // Hide modal and set user nation state
+      setUserNation(nationData);
+      setShowNationModal(false);
+      setNationName('');
+    } catch (err) {
+      setError('Error creating nation: ' + err.message);
+    }
+  }
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -92,6 +232,8 @@ function App() {
   async function handleLogout() {
     await supabase.auth.signOut();
     setSession(null);
+    setUserNation(null);
+    setShowNationModal(false);
   }
 
   return (
@@ -191,6 +333,32 @@ function App() {
 
       {error && <div className="error-box">{error}</div>}
 
+      {showNationModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Create Your Nation</h2>
+            <input
+              type="text"
+              placeholder="Nation Name"
+              value={nationName}
+              onChange={(e) => setNationName(e.target.value)}
+              className="input"
+            />
+            <label>
+              Pick Nation Color:{' '}
+              <input
+                type="color"
+                value={nationColor}
+                onChange={(e) => setNationColor(e.target.value)}
+              />
+            </label>
+            <button className="button" onClick={handleStartGame}>
+              Start Game
+            </button>
+          </div>
+        </div>
+      )}
+
       {tiles && tiles.length > 0 && (
         <div className="map-scroll-container">
           <div className="map-grid">
@@ -201,6 +369,7 @@ function App() {
                 title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
                   tile.resource || 'None'
                 }, Owner: ${tile.owner || 'None'}`}
+                style={{ borderColor: tile.is_capital ? 'yellow' : undefined, borderWidth: tile.is_capital ? 2 : 0, borderStyle: 'solid' }}
               />
             ))}
           </div>
