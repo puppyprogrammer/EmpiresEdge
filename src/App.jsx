@@ -8,10 +8,7 @@ const supabaseKey =
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 function App() {
-  // Ref for the scroll container to control scroll position
   const mapScrollRef = useRef(null);
-
-  // Tile size in px, adjust if different in your CSS
   const TILE_SIZE = 32;
 
   const [tiles, setTiles] = useState(null);
@@ -29,7 +26,6 @@ function App() {
   const [userNation, setUserNation] = useState(null);
 
   useEffect(() => {
-    // Force sign out on app load to clear stale sessions
     supabase.auth.signOut().then(() => {
       setSession(null);
       setUserNation(null);
@@ -50,20 +46,7 @@ function App() {
       }
     });
 
-    // Initialize tiles array
-    const sampleTiles = [];
-    for (let i = 0; i < 10000; i++) {
-      sampleTiles.push({
-        id: i,
-        x: Math.floor(i / 100),
-        y: i % 100,
-        type: i % 3 === 0 ? 'grass' : i % 3 === 1 ? 'forest' : 'mountain',
-        resource: null,
-        owner: null,
-        is_capital: false,
-      });
-    }
-    setTiles(sampleTiles);
+    fetchTiles();
 
     return () => {
       subscription.unsubscribe();
@@ -73,7 +56,6 @@ function App() {
   useEffect(() => {
     if (!userNation || !tiles || !mapScrollRef.current) return;
 
-    // Find capital tile (must match userNation coordinates and flagged is_capital)
     const capitalTile = tiles.find(
       (t) =>
         t.x === userNation.capital_tile_x &&
@@ -83,28 +65,43 @@ function App() {
     if (!capitalTile) return;
 
     const container = mapScrollRef.current;
-
-    // Calculate pixel position (y is horizontal axis, x is vertical)
     const capitalPixelX = capitalTile.y * TILE_SIZE;
     const capitalPixelY = capitalTile.x * TILE_SIZE;
 
-    // Center scroll container on capital tile
     container.scrollTo({
       left: capitalPixelX - container.clientWidth / 2 + TILE_SIZE / 2,
       top: capitalPixelY - container.clientHeight / 2 + TILE_SIZE / 2,
       behavior: 'smooth',
     });
 
-    // Highlight the capital tile after scrolling
     const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
     if (tileEl) {
       tileEl.classList.add('capital-highlight');
       setTimeout(() => {
         tileEl.classList.remove('capital-highlight');
-      }, 1500); // duration matches CSS animation
+      }, 1500);
     }
   }, [userNation, tiles]);
 
+  async function fetchTiles() {
+    try {
+      const { data, error } = await supabase
+        .from('tiles')
+        .select('id, x, y, type, resource, owner, is_capital')
+        .order('x', { ascending: true })
+        .order('y', { ascending: true });
+
+      if (error) {
+        setError('Failed to fetch tiles: ' + error.message);
+        setTiles([]);
+      } else {
+        setTiles(data);
+      }
+    } catch (err) {
+      setError('Error fetching tiles: ' + err.message);
+      setTiles([]);
+    }
+  }
 
   async function checkUserNation(userId) {
     try {
@@ -151,25 +148,6 @@ function App() {
 
     const idx = Math.floor(Math.random() * candidates.length);
     return candidates[idx];
-  }
-
-  function assignNationTiles(capitalTile, nationId) {
-    const updatedTiles = [...tiles];
-    const capitalIdx = updatedTiles.findIndex((t) => t.id === capitalTile.id);
-
-    if (capitalIdx === -1) return;
-
-    updatedTiles[capitalIdx].owner = nationId;
-    updatedTiles[capitalIdx].is_capital = true;
-
-    updatedTiles.forEach((tile) => {
-      const dist = Math.abs(tile.x - capitalTile.x) + Math.abs(tile.y - capitalTile.y);
-      if (dist <= 1) {
-        tile.owner = nationId;
-      }
-    });
-
-    setTiles(updatedTiles);
   }
 
   async function handleStartGame() {
@@ -233,7 +211,7 @@ function App() {
         }
       }
 
-      assignNationTiles(capitalTile, nationData.id);
+      fetchTiles();
 
       setUserNation(nationData);
       setShowNationModal(false);
@@ -413,12 +391,11 @@ function App() {
             {tiles.map((tile) => (
               <div
                 key={tile.id}
-                className={`tile ${tile.type} ${tile.is_capital ? "capital-highlight" : ""}`}
+                className={`tile ${tile.type} ${tile.is_capital ? 'capital-highlight' : ''}`}
                 data-x={tile.x}
                 data-y={tile.y}
-                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}`}
+                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
               />
-
             ))}
           </div>
         </div>
