@@ -49,28 +49,36 @@ function App() {
       )}
 
       {tiles && tiles.length > 0 && (
-        <>
-          <div className="text-green-300 text-sm">Loaded {tiles.length} tiles.</div>
+  <>
+    <div className="text-green-300 text-sm">Loaded {tiles.length} tiles.</div>
+    <div
+      className="overflow-auto border border-gray-700"
+      style={{ width: '800px', height: '800px' }}
+    >
+      <div
+        className="grid gap-0.5"
+        style={{
+          gridTemplateColumns: 'repeat(100, 1fr)', // force 100 cols
+        }}
+      >
+        {tiles.map(tile => (
           <div
-            className="grid grid-cols-10 gap-0.5 border border-gray-700 p-1"
-            style={{ width: '500px', height: '500px', overflow: 'auto' }}
-          >
-            {tiles.map(tile => (
-              <div
-                key={tile.id}
-                className={`w-10 h-10 ${
-                  tile.type === 'grass'
-                    ? 'bg-green-500'
-                    : tile.type === 'forest'
-                    ? 'bg-green-700'
-                    : 'bg-gray-500'
-                }`}
-                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
-              />
-            ))}
-          </div>
-        </>
-      )}
+            key={tile.id}
+            className={`w-8 h-8 ${
+              tile.type === 'grass'
+                ? 'bg-green-500'
+                : tile.type === 'forest'
+                ? 'bg-green-700'
+                : 'bg-gray-500'
+            }`}
+            title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
+          />
+        ))}
+      </div>
+    </div>
+  </>
+)}
+
     </div>
   );
 }
