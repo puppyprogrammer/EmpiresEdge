@@ -8,49 +8,68 @@ const supabase = createClient(
 );
 
 function App() {
-  const [tiles, setTiles] = useState([]);
+  const [tiles, setTiles] = useState(null); // null = loading
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchTiles = async () => {
-      const { data, error } = await supabase
-        .from('tiles')
-        .select('id, x, y, type, resource, owner');
+      try {
+        const { data, error } = await supabase
+          .from('tiles')
+          .select('id, x, y, type, resource, owner');
 
-      if (error) {
-        console.error('Error fetching tiles:', error);
-        setError('Unable to load map. Database error.');
-      } else {
-        setTiles(data || []);
+        if (error) {
+          setError('Supabase error: ' + error.message);
+        } else if (!data || data.length === 0) {
+          setError('No tiles returned. Check if Supabase "tiles" table has rows and is publicly readable.');
+          setTiles([]);
+        } else {
+          setTiles(data);
+        }
+      } catch (err) {
+        setError('Unexpected fetch error: ' + err.message);
       }
     };
+
     fetchTiles();
   }, []);
 
   return (
-    <div className="flex flex-col justify-center items-center h-screen bg-gray-800 p-4">
-      <h1 className="text-3xl font-bold text-white mb-4">Empire’s Edge</h1>
+    <div className="flex flex-col justify-center items-center h-screen bg-gray-800 text-white p-4 space-y-4">
+      <h1 className="text-3xl font-bold">Empire’s Edge</h1>
 
-      {error ? (
-        <div className="text-red-400 text-lg bg-red-950 p-4 rounded-xl border border-red-600">
+      {tiles === null && !error && (
+        <div className="text-yellow-400 text-lg">Loading map data...</div>
+      )}
+
+      {error && (
+        <div className="text-red-400 text-lg bg-red-950 p-4 rounded-xl border border-red-600 max-w-lg">
           {error}
         </div>
-      ) : (
-        <div className="grid grid-cols-10 gap-0.5" style={{ width: '500px', height: '500px' }}>
-          {tiles.map(tile => (
-            <div
-              key={tile.id}
-              className={`w-20 h-20 ${
-                tile.type === 'grass'
-                  ? 'bg-green-500'
-                  : tile.type === 'forest'
-                  ? 'bg-green-700'
-                  : 'bg-gray-500'
-              }`}
-              title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
-            ></div>
-          ))}
-        </div>
+      )}
+
+      {tiles && tiles.length > 0 && (
+        <>
+          <div className="text-green-300 text-sm">Loaded {tiles.length} tiles.</div>
+          <div
+            className="grid grid-cols-10 gap-0.5 border border-gray-700 p-1"
+            style={{ width: '500px', height: '500px', overflow: 'auto' }}
+          >
+            {tiles.map(tile => (
+              <div
+                key={tile.id}
+                className={`w-10 h-10 ${
+                  tile.type === 'grass'
+                    ? 'bg-green-500'
+                    : tile.type === 'forest'
+                    ? 'bg-green-700'
+                    : 'bg-gray-500'
+                }`}
+                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
