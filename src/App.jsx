@@ -3,36 +3,22 @@ import { createClient } from '@supabase/supabase-js';
 import './index.css';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
-const supabaseKey =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 function App() {
-  // Map state
   const [tiles, setTiles] = useState(null);
   const [error, setError] = useState(null);
-
-  // Auth state
   const [session, setSession] = useState(null);
-
-  // UI state for showing register or login forms
   const [showRegister, setShowRegister] = useState(false);
-
-  // Login form inputs
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-
-  // Register form inputs
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerUsername, setRegisterUsername] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
-
-  // Nation creation popup
   const [showNationModal, setShowNationModal] = useState(false);
   const [nationName, setNationName] = useState('');
-  const [nationColor, setNationColor] = useState('#2563eb'); // default blue
-
-  // Store user's nation if any
+  const [nationColor, setNationColor] = useState('#2563eb');
   const [userNation, setUserNation] = useState(null);
 
   useEffect(() => {
@@ -50,7 +36,6 @@ function App() {
       }
     });
 
-    // Load tiles (dummy sample for now)
     const sampleTiles = [];
     for (let i = 0; i < 10000; i++) {
       sampleTiles.push({
@@ -70,16 +55,15 @@ function App() {
     };
   }, []);
 
-  // Check if logged-in user has a nation
   async function checkUserNation(userId) {
     try {
       const { data, error } = await supabase
         .from('nations')
         .select('*')
-        .eq('owner', userId)
+        .eq('owner_id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+      if (error && error.code !== 'PGRST116') {
         setError(error.message);
         return;
       }
@@ -88,7 +72,6 @@ function App() {
         setUserNation(data);
         setShowNationModal(false);
       } else {
-        // No nation found — show nation creation modal
         setUserNation(null);
         setShowNationModal(true);
       }
@@ -97,48 +80,39 @@ function App() {
     }
   }
 
-  // Get tiles within distance of a given tile (manhattan distance)
   function tilesWithinDistance(centerTile, distance, tilesArr) {
     return tilesArr.filter(
-      (t) =>
-        Math.abs(t.x - centerTile.x) + Math.abs(t.y - centerTile.y) <= distance
+      (t) => Math.abs(t.x - centerTile.x) + Math.abs(t.y - centerTile.y) <= distance
     );
   }
 
-  // Find a random tile for capital at least 3 tiles from any capital
   function findCapitalTile() {
     const capitalTiles = tiles.filter((t) => t.is_capital);
     const minDistance = 3;
 
     const candidates = tiles.filter((tile) => {
       return capitalTiles.every(
-        (cap) =>
-          Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
+        (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
       );
     });
 
     if (candidates.length === 0) return null;
 
-    // Randomly pick one candidate tile
     const idx = Math.floor(Math.random() * candidates.length);
     return candidates[idx];
   }
 
-  // Assign ownership to capital tile + neighbors within 1 tile radius
   function assignNationTiles(capitalTile, nationId) {
     const updatedTiles = [...tiles];
     const capitalIdx = updatedTiles.findIndex((t) => t.id === capitalTile.id);
 
     if (capitalIdx === -1) return;
 
-    // Mark capital tile
     updatedTiles[capitalIdx].owner = nationId;
     updatedTiles[capitalIdx].is_capital = true;
 
-    // Surrounding tiles radius 1 (8 neighbors + self)
     updatedTiles.forEach((tile) => {
-      const dist =
-        Math.abs(tile.x - capitalTile.x) + Math.abs(tile.y - capitalTile.y);
+      const dist = Math.abs(tile.x - capitalTile.x) + Math.abs(tile.y - capitalTile.y);
       if (dist <= 1) {
         tile.owner = nationId;
       }
@@ -154,7 +128,6 @@ function App() {
     }
     setError(null);
 
-    // Find capital tile
     const capitalTile = findCapitalTile();
     if (!capitalTile) {
       setError('No available tile to place capital.');
@@ -162,15 +135,15 @@ function App() {
     }
 
     try {
-      // Insert new nation
       const { data: nationData, error: insertError } = await supabase
         .from('nations')
         .insert([
           {
             name: nationName.trim(),
             color: nationColor,
-            owner: session.user.id,
-            capital_tile_id: capitalTile.id,
+            owner_id: session.user.id,
+            capital_tile_x: capitalTile.x,
+            capital_tile_y: capitalTile.y,
           },
         ])
         .select()
@@ -181,10 +154,7 @@ function App() {
         return;
       }
 
-      // Assign ownership on tiles
       assignNationTiles(capitalTile, nationData.id);
-
-      // Hide modal and set user nation state
       setUserNation(nationData);
       setShowNationModal(false);
       setNationName('');
@@ -214,9 +184,7 @@ function App() {
       email: registerEmail,
       password: registerPassword,
       options: {
-        data: {
-          username: registerUsername,
-        },
+        data: { username: registerUsername },
       },
     });
     if (error) setError(error.message);
@@ -225,7 +193,7 @@ function App() {
       setRegisterEmail('');
       setRegisterPassword('');
       setRegisterUsername('');
-      setShowRegister(false); // Switch back to login after register
+      setShowRegister(false);
     }
   }
 
@@ -243,79 +211,20 @@ function App() {
 
         {!session && !showRegister && (
           <form className="login-form" onSubmit={handleLogin}>
-            <input
-              type="email"
-              placeholder="Email"
-              className="input"
-              value={loginEmail}
-              onChange={(e) => setLoginEmail(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              className="input"
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              required
-            />
-            <button type="submit" className="button">
-              LOGIN
-            </button>
-            <button
-              type="button"
-              className="button"
-              onClick={() => {
-                setShowRegister(true);
-                setError(null);
-              }}
-              style={{ marginLeft: '0.5rem' }}
-            >
-              REGISTER
-            </button>
+            <input type="email" placeholder="Email" className="input" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
+            <input type="password" placeholder="Password" className="input" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
+            <button type="submit" className="button">LOGIN</button>
+            <button type="button" className="button" onClick={() => { setShowRegister(true); setError(null); }} style={{ marginLeft: '0.5rem' }}>REGISTER</button>
           </form>
         )}
 
         {!session && showRegister && (
           <form className="login-form" onSubmit={handleRegister}>
-            <input
-              type="email"
-              placeholder="Email"
-              className="input"
-              value={registerEmail}
-              onChange={(e) => setRegisterEmail(e.target.value)}
-              required
-            />
-            <input
-              type="text"
-              placeholder="Username"
-              className="input"
-              value={registerUsername}
-              onChange={(e) => setRegisterUsername(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              className="input"
-              value={registerPassword}
-              onChange={(e) => setRegisterPassword(e.target.value)}
-              required
-            />
-            <button type="submit" className="button">
-              REGISTER
-            </button>
-            <button
-              type="button"
-              className="button"
-              onClick={() => {
-                setShowRegister(false);
-                setError(null);
-              }}
-              style={{ marginLeft: '0.5rem' }}
-            >
-              BACK TO LOGIN
-            </button>
+            <input type="email" placeholder="Email" className="input" value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} required />
+            <input type="text" placeholder="Username" className="input" value={registerUsername} onChange={(e) => setRegisterUsername(e.target.value)} required />
+            <input type="password" placeholder="Password" className="input" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} required />
+            <button type="submit" className="button">REGISTER</button>
+            <button type="button" className="button" onClick={() => { setShowRegister(false); setError(null); }} style={{ marginLeft: '0.5rem' }}>BACK TO LOGIN</button>
           </form>
         )}
 
@@ -324,9 +233,7 @@ function App() {
             <span className="username">
               {session.user.user_metadata?.username || session.user.email}
             </span>
-            <button className="button" onClick={handleLogout}>
-              LOGOUT
-            </button>
+            <button className="button" onClick={handleLogout}>LOGOUT</button>
           </div>
         )}
       </header>
@@ -337,24 +244,12 @@ function App() {
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Create Your Nation</h2>
-            <input
-              type="text"
-              placeholder="Nation Name"
-              value={nationName}
-              onChange={(e) => setNationName(e.target.value)}
-              className="input"
-            />
+            <input type="text" placeholder="Nation Name" value={nationName} onChange={(e) => setNationName(e.target.value)} className="input" />
             <label>
               Pick Nation Color:{' '}
-              <input
-                type="color"
-                value={nationColor}
-                onChange={(e) => setNationColor(e.target.value)}
-              />
+              <input type="color" value={nationColor} onChange={(e) => setNationColor(e.target.value)} />
             </label>
-            <button className="button" onClick={handleStartGame}>
-              Start Game
-            </button>
+            <button className="button" onClick={handleStartGame}>Start Game</button>
           </div>
         </div>
       )}
@@ -366,19 +261,19 @@ function App() {
               <div
                 key={tile.id}
                 className={`tile ${tile.type}`}
-                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
-                  tile.resource || 'None'
-                }, Owner: ${tile.owner || 'None'}`}
-                style={{ borderColor: tile.is_capital ? 'yellow' : undefined, borderWidth: tile.is_capital ? 2 : 0, borderStyle: 'solid' }}
+                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
+                style={{
+                  borderColor: tile.is_capital ? 'yellow' : undefined,
+                  borderWidth: tile.is_capital ? 2 : 0,
+                  borderStyle: 'solid',
+                }}
               />
             ))}
           </div>
         </div>
       )}
 
-      {tiles === null && !error && (
-        <div className="loading-message">Loading map data...</div>
-      )}
+      {tiles === null && !error && <div className="loading-message">Loading map data...</div>}
     </div>
   );
 }
