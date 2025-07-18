@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef } from 'react'; // Removed useLayoutEffect
 import { createClient } from '@supabase/supabase-js';
 import './index.css';
 
@@ -85,7 +85,7 @@ function App() {
     }
   }, [userNation, tiles]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!tiles || !mapScrollRef.current) {
       console.log('Tiles not loaded or container ref is null');
       return;
@@ -96,7 +96,7 @@ function App() {
 
     const handleMouseDown = (e) => {
       if (e.button === 0) { // Left click
-        console.log('Mouse down at:', e.pageX, e.pageY);
+        console.log('Mouse down at:', e.pageX, e.pageY, 'isDragging:', isDragging);
         setIsDragging(true);
         setStartX(e.pageX - container.offsetLeft);
         setStartY(e.pageY - container.offsetTop);
@@ -106,6 +106,7 @@ function App() {
     };
 
     const handleMouseMove = (e) => {
+      console.log('Mouse move, isDragging:', isDragging); // Debug isDragging state
       if (!isDragging) return;
 
       console.log('Dragging, scroll:', container.scrollLeft, container.scrollTop);
@@ -123,7 +124,7 @@ function App() {
 
     const handleMouseUpOrLeave = () => {
       if (isDragging) {
-        console.log('Mouse up or leave');
+        console.log('Mouse up or leave, isDragging:', isDragging);
         setIsDragging(false);
       }
     };
@@ -139,7 +140,7 @@ function App() {
       container.removeEventListener('mouseup', handleMouseUpOrLeave);
       container.removeEventListener('mouseleave', handleMouseUpOrLeave);
     };
-  }, [tiles]); // Depend on tiles to re-run when map is ready
+  }, [tiles, isDragging]); // Depend on tiles and isDragging
 
   async function fetchTiles() {
     try {
