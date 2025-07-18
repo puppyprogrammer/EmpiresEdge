@@ -471,7 +471,6 @@ function App() {
 
       {tiles && tiles.length > 0 && (
         <div>
-          <div>Rendered tiles: {tiles.length}</div>
           <div className="map-scroll-container" ref={mapScrollRef}>
             <div className="map-grid">
               {tiles.map((tile) => (
