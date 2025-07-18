@@ -78,12 +78,6 @@ html {
   background-color: #1d4ed8;
 }
 
-.divider {
-  color: #9ca3af;
-  padding: 0 0.5rem;
-  font-weight: normal;
-}
-
 /* Logged-in user info */
 .user-info {
   display: flex;
@@ -109,32 +103,20 @@ html {
   margin: 1rem auto;
 }
 
-.map-scroll-container:active {
-  cursor: grabbing; /* Change cursor during drag */
-}
-
-/* Ensure container captures events */
-.map-scroll-container {
-  pointer-events: auto;
-}
-
 /* Map area */
 .map-scroll-container {
   flex: 1;
-  overflow: auto; /* Changed from hidden to auto */
+  overflow: auto; /* Enable scrolling */
   width: 100%;
   height: calc(100vh - 60px);
   padding: 8px;
   box-sizing: border-box;
   position: relative;
-  scroll-behavior: smooth;
-  touch-action: none;
-  cursor: grab;
-  z-index: 0;
+  cursor: grab; /* Default cursor */
 }
 
 .map-scroll-container:active {
-  cursor: grabbing;
+  cursor: grabbing; /* Cursor during drag */
 }
 
 /* Map grid */
@@ -147,8 +129,6 @@ html {
   height: 3398px; /* (100 * 32px) + (99 * 2px) */
   margin: auto;
   box-sizing: content-box;
-  pointer-events: none;
-  will-change: transform; /* Optimize rendering */
 }
 
 /* Tile styles */
@@ -158,8 +138,6 @@ html {
   border-radius: 4px;
   box-sizing: border-box;
   transition: box-shadow 0.2s ease, border 0.2s ease;
-  pointer-events: auto;
-  backface-visibility: hidden; /* Reduce repaint cost */
 }
 
 .tile.grass {
@@ -174,12 +152,11 @@ html {
   background-color: #6b7280;
 }
 
-/* Highlight capital tile using a dedicated class */
+/* Highlight capital tile */
 .tile.capital-highlight {
   border: 2px solid gold;
   box-shadow: 0 0 15px 6px gold;
   animation: glow 1.5s ease-in-out infinite;
-  z-index: 1;
   position: relative;
 }
 

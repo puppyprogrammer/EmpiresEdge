@@ -7,18 +7,6 @@ const supabaseKey =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Throttle function to limit event frequency
-const throttle = (func, limit) => {
-  let inThrottle;
-  return function (...args) {
-    if (!inThrottle) {
-      func.apply(this, args);
-      inThrottle = true;
-      setTimeout(() => (inThrottle = false), limit);
-    }
-  };
-};
-
 function App() {
   const mapScrollRef = useRef(null);
   const TILE_SIZE = 32;
@@ -85,8 +73,8 @@ function App() {
     const capitalPixelY = capitalTile.x * TILE_SIZE;
 
     container.scrollTo({
-      left: capitalPixelX - container.clientWidth / 2 + TILE_SIZE / 2,
-      top: capitalPixelY - container.clientHeight / 2 + TILE_SIZE / 2,
+      left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
+      top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
       behavior: 'smooth',
     });
 
@@ -109,36 +97,34 @@ function App() {
       if (e.button === 0) {
         console.log('Mouse down at:', e.pageX, e.pageY, 'isDragging:', isDragging);
         setIsDragging(true);
-        setStartX(e.pageX - container.offsetLeft);
-        setStartY(e.pageY - container.offsetTop);
+        setStartX(e.pageX - container.scrollLeft);
+        setStartY(e.pageY - container.scrollTop);
         e.preventDefault();
         e.stopPropagation();
       }
     };
 
-    const handleMouseMove = throttle((e) => {
+    const handleMouseMove = (e) => {
       if (!isDragging) {
         console.log('Mouse move, isDragging:', isDragging);
         return;
       }
 
       console.log('Dragging, scroll:', container.scrollLeft, container.scrollTop);
-      const currentX = e.pageX - container.offsetLeft;
-      const currentY = e.pageY - container.offsetTop;
-      const diffX = currentX - startX;
-      const diffY = currentY - startY;
+      const diffX = e.pageX - startX;
+      const diffY = e.pageY - startY;
 
-      container.scrollLeft -= diffX; // Natural drag direction
-      container.scrollTop -= diffY;  // Natural drag direction
+      container.scrollLeft -= diffX;
+      container.scrollTop -= diffY;
 
-      setStartX(currentX);
-      setStartY(currentY);
-    }, 32); // Increased to 32ms for 30fps to reduce load
+      setStartX(e.pageX - container.scrollLeft);
+      setStartY(e.pageY - container.scrollTop);
+    };
 
     const handleMouseUpOrLeave = () => {
       if (isDragging) {
         console.log('Mouse up or leave, isDragging:', isDragging);
-        setIsDragging(false); // Ensure state resets
+        setIsDragging(false);
       }
     };
 
@@ -153,7 +139,7 @@ function App() {
       container.removeEventListener('mouseup', handleMouseUpOrLeave);
       container.removeEventListener('mouseleave', handleMouseUpOrLeave);
     };
-  }, [tiles]); // Removed isDragging from dependencies
+  }, [tiles]); // Only re-run on tiles change
 
   async function fetchTiles() {
     try {
