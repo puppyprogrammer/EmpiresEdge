@@ -95,4 +95,61 @@ function App() {
               placeholder="Password"
               className="input"
               value={password}
-              onChange={e => setPassword(e.t
+              onChange={e => setPassword(e.target.value)}
+              disabled={loadingAuth}
+            />
+            <button
+              type="button"
+              className="button"
+              onClick={handleLogin}
+              disabled={loadingAuth}
+            >
+              LOGIN
+            </button>
+            <span className="divider">|</span>
+            <button
+              type="button"
+              className="button"
+              onClick={handleRegister}
+              disabled={loadingAuth}
+            >
+              REGISTER
+            </button>
+          </form>
+        ) : (
+          <div className="user-info">
+            <span className="username">{session.user.email}</span>
+            <button className="button" onClick={handleLogout}>
+              LOGOUT
+            </button>
+          </div>
+        )}
+      </header>
+
+      {authError && <div className="error-box">{authError}</div>}
+      {error && <div className="error-box">{error}</div>}
+
+      {tiles && tiles.length > 0 && (
+        <div className="map-scroll-container">
+          <div className="map-grid">
+            {tiles.map((tile) => (
+              <div
+                key={tile.id}
+                className={`tile ${tile.type}`}
+                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
+                  tile.resource || 'None'
+                }, Owner: ${tile.owner || 'None'}`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tiles === null && !error && (
+        <div className="loading-message">Loading map data...</div>
+      )}
+    </div>
+  );
+}
+
+export default App;
