@@ -1,13 +1,27 @@
 import { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import './index.css';
+
+// Hardcoded Supabase credentials — **only safe if you use RLS on your tables!**
+const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 function App() {
   const [tiles, setTiles] = useState(null);
   const [error, setError] = useState(null);
 
+  const [session, setSession] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loadingAuth, setLoadingAuth] = useState(false);
+  const [authError, setAuthError] = useState(null);
+
   useEffect(() => {
-    // For test, hardcode some tiles or fetch real data here
+    // Load tiles data (replace with your real fetch later)
     const sampleTiles = [];
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 10000; i++) {
       sampleTiles.push({
         id: i,
         x: Math.floor(i / 100),
@@ -18,100 +32,67 @@ function App() {
       });
     }
     setTiles(sampleTiles);
+
+    // Get current session
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+
+    // Listen to auth changes
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
-  const getTileStyle = (type) => {
-    let bgColor;
-    switch (type) {
-      case 'grass':
-        bgColor = '#22c55e';
-        break;
-      case 'forest':
-        bgColor = '#166534';
-        break;
-      default:
-        bgColor = '#6b7280';
-    }
-    return {
-      width: '32px',
-      height: '32px',
-      backgroundColor: bgColor,
-    };
+  const handleRegister = async () => {
+    setLoadingAuth(true);
+    setAuthError(null);
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) setAuthError(error.message);
+    else alert('Check your email for confirmation.');
+    setLoadingAuth(false);
+  };
+
+  const handleLogin = async () => {
+    setLoadingAuth(true);
+    setAuthError(null);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) setAuthError(error.message);
+    setLoadingAuth(false);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+    setEmail('');
+    setPassword('');
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        backgroundColor: '#1f2937',
-        color: 'white',
-        padding: '16px',
-      }}
-    >
-      <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>Empire’s Edge</h1>
+    <div className="app-container">
+      <header className="app-header">
+        <div className="header-title">Empire’s Edge</div>
 
-      {tiles === null && !error && (
-        <div style={{ color: '#facc15', fontSize: '1.125rem' }}>
-          Loading map data...
-        </div>
-      )}
-
-      {error && (
-        <div
-          style={{
-            color: '#f87171',
-            backgroundColor: '#4b0000',
-            padding: '1rem',
-            borderRadius: '0.75rem',
-            border: '1px solid #dc2626',
-            maxWidth: '32rem',
-            fontSize: '1.125rem',
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      {tiles && tiles.length > 0 && (
-        <>
-          <div style={{ color: '#86efac', fontSize: '0.875rem' }}>
-            Loaded {tiles.length} tiles.
-          </div>
-          <div
-            style={{
-              overflow: 'auto',
-              border: '1px solid #374151',
-              width: '800px',
-              height: '800px',
-              marginTop: '8px',
-            }}
+        {!session ? (
+          <form
+            className="login-form"
+            onSubmit={e => e.preventDefault()}
           >
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(100, 1fr)',
-                gap: '2px',
-              }}
-            >
-              {tiles.map((tile) => (
-                <div
-                  key={tile.id}
-                  style={getTileStyle(tile.type)}
-                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
-                    tile.resource || 'None'
-                  }, Owner: ${tile.owner || 'None'}`}
-                />
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-export default App;
+            <input
+              type="email"
+              placeholder="Email"
+              className="input"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              disabled={loadingAuth}
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              className="input"
+              value={password}
+              onChange={e => setPassword(e.t

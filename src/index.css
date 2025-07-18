@@ -1,129 +1,157 @@
-/* custom global styles here */
-
-body {
+/* Base layout */
+body, html {
   margin: 0;
-  background-color: #1f2937; /* Tailwind's gray-800 equivalent */
+  padding: 0;
+  background-color: #1f2937;
   color: white;
-  font-family: system-ui, sans-serif;
-}
-
-/* Utility classes for your tiles */
-.w-8 {
-  width: 2rem; /* 8 * 0.25rem */
-}
-
-.h-8 {
-  height: 2rem;
-}
-
-/* Background colors */
-.bg-green-500 {
-  background-color: #22c55e; /* Tailwind green-500 */
-}
-
-.bg-green-700 {
-  background-color: #15803d; /* Tailwind green-700 */
-}
-
-.bg-gray-500 {
-  background-color: #6b7280; /* Tailwind gray-500 */
-}
-
-/* Additional styles you were using */
-.flex {
-  display: flex;
-}
-
-.flex-col {
-  flex-direction: column;
-}
-
-.justify-center {
-  justify-content: center;
-}
-
-.items-center {
-  align-items: center;
-}
-
-.h-screen {
+  font-family: sans-serif;
   height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
 
-.p-4 {
-  padding: 1rem;
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
 }
 
-.space-y-4 > * + * {
-  margin-top: 1rem;
+/* Header layout */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  background-color: #111827;
+  border-bottom: 1px solid #374151;
+  gap: 1rem;
 }
 
-.text-3xl {
-  font-size: 1.875rem;
-  line-height: 2.25rem;
-  font-weight: 700;
-}
-
-.font-bold {
-  font-weight: 700;
-}
-
-.text-yellow-400 {
+.header-title {
+  flex-shrink: 0;
+  white-space: nowrap;
   color: #facc15;
 }
 
-.text-lg {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
+/* Login form styles */
+.login-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-grow: 1;
+  justify-content: flex-end;
 }
 
-.text-red-400 {
+.input {
+  background-color: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  color: white;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  outline-offset: 2px;
+  transition: border-color 0.2s ease;
+}
+
+.input:focus {
+  border-color: #2563eb;
+}
+
+/* Buttons */
+.button {
+  background-color: #2563eb;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+}
+
+.button:hover {
+  background-color: #1d4ed8;
+}
+
+.divider {
+  color: #9ca3af;
+  padding: 0 0.5rem;
+  font-weight: normal;
+}
+
+/* Logged-in user info */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 1rem;
+}
+
+.username {
+  font-weight: bold;
+  color: #38bdf8;
+}
+
+/* Error box styling */
+.error-box {
   color: #f87171;
-}
-
-.bg-red-950 {
   background-color: #4b0000;
-}
-
-.rounded-xl {
+  padding: 1rem;
   border-radius: 0.75rem;
-}
-
-.border {
-  border: 1px solid currentColor;
-}
-
-.border-red-600 {
-  border-color: #dc2626;
-}
-
-.max-w-lg {
+  border: 1px solid #dc2626;
   max-width: 32rem;
+  font-size: 1.125rem;
+  margin: 1rem auto;
 }
 
-.text-green-300 {
-  color: #86efac;
-}
-
-.text-sm {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-}
-
-.border-gray-700 {
-  border-color: #374151;
-}
-
-.grid {
-  display: grid;
-  gap: 0.125rem; /* 0.5 * 0.25rem */
-}
-
-/* Custom grid template columns for your map */
-.grid-100-cols {
-  grid-template-columns: repeat(100, 1fr);
-}
-
-.overflow-auto {
+/* Map area */
+.map-scroll-container {
+  flex: 1;
   overflow: auto;
+  /* Use full available width and height */
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(100, 32px);
+  grid-auto-rows: 32px;
+  gap: 2px;
+  width: fit-content;
+  margin: auto;
+}
+
+/* Tile styles */
+.tile {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.tile.grass {
+  background-color: #22c55e;
+}
+
+.tile.forest {
+  background-color: #166534;
+}
+
+.tile.mountain {
+  background-color: #6b7280;
+}
+
+/* Loading */
+.loading-message {
+  padding: 1rem;
+  font-size: 1rem;
+  color: #facc15;
+  text-align: center;
 }
