@@ -34,6 +34,17 @@ function App() {
     fetchTiles();
   }, []);
 
+  const getTileClass = (type) => {
+    switch (type) {
+      case 'grass':
+        return 'w-8 h-8 bg-green-500';
+      case 'forest':
+        return 'w-8 h-8 bg-green-700';
+      default:
+        return 'w-8 h-8 bg-gray-500';
+    }
+  };
+
   return (
     <div className="flex flex-col justify-center items-center h-screen bg-gray-800 text-white p-4 space-y-4">
       <h1 className="text-3xl font-bold">Empire’s Edge</h1>
@@ -49,36 +60,29 @@ function App() {
       )}
 
       {tiles && tiles.length > 0 && (
-  <>
-    <div className="text-green-300 text-sm">Loaded {tiles.length} tiles.</div>
-    <div
-      className="overflow-auto border border-gray-700"
-      style={{ width: '800px', height: '800px' }}
-    >
-      <div
-        className="grid gap-0.5"
-        style={{
-          gridTemplateColumns: 'repeat(100, 1fr)', // force 100 cols
-        }}
-      >
-        {tiles.map(tile => (
+        <>
+          <div className="text-green-300 text-sm">Loaded {tiles.length} tiles.</div>
           <div
-            key={tile.id}
-            className={`w-8 h-8 ${
-              tile.type === 'grass'
-                ? 'bg-green-500'
-                : tile.type === 'forest'
-                ? 'bg-green-700'
-                : 'bg-gray-500'
-            }`}
-            title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
-          />
-        ))}
-      </div>
-    </div>
-  </>
-)}
-
+            className="overflow-auto border border-gray-700"
+            style={{ width: '800px', height: '800px' }}
+          >
+            <div
+              className="grid gap-0.5"
+              style={{
+                gridTemplateColumns: 'repeat(100, 1fr)', // 100 columns
+              }}
+            >
+              {tiles.map((tile) => (
+                <div
+                  key={tile.id}
+                  className={getTileClass(tile.type)}
+                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
+                />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
