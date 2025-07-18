@@ -23,11 +23,13 @@ function App() {
   const [userNation, setUserNation] = useState(null);
 
   useEffect(() => {
+    // Check existing session on mount
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session) checkUserNation(data.session.user.id);
     });
 
+    // Listen for auth state changes
     const { subscription } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) checkUserNation(session.user.id);
@@ -37,7 +39,7 @@ function App() {
       }
     });
 
-    // Load sample tiles into state for UI
+    // Initialize sample tiles for UI
     const sampleTiles = [];
     for (let i = 0; i < 10000; i++) {
       sampleTiles.push({
@@ -89,6 +91,7 @@ function App() {
   }
 
   function findCapitalTile() {
+    if (!tiles) return null;
     const capitalTiles = tiles.filter((t) => t.is_capital);
     const minDistance = 3;
 
@@ -106,6 +109,7 @@ function App() {
 
   // Update local tiles state to reflect new ownership & capital
   function assignNationTiles(capitalTile, nationId) {
+    if (!tiles) return;
     const updatedTiles = [...tiles];
     const capitalIdx = updatedTiles.findIndex((t) => t.id === capitalTile.id);
 
@@ -370,9 +374,9 @@ function App() {
               <div
                 key={tile.id}
                 className={`tile ${tile.type}`}
-                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${
-                  tile.owner || 'None'
-                }`}
+                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
+                  tile.resource || 'None'
+                }, Owner: ${tile.owner || 'None'}`}
                 style={{
                   borderColor: tile.is_capital ? 'yellow' : undefined,
                   borderWidth: tile.is_capital ? 2 : 0,
