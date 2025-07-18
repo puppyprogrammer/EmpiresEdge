@@ -104,6 +104,7 @@ function App() {
 
       container.scrollLeft += diffX; // Invert by adding instead of subtracting
       container.scrollTop += diffY;  // Invert by adding instead of subtracting
+      console.log('Dragging', container.scrollLeft, container.scrollTop)
 
       setStartX(currentX);
       setStartY(currentY);
