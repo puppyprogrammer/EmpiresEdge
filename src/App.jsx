@@ -95,6 +95,7 @@ function App() {
         setError('Failed to fetch tiles: ' + error.message);
         setTiles([]);
       } else {
+        console.log('Number of tiles fetched:', data.length); // Add this line
         setTiles(data);
       }
     } catch (err) {
