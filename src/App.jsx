@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'; // Removed useLayoutEffect
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import './index.css';
 
@@ -6,6 +6,18 @@ const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
 const supabaseKey =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Throttle function to limit event frequency
+const throttle = (func, limit) => {
+  let inThrottle;
+  return function (...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
+    }
+  };
+};
 
 function App() {
   const mapScrollRef = useRef(null);
@@ -100,13 +112,13 @@ function App() {
         setIsDragging(true);
         setStartX(e.pageX - container.offsetLeft);
         setStartY(e.pageY - container.offsetTop);
-        e.preventDefault(); // Prevent text selection and default behavior
-        e.stopPropagation(); // Prevent event from bubbling to tiles
+        e.preventDefault();
+        e.stopPropagation();
       }
     };
 
-    const handleMouseMove = (e) => {
-      console.log('Mouse move, isDragging:', isDragging); // Debug isDragging state
+    const handleMouseMove = throttle((e) => {
+      console.log('Mouse move, isDragging:', isDragging);
       if (!isDragging) return;
 
       console.log('Dragging, scroll:', container.scrollLeft, container.scrollTop);
@@ -115,12 +127,12 @@ function App() {
       const diffX = currentX - startX;
       const diffY = currentY - startY;
 
-      container.scrollLeft += diffX; // Invert direction
-      container.scrollTop += diffY;  // Invert direction
+      container.scrollLeft -= diffX; // Adjusted direction
+      container.scrollTop -= diffY;  // Adjusted direction
 
       setStartX(currentX);
       setStartY(currentY);
-    };
+    }, 16); // Throttle to ~60fps
 
     const handleMouseUpOrLeave = () => {
       if (isDragging) {
@@ -140,7 +152,7 @@ function App() {
       container.removeEventListener('mouseup', handleMouseUpOrLeave);
       container.removeEventListener('mouseleave', handleMouseUpOrLeave);
     };
-  }, [tiles, isDragging]); // Depend on tiles and isDragging
+  }, [tiles, isDragging]);
 
   async function fetchTiles() {
     try {

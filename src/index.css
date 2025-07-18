@@ -142,7 +142,9 @@ html {
   height: 3398px; /* (100 * 32px) + (99 * 2px) */
   margin: auto;
   box-sizing: content-box;
-  pointer-events: none; /* Allow container to handle drag */
+  pointer-events: none;
+  /* Optional: Use transform for smoother scrolling */
+  will-change: transform;
 }
 
 /* Tile styles */
@@ -152,7 +154,9 @@ html {
   border-radius: 4px;
   box-sizing: border-box;
   transition: box-shadow 0.2s ease, border 0.2s ease;
-  pointer-events: auto; /* Restore interaction for tiles (e.g., tooltips) */
+  pointer-events: auto;
+  /* Optional: Reduce repaint cost */
+  backface-visibility: hidden;
 }
 
 .tile.grass {
