@@ -68,7 +68,7 @@ function App() {
     fetchTiles();
 
     return () => {
-      if (subscription) subscription.unsubscribe(); // Safe unsubscribe
+      if (subscription) subscription.unsubscribe();
     };
   }, []);
 
@@ -93,7 +93,6 @@ function App() {
     const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
     if (tileEl) {
       tileEl.classList.add('capital-highlight');
-      // Highlight remains permanent
     }
   }, [userNation, tiles]);
 
@@ -107,7 +106,7 @@ function App() {
     console.log('Attaching event listeners to:', container);
 
     const handleMouseDown = (e) => {
-      if (e.button === 0) { // Left click
+      if (e.button === 0) {
         console.log('Mouse down at:', e.pageX, e.pageY, 'isDragging:', isDragging);
         setIsDragging(true);
         setStartX(e.pageX - container.offsetLeft);
@@ -118,8 +117,10 @@ function App() {
     };
 
     const handleMouseMove = throttle((e) => {
-      console.log('Mouse move, isDragging:', isDragging);
-      if (!isDragging) return;
+      if (!isDragging) {
+        console.log('Mouse move, isDragging:', isDragging);
+        return;
+      }
 
       console.log('Dragging, scroll:', container.scrollLeft, container.scrollTop);
       const currentX = e.pageX - container.offsetLeft;
@@ -127,17 +128,17 @@ function App() {
       const diffX = currentX - startX;
       const diffY = currentY - startY;
 
-      container.scrollLeft -= diffX; // Adjusted direction
-      container.scrollTop -= diffY;  // Adjusted direction
+      container.scrollLeft -= diffX; // Natural drag direction
+      container.scrollTop -= diffY;  // Natural drag direction
 
       setStartX(currentX);
       setStartY(currentY);
-    }, 16); // Throttle to ~60fps
+    }, 32); // Increased to 32ms for 30fps to reduce load
 
     const handleMouseUpOrLeave = () => {
       if (isDragging) {
         console.log('Mouse up or leave, isDragging:', isDragging);
-        setIsDragging(false);
+        setIsDragging(false); // Ensure state resets
       }
     };
 
@@ -152,15 +153,14 @@ function App() {
       container.removeEventListener('mouseup', handleMouseUpOrLeave);
       container.removeEventListener('mouseleave', handleMouseUpOrLeave);
     };
-  }, [tiles, isDragging]);
+  }, [tiles]); // Removed isDragging from dependencies
 
   async function fetchTiles() {
     try {
       let allTiles = [];
       let from = 0;
-      const limit = 1000; // Fetch 1,000 rows per request
+      const limit = 1000;
 
-      // First request to get the total count
       const { count, error: countError } = await supabase
         .from('tiles')
         .select('id, x, y, type, resource, owner, is_capital', { count: 'exact', head: true })
@@ -173,7 +173,7 @@ function App() {
         return;
       }
 
-      const totalRows = count || 10000; // Default to 10,000 if count fails
+      const totalRows = count || 10000;
 
       while (from < totalRows) {
         const { data, error } = await supabase
