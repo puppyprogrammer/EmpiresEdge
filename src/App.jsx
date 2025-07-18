@@ -69,7 +69,7 @@ function App() {
             <div
               className="grid gap-0.5"
               style={{
-                gridTemplateColumns: 'repeat(100, 1fr)', // 100 columns
+                gridTemplateColumns: 'repeat(100, 2rem)', // match tile width 2rem = w-8
               }}
             >
               {tiles.map((tile) => {
