@@ -1,5 +1,6 @@
 /* Base layout */
-body, html {
+body,
+html {
   margin: 0;
   padding: 0;
   background-color: #1f2937;
@@ -113,11 +114,17 @@ body, html {
   flex: 1;
   overflow: auto;
   width: 100%;
-  height: calc(100vh - 60px); /* Adjust 60px to the actual height of .app-header */
+  height: calc(100vh - 60px); /* Adjust based on header height */
   padding: 8px;
   box-sizing: border-box;
   position: relative;
   scroll-behavior: smooth;
+  touch-action: none; /* Prevent default touch scrolling for better drag */
+  cursor: grab; /* Visual cue for dragging */
+}
+
+.map-scroll-container:active {
+  cursor: grabbing; /* Change cursor during drag */
 }
 
 .map-grid {
@@ -125,8 +132,8 @@ body, html {
   grid-template-columns: repeat(100, 32px);
   grid-template-rows: repeat(100, 32px);
   gap: 2px;
-  width: 3398px; /* Corrected: (100 * 32px) + (99 * 2px) */
-  height: 3398px; /* Corrected: (100 * 32px) + (99 * 2px) */
+  width: 3398px; /* (100 * 32px) + (99 * 2px) */
+  height: 3398px; /* (100 * 32px) + (99 * 2px) */
   margin: auto;
   box-sizing: content-box;
 }
@@ -163,7 +170,8 @@ body, html {
 
 /* Glow animation for capital tile */
 @keyframes glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 8px 3px gold;
     transform: scale(1);
   }
@@ -188,7 +196,7 @@ body, html {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.75);
+  background: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
