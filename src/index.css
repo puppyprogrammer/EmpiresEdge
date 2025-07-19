@@ -116,12 +116,11 @@ body, html {
 .profile-icon {
   cursor: pointer;
   fill: #166534;
-  stroke: white;
+  stroke: #166534;
 }
 
 .logout-button {
   background-color: #111827;
-  border: 1px solid #374151;
   padding: 0;
   cursor: pointer;
 }
@@ -160,7 +159,7 @@ body, html {
   width: 3398px;
   height: 3398px;
   margin: auto;
-  box-sizing: content-box;
+  box-sizing: content-content;
 }
 
 .tile {
@@ -203,6 +202,15 @@ body, html {
 .tile.capital-highlight {
   box-shadow: 0 0 8px 3px gold;
   animation: glow 1.5s ease-in-out infinite;
+}
+
+.capital-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
 }
 
 @keyframes glow {

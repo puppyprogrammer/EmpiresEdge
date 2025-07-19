@@ -204,7 +204,7 @@ function App() {
 
     const candidates = tiles.filter((tile) => {
       return capitalTiles.every(
-        (cap) => Math.abs(tile.x - cap.x) + Math.abs(t.y - cap.y) >= minDistance
+        (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
       );
     });
 
@@ -292,7 +292,7 @@ function App() {
       setResources({
         lumber: nationData.lumber || 0,
         oil: nationData.oil || 0,
-        ore: data.ore || 0
+        ore: nationData.ore || 0
       });
       setShowNationModal(false);
       setNationName('');
@@ -531,7 +531,15 @@ function App() {
                   data-y={tile.y}
                   title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
                   style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
-                />
+                >
+                  {tile.is_capital && (
+                    <img
+                      src="/icons/building.svg"
+                      alt="Capital Building"
+                      className="capital-icon"
+                    />
+                  )}
+                </div>
               ))}
             </div>
           </div>
