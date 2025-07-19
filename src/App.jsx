@@ -39,7 +39,6 @@ function App() {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session) {
-        console.log('Initial session fetch, user:', data.session.user.id);
         checkUserNation(data.session.user.id);
       }
     });
@@ -47,7 +46,6 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
-        console.log('Auth state changed, user:', session.user.id);
         checkUserNation(session.user.id);
       } else {
         setUserNation(null);
@@ -59,7 +57,6 @@ function App() {
 
     if (session?.user?.id) {
       pollInterval = setInterval(async () => {
-        console.log('Polling nation data for user:', session.user.id);
         await checkUserNation(session.user.id);
       }, 3000);
     }
@@ -103,7 +100,6 @@ function App() {
         .select('id, color');
 
       if (nationsError) {
-        console.error('Nations fetch error:', nationsError);
         setError('Failed to fetch nations: ' + nationsError.message);
         setTiles([]);
         return;
@@ -114,8 +110,6 @@ function App() {
         nationsMap[nation.id] = { color: nation.color };
       });
       setNations(nationsMap);
-      console.log('Fetched nations:', nationsMap);
-      console.log('Number of nations:', Object.keys(nationsMap).length);
 
       let allTiles = [];
       let from = 0;
@@ -128,7 +122,6 @@ function App() {
         .order('y', { ascending: true });
 
       if (countError) {
-        console.error('Tile count error:', countError);
         setError('Failed to fetch tile count: ' + countError.message);
         setTiles([]);
         return;
@@ -145,83 +138,57 @@ function App() {
           .range(from, from + limit - 1);
 
         if (error) {
-          console.error('Tile fetch error:', error);
           setError('Failed to fetch tiles: ' + error.message);
           setTiles([]);
           return;
         }
 
-        const tileOwners = [...new Set(data.filter(t => t.owner).map(t => t.owner))];
-        const missingNationIds = tileOwners.filter(owner => !nationsMap[owner]);
-        if (missingNationIds.length > 0) {
-          console.warn('Orphaned tile owners (not in nations):', missingNationIds);
-        }
-
-        const enrichedTiles = data.map(tile => {
-          if (tile.owner && !nationsMap[tile.owner]) {
-            console.warn(`Orphaned tile (${tile.x}, ${tile.y}): owner ${tile.owner} not found in nations`);
-            return { ...tile, nations: null };
-          }
-          return {
-            ...tile,
-            nations: tile.owner ? nationsMap[tile.owner] : null
-          };
-        });
+        const enrichedTiles = data.map(tile => ({
+          ...tile,
+          nations: tile.owner ? nationsMap[tile.owner] : null
+        }));
 
         allTiles = [...allTiles, ...enrichedTiles];
         from += limit;
       }
 
-      console.log('Number of tiles fetched:', allTiles.length, 'Total rows in table:', totalRows);
-      console.log('Number of owned tiles:', allTiles.filter(t => t.owner).length);
-      console.log('Sample enriched tiles:', allTiles.filter(t => t.owner).slice(0, 5));
       setTiles(allTiles);
     } catch (err) {
-      console.error('Fetch tiles error:', err);
       setError('Error fetching tiles: ' + err.message);
       setTiles([]);
     }
   }
 
   async function checkUserNation(userId) {
-  try {
-    const { data, error } = await supabase
-      .from('nations')
-      .select('id, name, color, capital_tile_x, capital_tile_y, owner_id, lumber, oil, ore')
-      .eq('owner_id', userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('nations')
+        .select('id, name, color, capital_tile_x, capital_tile_y, owner_id, lumber, oil, ore')
+        .eq('owner_id', userId)
+        .single();
 
-    if (error && error.code !== 'PGRST116') {
-      console.error('Check nation error:', error);
-      setError(error.message);
-      return;
-    }
+      if (error && error.code !== 'PGRST116') {
+        setError(error.message);
+        return;
+      }
 
-    if (data) {
-      console.log('Fetched nation:', {
-        id: data.id,
-        lumber: data.lumber,
-        oil: data.oil,
-        ore: data.ore
-      });
-      setUserNation(data);
-      setResources({
-        lumber: data.lumber || 0,
-        oil: data.oil || 0,
-        ore: data.ore || 0
-      });
-      setShowNationModal(false);
-    } else {
-      console.log('No nation found for user:', userId);
-      setUserNation(null);
-      setResources({ lumber: 0, oil: 0, ore: 0 });
-      setShowNationModal(true);
+      if (data) {
+        setUserNation(data);
+        setResources({
+          lumber: data.lumber || 0,
+          oil: data.oil || 0,
+          ore: data.ore || 0
+        });
+        setShowNationModal(false);
+      } else {
+        setUserNation(null);
+        setResources({ lumber: 0, oil: 0, ore: 0 });
+        setShowNationModal(true);
+      }
+    } catch (err) {
+      setError('Failed to check nation: ' + err.message);
     }
-  } catch (err) {
-    console.error('Check nation error:', err);
-    setError('Failed to check nation: ' + err.message);
   }
-}
 
   function tilesWithinDistance(centerTile, distance, tilesArr) {
     return tilesArr.filter(
@@ -245,7 +212,7 @@ function App() {
     return candidates[idx];
   }
 
-async function handleStartGame() {
+  async function handleStartGame() {
     if (!nationName.trim()) {
       setError('Nation name is required');
       return;
@@ -277,7 +244,6 @@ async function handleStartGame() {
         .single();
 
       if (insertError) {
-        console.error('Nation insert error:', insertError);
         setError('Failed to create nation: ' + insertError.message);
         return;
       }
@@ -289,7 +255,6 @@ async function handleStartGame() {
         .eq('y', capitalTile.y);
 
       if (capTileErr) {
-        console.error('Capital tile update error:', capTileErr);
         setError('Failed to update capital tile: ' + capTileErr.message);
         return;
       }
@@ -306,7 +271,6 @@ async function handleStartGame() {
           .eq('y', tile.y);
 
         if (updateErr) {
-          console.error('Sur surrounding tile update error:', updateErr);
           setError('Failed to update surrounding tile: ' + updateErr.message);
           return;
         }
@@ -322,7 +286,6 @@ async function handleStartGame() {
       setShowNationModal(false);
       setNationName('');
     } catch (err) {
-      console.error('Start game error:', err);
       setError('Error creating nation: ' + err.message);
     }
   }
@@ -335,7 +298,6 @@ async function handleStartGame() {
       password: loginPassword,
     });
     if (error) {
-      console.error('Login error:', error);
       setError(error.message);
     } else {
       setLoginEmail('');
@@ -355,7 +317,6 @@ async function handleStartGame() {
       },
     });
     if (error) {
-      console.error('Register error:', error);
       setError(error.message);
     } else {
       alert('Registration successful! Please check your email to confirm.');
@@ -374,30 +335,12 @@ async function handleStartGame() {
       setShowNationModal(false);
       fetchTiles();
     } catch (err) {
-      console.error('Logout error:', err);
       setError('Failed to log out: ' + err.message);
     }
   }
 
   function getTileBorderClasses(tile) {
-    const isCapital = tile.is_capital;
-
-    if (!tile.owner) {
-      if (isCapital) {
-        console.log(`No border for capital tile (${tile.x}, ${tile.y}): No owner`);
-      }
-      return '';
-    }
-    if (!tile.nations) {
-      if (isCapital) {
-        console.log(`No border for capital tile (${tile.x}, ${tile.y}): No nations data, owner=${tile.owner}`);
-      }
-      return '';
-    }
-    if (!tile.nations.color) {
-      if (isCapital) {
-        console.log(`No border for capital tile (${tile.x}, ${tile.y}): No nation color, owner=${tile.owner}, nations=${JSON.stringify(tile.nations)}`);
-      }
+    if (!tile.owner || !tile.nations || !tile.nations.color) {
       return '';
     }
 
@@ -421,20 +364,7 @@ async function handleStartGame() {
       }
     });
 
-    const borderClasses = borders.join(' ');
-
-    if (isCapital || borders.length > 0) {
-      console.log(`getTileBorderClasses for tile (${tile.x}, ${tile.y}): session=${!!session}, userNation=${userNation ? userNation.id : 'none'}, isCapital=${isCapital}`);
-      console.log(`Processing borders for tile (${tile.x}, ${tile.y}): owner=${ownerId}, color=${tile.nations.color}, isUserNation=${userNation && ownerId === userNation.id}`);
-      adjacentTiles.forEach(({ dx, dy, side }) => {
-        const adjKey = `${tile.x + dx},${tile.y + dy}`;
-        const adjacentTile = tileMap.get(adjKey);
-        console.log(`Checking adjacent tile (${tile.x + dx}, ${tile.y + dy}): exists=${!!adjacentTile}, owner=${adjacentTile ? adjacentTile.owner : 'none'}, matchesOwner=${adjacentTile ? adjacentTile.owner === ownerId : false}`);
-      });
-      console.log(`Assigned borders for tile (${tile.x}, ${tile.y}): ${borderClasses || 'none'}`);
-    }
-
-    return borderClasses;
+    return borders.join(' ');
   }
 
   const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
