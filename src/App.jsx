@@ -161,58 +161,57 @@ function App() {
   }
 
   async function checkUserNation(userId) {
-  try {
-    // Step 1: Fetch the user's nation data
-    const { data: nation, error } = await supabase
-      .from('nations')
-      .select('id, name, color, capital_tile_x, capital_tile_y, owner_id, lumber, oil, ore')
-      .eq('owner_id', userId)
-      .single();
-
-    // If an error occurred (and it’s not “no rows found”), stop here
-    if (error && error.code !== 'PGRST116') {
-      setError(error.message);
-      return;
-    }
-
-    // Step 2: Attempt to update resources via RPC
     try {
-      const { data: resourceData, error: resourceError } = await supabase.rpc('update_resources', {
-        input_user_id: userId,
-      });
+      // Step 1: Fetch the user's nation data
+      const { data: nation, error } = await supabase
+        .from('nations')
+        .select('id, name, color, capital_tile_x, capital_tile_y, owner_id, lumber, oil, ore')
+        .eq('owner_id', userId)
+        .single();
 
-      if (resourceError) {
-        console.error('Failed to update resources:', resourceError);
-      } else if (resourceData) {
-        // Merge new resource data into nation state
-        setUserNation(prevNation => ({
-          ...prevNation,
-          ...resourceData,
-        }));
-
-        setResources({
-          lumber: resourceData.lumber || 0,
-          oil: resourceData.oil || 0,
-          ore: resourceData.ore || 0,
-        });
+      // If an error occurred (and it’s not “no rows found”), stop here
+      if (error && error.code !== 'PGRST116') {
+        setError(error.message);
+        return;
       }
-    } catch (rpcError) {
-      console.error('RPC call error:', rpcError);
-    }
 
-    // Step 3: Show or hide the modal based on whether a nation exists
-    if (nation) {
-      setShowNationModal(false);
-    } else {
-      setUserNation(null);
-      setResources({ lumber: 0, oil: 0, ore: 0 });
-      setShowNationModal(true);
+      // Step 2: Attempt to update resources via RPC
+      try {
+        const { data: resourceData, error: resourceError } = await supabase.rpc('update_resources', {
+          input_user_id: userId,
+        });
+
+        if (resourceError) {
+          console.error('Failed to update resources:', resourceError);
+        } else if (resourceData) {
+          // Merge new resource data into nation state
+          setUserNation(prevNation => ({
+            ...prevNation,
+            ...resourceData,
+          }));
+
+          setResources({
+            lumber: resourceData.lumber || 0,
+            oil: resourceData.oil || 0,
+            ore: resourceData.ore || 0,
+          });
+        }
+      } catch (rpcError) {
+        console.error('RPC call error:', rpcError);
+      }
+
+      // Step 3: Show or hide the modal based on whether a nation exists
+      if (nation) {
+        setShowNationModal(false);
+      } else {
+        setUserNation(null);
+        setResources({ lumber: 0, oil: 0, ore: 0 });
+        setShowNationModal(true);
+      }
+    } catch (err) {
+      setError('Failed to check nation: ' + err.message);
     }
-  } catch (err) {
-    setError('Failed to check nation: ' + err.message);
   }
-}
-
 
 
 
