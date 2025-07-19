@@ -172,7 +172,17 @@ function App() {
       }
 
       if (data) {
-        setUserNation(data);
+        setUserNation({
+          id: data.id,
+          name: data.name,
+          color: data.color,
+          capital_tile_x: data.capital_tile_x,
+          capital_tile_y: data.capital_tile_y,
+          owner_id: data.owner_id,
+          lumber: data.lumber,
+          oil: data.oil,
+          ore: data.ore
+        });
         setResources({
           lumber: data.lumber || 0,
           oil: data.oil || 0,
