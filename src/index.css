@@ -1,222 +1,180 @@
-/* Base layout */
-body,
-html {
-  margin: 0;
-  padding: 0;
-  background-color: #1f2937;
-  color: white;
-  font-family: sans-serif;
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-}
-
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  width: 100vw;
+  min-height: 100vh;
+  background-color: #f0f0f0;
 }
 
-/* Header styles */
 .app-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
-  font-size: 1.5rem;
-  font-weight: bold;
-  background-color: #111827;
-  border-bottom: 1px solid #374151;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: #333;
+  color: white;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
   gap: 1rem;
 }
 
 .header-title {
-  flex-shrink: 0;
-  white-space: nowrap;
-  color: #facc15;
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
 }
 
-/* Form styles */
+.resource-tickers {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.resource-ticker {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background-color: #444;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+}
+
+.resource-icon {
+  font-size: 1rem;
+}
+
+.resource-value {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #e5e7eb;
+}
+
 .login-form {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex-grow: 1;
-  justify-content: flex-end;
 }
 
 .input {
-  background-color: #1f2937;
-  border: 1px solid #374151;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
   border-radius: 4px;
-  color: white;
-  padding: 6px 10px;
-  font-size: 0.9rem;
-  outline-offset: 2px;
-  transition: border-color 0.2s ease;
-}
-
-.input:focus {
-  border-color: #2563eb;
 }
 
 .button {
+  padding: 0.5rem 1rem;
   background-color: #2563eb;
+  color: white;
   border: none;
   border-radius: 4px;
-  padding: 6px 12px;
-  color: white;
-  font-weight: bold;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s ease;
 }
 
 .button:hover {
-  background-color: #1d4ed8;
+  background-color: #1e4db7;
 }
 
-/* User info */
 .session-icons {
   display: flex;
-  align-items: center;
   gap: 1rem;
+  align-items: center;
 }
 
 .icon {
+  width: 24px;
+  height: 24px;
   cursor: pointer;
-  color: white;
 }
 
-/* Error box */
 .error-box {
-  color: #f87171;
-  background-color: #4b0000;
-  padding: 1rem;
-  border-radius: 0.75rem;
-  border: 1px solid #dc2626;
-  max-width: 32rem;
-  font-size: 1.125rem;
-  margin: 1rem auto;
+  background-color: #fee2e2;
+  color: #dc2626;
+  padding: 0.5rem 1rem;
+  margin: 1rem;
+  border-radius: 4px;
 }
 
-/* Map container */
 .map-scroll-container {
   flex: 1;
   overflow: auto;
-  width: 100%;
-  height: calc(100vh - 60px);
-  padding: 8px;
-  box-sizing: border-box;
-  position: relative;
-  cursor: grab;
 }
 
-.map-scroll-container:active {
-  cursor: grabbing;
-}
-
-/* Map grid */
 .map-grid {
   display: grid;
-  grid-template-columns: repeat(100, 32px);
-  grid-template-rows: repeat(100, 32px);
-  gap: 2px;
-  width: 3398px; /* (100 * 32px) + (99 * 2px) */
-  height: 3398px; /* (100 * 32px) + (99 * 2px) */
-  margin: auto;
-  box-sizing: content-box;
+  grid-template: repeat(100, 32px) / repeat(100, 32px);
+  width: fit-content;
 }
 
-/* Tile base styles */
 .tile {
   width: 32px;
   height: 32px;
-  border-radius: 4px;
+  border: 1px solid #808080;
   box-sizing: border-box;
-  position: relative;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-/* Terrain types */
-.tile.grass {
-  background-color: #22c55e;
+.tile.land {
+  background-color: #86efac;
 }
 
-.tile.forest {
-  background-color: #166534;
+.tile.water {
+  background-color: #60a5fa;
 }
 
 .tile.mountain {
-  background-color: #6b7280;
+  background-color: #9ca3af;
 }
 
-/* Nation borders */
+.tile.capital-highlight {
+  box-shadow: inset 0 0 8px #facc15;
+}
+
 .tile.border-top {
-  border-top: 2px solid var(--nation-color, #808080); /* Gray fallback for debugging */
-}
-
-.tile.border-right {
-  border-right: 2px solid var(--nation-color, #808080); /* Gray fallback for debugging */
+  border-top: 2px solid var(--nation-color, #808080);
 }
 
 .tile.border-bottom {
-  border-bottom: 2px solid var(--nation-color, #808080); /* Gray fallback for debugging */
+  border-bottom: 2px solid var(--nation-color, #808080);
 }
 
 .tile.border-left {
-  border-left: 2px solid var(--nation-color, #808080); /* Gray fallback for debugging */
+  border-left: 2px solid var(--nation-color, #808080);
 }
 
-/* Capital highlight */
-.tile.capital-highlight {
-  box-shadow: 0 0 15px 6px gold;
-  animation: glow 1.5s ease-in-out infinite;
+.tile.border-right {
+  border-right: 2px solid var(--nation-color, #808080);
 }
 
-/* Glow animation for capital */
-@keyframes glow {
-  0%,
-  100% {
-    box-shadow: 0 0 8px 3px gold;
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 15px 6px gold;
-    transform: scale(1.1);
-  }
-}
-
-/* Loading message */
-.loading-message {
-  padding: 1rem;
-  font-size: 1rem;
-  color: #facc15;
-  text-align: center;
-}
-
-/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.75);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   z-index: 1000;
 }
 
 .modal-content {
-  background: #111827;
-  padding: 1.5rem;
+  background-color: white;
+  padding: 2rem;
   border-radius: 8px;
-  width: 300px;
-  color: white;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  max-width: 400px;
+  width: 100%;
+}
+
+.modal-content h2 {
+  margin: 0;
+}
+
+.loading-message {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
 }

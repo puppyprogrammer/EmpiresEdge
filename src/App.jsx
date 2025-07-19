@@ -27,6 +27,11 @@ function App() {
   const [nationColor, setNationColor] = useState('#2563eb');
   const [userNation, setUserNation] = useState(null);
   const [nations, setNations] = useState({});
+  const [resources, setResources] = useState({
+    lumber: 9999999,
+    oil: 9999999,
+    ore: 9999999
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -77,7 +82,6 @@ function App() {
 
   async function fetchTiles() {
     try {
-      // Fetch nations data
       const { data: nationsData, error: nationsError } = await supabase
         .from('nations')
         .select('id, color');
@@ -89,7 +93,6 @@ function App() {
         return;
       }
 
-      // Map nation IDs to colors
       const nationsMap = {};
       nationsData.forEach(nation => {
         nationsMap[nation.id] = { color: nation.color };
@@ -132,14 +135,12 @@ function App() {
           return;
         }
 
-        // Check for orphaned tiles
         const tileOwners = [...new Set(data.filter(t => t.owner).map(t => t.owner))];
         const missingNationIds = tileOwners.filter(owner => !nationsMap[owner]);
         if (missingNationIds.length > 0) {
           console.warn('Orphaned tile owners (not in nations):', missingNationIds);
         }
 
-        // Enrich tiles with nation color
         const enrichedTiles = data.map(tile => {
           if (tile.owner && !nationsMap[tile.owner]) {
             console.warn(`Orphaned tile (${tile.x}, ${tile.y}): owner ${tile.owner} not found in nations`);
@@ -205,7 +206,7 @@ function App() {
 
     const candidates = tiles.filter((tile) => {
       return capitalTiles.every(
-        (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
+        (cap) => Math.abs(tile.x - cap.x) + Math.abs(t.y - cap.y) >= minDistance
       );
     });
 
@@ -280,7 +281,6 @@ function App() {
       }
 
       fetchTiles();
-
       setUserNation(nationData);
       setShowNationModal(false);
       setNationName('');
@@ -343,10 +343,8 @@ function App() {
   }
 
   function getTileBorderClasses(tile) {
-    // Only log for capitals or owned tiles with borders
     const isCapital = tile.is_capital;
 
-    // Check if tile has owner and nation data
     if (!tile.owner) {
       if (isCapital) {
         console.log(`No border for capital tile (${tile.x}, ${tile.y}): No owner`);
@@ -369,14 +367,13 @@ function App() {
     const ownerId = tile.owner;
     const borders = [];
 
-    // Create a fresh Map for tile lookup
     const tileMap = new Map(tiles.map(t => [`${t.x},${t.y}`, t]));
 
     const adjacentTiles = [
-      { dx: -1, dy: 0, side: 'top' },    // Tile above
-      { dx: 1, dy: 0, side: 'bottom' },  // Tile below
-      { dx: 0, dy: 1, side: 'right' },   // Tile to the right
-      { dx: 0, dy: -1, side: 'left' },   // Tile to the left
+      { dx: -1, dy: 0, side: 'top' },
+      { dx: 1, dy: 0, side: 'bottom' },
+      { dx: 0, dy: 1, side: 'right' },
+      { dx: 0, dy: -1, side: 'left' },
     ];
 
     adjacentTiles.forEach(({ dx, dy, side }) => {
@@ -389,7 +386,6 @@ function App() {
 
     const borderClasses = borders.join(' ');
 
-    // Log only for capitals or tiles with borders
     if (isCapital || borders.length > 0) {
       console.log(`getTileBorderClasses for tile (${tile.x}, ${tile.y}): session=${!!session}, userNation=${userNation ? userNation.id : 'none'}, isCapital=${isCapital}`);
       console.log(`Processing borders for tile (${tile.x}, ${tile.y}): owner=${ownerId}, color=${tile.nations.color}, isUserNation=${userNation && ownerId === userNation.id}`);
@@ -404,10 +400,30 @@ function App() {
     return borderClasses;
   }
 
+  const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
   return (
     <div className="app-container">
       <header className="app-header">
-        <div className="header-title">Empire’s Edge</div>
+        <div className="header-left">
+          <div className="header-title">EE</div>
+          {session?.user && userNation && (
+            <div className="resource-tickers">
+              <div className="resource-ticker">
+                <span className="resource-icon">🌲</span>
+                <span className="resource-value">{formatNumber(resources.lumber)}</span>
+              </div>
+              <div className="resource-ticker">
+                <span className="resource-icon">🛢️</span>
+                <span className="resource-value">{formatNumber(resources.oil)}</span>
+              </div>
+              <div className="resource-ticker">
+                <span className="resource-icon">⛏️</span>
+                <span className="resource-value">{formatNumber(resources.ore)}</span>
+              </div>
+            </div>
+          )}
+        </div>
 
         {!session && !showRegister && (
           <form className="login-form" onSubmit={handleLogin}>
