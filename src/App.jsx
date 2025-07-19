@@ -161,54 +161,33 @@ function App() {
   }
 
   async function checkUserNation(userId) {
-  try {
-    // Step 1: Fetch the user's nation
-    const { data: nation, error } = await supabase
-      .from('nations')
-      .select('id, name, color, capital_tile_x, capital_tile_y, owner_id, lumber, oil, ore')
-      .eq('owner_id', userId)
-      .single();
-
-    // If an error occurred that isn't "No rows found" (PGRST116), show error
-    if (error && error.code !== 'PGRST116') {
-      setError(error.message);
-      return;
-    }
-
-    // Step 2: Try to update resources via RPC
     try {
-      const { data: resourceData, error: resourceError } = await supabase.rpc('update_resources', {
-        input_user_id: userId,
-      });
+      const { data, error } = await supabase
+        .rpc('update_resources', { user_id: userId })
+        .single();
 
-      if (resourceError) {
-        console.error('Failed to update resources:', resourceError);
-        // Continue with existing nation data even if update fails
+      if (error && error.code !== 'PGRST116') {
+        setError('Failed to update resources: ' + error.message);
+        return;
       }
-    } catch (rpcError) {
-      console.error('RPC call error:', rpcError);
-    }
 
-    // Step 3: Set state based on nation data
-    if (nation) {
-      setUserNation(nation);
-      setResources({
-        lumber: nation.lumber || 0,
-        oil: nation.oil || 0,
-        ore: nation.ore || 0,
-      });
-      setShowNationModal(false);
-    } else {
-      // No nation found — show modal to create/select nation
-      setUserNation(null);
-      setResources({ lumber: 0, oil: 0, ore: 0 });
-      setShowNationModal(true);
+      if (data) {
+        setUserNation(data);
+        setResources({
+          lumber: data.lumber || 0,
+          oil: data.oil || 0,
+          ore: data.ore || 0
+        });
+        setShowNationModal(false);
+      } else {
+        setUserNation(null);
+        setResources({ lumber: 0, oil: 0, ore: 0 });
+        setShowNationModal(true);
+      }
+    } catch (err) {
+      setError('Failed to check nation: ' + err.message);
     }
-  } catch (err) {
-    setError('Failed to check nation: ' + err.message);
   }
-}
-
 
   function tilesWithinDistance(centerTile, distance, tilesArr) {
     return tilesArr.filter(
@@ -224,7 +203,7 @@ function App() {
 
     const candidates = tiles.filter((tile) => {
       return capitalTiles.every(
-        (cap) => Math.abs(tile.x - cap.x) + Math.abs(t.y - cap.y) >= minDistance
+        (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
       );
     });
 
@@ -286,7 +265,7 @@ function App() {
         .eq('y', capitalTile.y);
 
       if (capTileErr) {
-        setError('Failed to fetch capital tile: ' + capTileErr.message);
+        setError('Failed to update capital tile: ' + capTileErr.message);
         return;
       }
 
