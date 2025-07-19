@@ -132,11 +132,10 @@ function App() {
 
       while (from < totalRows) {
         const { data, error } = await supabase
-          .from('tiles')
-          .select('id, x, y, type, resource, owner, is_capital, owner_username:public.get_username(owner)')
-          .order('x', { ascending: true })
-          .order('y', { ascending: true })
-          .range(from, from + limit - 1);
+          .rpc('get_tiles_with_username', {
+            start_row: from,
+            end_row: from + limit - 1
+          });
 
         if (error) {
           setError(`Failed to fetch tiles: ${error.message} (code: ${error.code}, details: ${error.details})`);
