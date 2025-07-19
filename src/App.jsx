@@ -40,9 +40,10 @@ function App() {
       setSession(data.session);
       if (data.session) {
         checkUserNation(data.session.user.id);
-        fetchTiles();
       }
     });
+
+    fetchTiles();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -53,7 +54,7 @@ function App() {
         setUserNation(null);
         setResources({ lumber: 0, oil: 0, ore: 0 });
         setShowNationModal(false);
-        setTiles(null);
+        fetchTiles();
       }
     });
 
@@ -204,7 +205,7 @@ function App() {
 
     const candidates = tiles.filter((tile) => {
       return capitalTiles.every(
-        (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
+        (cap) => Math.abs(tile.x - cap.x) + Math.abs(t.y - cap.y) >= minDistance
       );
     });
 
@@ -266,7 +267,7 @@ function App() {
         .eq('y', capitalTile.y);
 
       if (capTileErr) {
-        setError('Failed to update capital tile: ' + capTileErr.message);
+        setError('Failed to fetch capital tile: ' + capTileErr.message);
         return;
       }
 
@@ -344,6 +345,7 @@ function App() {
       setSession(null);
       setUserNation(null);
       setShowNationModal(false);
+      setTiles(null);
       fetchTiles();
     } catch (err) {
       setError('Failed to log out: ' + err.message);
