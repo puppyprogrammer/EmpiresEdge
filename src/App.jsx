@@ -41,7 +41,7 @@ function App() {
         setUserNation(null);
         setShowNationModal(false);
       }
-      fetchTiles(); // Refresh tiles on auth state change
+      fetchTiles();
     });
 
     fetchTiles();
@@ -96,6 +96,7 @@ function App() {
       });
       setNations(nationsMap);
       console.log('Fetched nations:', nationsMap);
+      console.log('Number of nations:', Object.keys(nationsMap).length);
 
       let allTiles = [];
       let from = 0;
@@ -131,10 +132,17 @@ function App() {
           return;
         }
 
+        // Check for orphaned tiles
+        const tileOwners = [...new Set(data.filter(t => t.owner).map(t => t.owner))];
+        const missingNationIds = tileOwners.filter(owner => !nationsMap[owner]);
+        if (missingNationIds.length > 0) {
+          console.warn('Orphaned tile owners (not in nations):', missingNationIds);
+        }
+
         // Enrich tiles with nation color
         const enrichedTiles = data.map(tile => {
           if (tile.owner && !nationsMap[tile.owner]) {
-            console.warn(`Orphaned tile (${tile.x}, ${tile.y}): owner ${tile.owner} not found in nationsMap`);
+            console.warn(`Orphaned tile (${tile.x}, ${tile.y}): owner ${tile.owner} not found in nations`);
             return { ...tile, nations: null };
           }
           return {
@@ -148,6 +156,7 @@ function App() {
       }
 
       console.log('Number of tiles fetched:', allTiles.length, 'Total rows in table:', totalRows);
+      console.log('Number of owned tiles:', allTiles.filter(t => t.owner).length);
       console.log('Sample enriched tiles:', allTiles.filter(t => t.owner).slice(0, 5));
       setTiles(allTiles);
     } catch (err) {
@@ -294,7 +303,7 @@ function App() {
     } else {
       setLoginEmail('');
       setLoginPassword('');
-      fetchTiles(); // Refresh tiles after login
+      fetchTiles();
     }
   }
 
@@ -326,7 +335,7 @@ function App() {
       setSession(null);
       setUserNation(null);
       setShowNationModal(false);
-      fetchTiles(); // Refresh tiles to ensure borders persist
+      fetchTiles();
     } catch (err) {
       console.error('Logout error:', err);
       setError('Failed to log out: ' + err.message);
@@ -334,10 +343,21 @@ function App() {
   }
 
   function getTileBorderClasses(tile) {
-    if (!tile.owner || !tile.nations || !tile.nations.color) {
-      console.log(`No border for tile (${tile.x}, ${tile.y}): owner=${tile.owner}, nations=${JSON.stringify(tile.nations)}`);
+    // Detailed logging to diagnose border class assignment
+    if (!tile.owner) {
+      console.log(`No border for tile (${tile.x}, ${tile.y}): No owner`);
       return '';
     }
+    if (!tile.nations) {
+      console.log(`No border for tile (${tile.x}, ${tile.y}): No nations data, owner=${tile.owner}`);
+      return '';
+    }
+    if (!tile.nations.color) {
+      console.log(`No border for tile (${tile.x}, ${tile.y}): No nation color, owner=${tile.owner}, nations=${JSON.stringify(tile.nations)}`);
+      return '';
+    }
+
+    console.log(`Assigning borders for tile (${tile.x}, ${tile.y}): owner=${tile.owner}, color=${tile.nations.color}`);
 
     const ownerId = tile.owner;
     const borders = [];
