@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import './index.css';
 import { User, LogOut } from 'lucide-react';
+import { Analytics } from "@vercel/analytics/react";
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
 const supabaseKey =
@@ -478,6 +479,7 @@ function App() {
       )}
 
       {tiles === null && !error && <div className="loading-message">Loading map data...</div>}
+      <Analytics /> 
     </div>
   );
 }
