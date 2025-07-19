@@ -145,7 +145,7 @@ function App() {
 
         const enrichedTiles = data.map(tile => ({
           ...tile,
-          owner_username: tile.owner_username || 'None',
+          owner_nation_name: tile.owner_nation_name || 'None',
           nations: tile.owner ? nationsMap[tile.owner] : null
         }));
 
@@ -539,7 +539,7 @@ function App() {
                   className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${tile.is_capital && tile.owner === userNation?.id ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)}`}
                   data-x={tile.x}
                   data-y={tile.y}
-                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_username}`}
+                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}`}
                   style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
                 >
                   {tile.is_capital && (
