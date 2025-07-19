@@ -118,12 +118,12 @@ function App() {
 
       const { count, error: countError } = await supabase
         .from('tiles')
-        .select('id, x, y, type, resource, owner, is_capital, owner_username:public.get_username(owner)', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .order('x', { ascending: true })
         .order('y', { ascending: true });
 
       if (countError) {
-        setError('Failed to fetch tile count: ' + countError.message);
+        setError(`Failed to fetch tile count: ${countError.message} (code: ${countError.code}, details: ${countError.details})`);
         setTiles([]);
         return;
       }
@@ -139,7 +139,7 @@ function App() {
           .range(from, from + limit - 1);
 
         if (error) {
-          setError('Failed to fetch tiles: ' + error.message);
+          setError(`Failed to fetch tiles: ${error.message} (code: ${error.code}, details: ${error.details})`);
           setTiles([]);
           return;
         }
@@ -156,7 +156,7 @@ function App() {
 
       setTiles(allTiles);
     } catch (err) {
-      setError('Error fetching tiles: ' + err.message);
+      setError(`Error fetching tiles: ${err.message}`);
       setTiles([]);
     }
   }
@@ -301,8 +301,8 @@ function App() {
       setUserNation(nationData);
       setResources({
         lumber: nationData.lumber || 0,
-        oil: nationData.lumber || 0,
-        ore: nationData.lumber || 0
+        oil: nationData.oil || 0,
+        ore: nationData.ore || 0
       });
       setShowNationModal(false);
       setNationName('');
