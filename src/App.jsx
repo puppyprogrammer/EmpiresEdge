@@ -406,7 +406,7 @@ function App() {
     <div className="app-container">
       <header className="app-header">
         <div className="header-left">
-          <div className="header-title">EE</div>
+          <img src="/icons/building.svg" alt="Empire's Edge" className="header-icon" />
           {session?.user && userNation && (
             <div className="resource-tickers">
               <div className="resource-ticker">
@@ -548,7 +548,7 @@ function App() {
               {tiles.map((tile) => (
                 <div
                   key={tile.id}
-                  className={`tile ${tile.type} ${tile.is_capital ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)}`}
+                  className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${tile.is_capital ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)}`}
                   data-x={tile.x}
                   data-y={tile.y}
                   title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}

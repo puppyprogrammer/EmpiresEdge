@@ -32,18 +32,16 @@ body, html {
   gap: 1rem;
 }
 
-.header-title {
-  font-size: 1.8rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  color: #facc15;
+.header-icon {
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
-  white-space: nowrap;
 }
 
 .resource-tickers {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .resource-ticker {
