@@ -343,7 +343,7 @@ function App() {
   }
 
   function getTileBorderClasses(tile) {
-    // Detailed logging to diagnose border class assignment
+    // Check if tile has owner and nation data
     if (!tile.owner) {
       console.log(`No border for tile (${tile.x}, ${tile.y}): No owner`);
       return '';
@@ -357,10 +357,13 @@ function App() {
       return '';
     }
 
-    console.log(`Assigning borders for tile (${tile.x}, ${tile.y}): owner=${tile.owner}, color=${tile.nations.color}`);
-
     const ownerId = tile.owner;
     const borders = [];
+
+    // Create a Map for faster tile lookup
+    const tileMap = new Map(tiles.map(t => [`${t.x},${t.y}`, t]));
+
+    console.log(`Processing borders for tile (${tile.x}, ${tile.y}): owner=${ownerId}, color=${tile.nations.color}`);
 
     const adjacentTiles = [
       { dx: -1, dy: 0, side: 'top' },    // Tile above
@@ -370,13 +373,17 @@ function App() {
     ];
 
     adjacentTiles.forEach(({ dx, dy, side }) => {
-      const adjacentTile = tiles.find(t => t.x === tile.x + dx && t.y === tile.y + dy);
+      const adjKey = `${tile.x + dx},${tile.y + dy}`;
+      const adjacentTile = tileMap.get(adjKey);
+      console.log(`Checking adjacent tile (${tile.x + dx}, ${tile.y + dy}): exists=${!!adjacentTile}, owner=${adjacentTile ? adjacentTile.owner : 'none'}`);
       if (!adjacentTile || adjacentTile.owner !== ownerId) {
         borders.push(`border-${side}`);
       }
     });
 
-    return borders.join(' ');
+    const borderClasses = borders.join(' ');
+    console.log(`Assigned borders for tile (${tile.x}, ${tile.y}): ${borderClasses || 'none'}`);
+    return borderClasses;
   }
 
   return (
