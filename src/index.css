@@ -1,3 +1,4 @@
+/* Global Styles */
 body, html {
   margin: 0;
   padding: 0;
@@ -16,6 +17,7 @@ body, html {
   width: 100vw;
 }
 
+/* Header Styles */
 .app-header {
   display: flex;
   align-items: center;
@@ -63,6 +65,30 @@ body, html {
   color: #e5e7eb;
 }
 
+.session-icons {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-icon {
+  fill: #166534;
+  stroke: #166534;
+  cursor: pointer;
+}
+
+.logout-button {
+  background-color: #111827;
+  padding: 0;
+  cursor: pointer;
+}
+
+.icon {
+  color: white;
+  cursor: pointer;
+}
+
+/* Form Styles */
 .login-form {
   display: flex;
   align-items: center;
@@ -102,29 +128,7 @@ body, html {
   background-color: #1d4ed8;
 }
 
-.session-icons {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.icon {
-  cursor: pointer;
-  color: white;
-}
-
-.profile-icon {
-  cursor: pointer;
-  fill: #166534;
-  stroke: #166534;
-}
-
-.logout-button {
-  background-color: #111827;
-  padding: 0;
-  cursor: pointer;
-}
-
+/* Error and Loading */
 .error-box {
   color: #f87171;
   background-color: #4b0000;
@@ -134,8 +138,17 @@ body, html {
   max-width: 32rem;
   font-size: 1.125rem;
   margin: 1rem auto;
+  text-align: center;
 }
 
+.loading-message {
+  padding: 1rem;
+  font-size: 1rem;
+  color: #facc15;
+  text-align: center;
+}
+
+/* Map Styles */
 .map-scroll-container {
   flex: 1;
   overflow: auto;
@@ -159,9 +172,10 @@ body, html {
   width: 3398px;
   height: 3398px;
   margin: auto;
-  box-sizing: content-content;
+  box-sizing: content-box;
 }
 
+/* Tile Styles */
 .tile {
   width: 32px;
   height: 32px;
@@ -224,13 +238,19 @@ body, html {
   }
 }
 
-.loading-message {
-  padding: 1rem;
-  font-size: 1rem;
-  color: #facc15;
-  text-align: center;
+/* Tooltip (for potential custom hover UI) */
+.tooltip {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 1000;
+  pointer-events: none;
 }
 
+/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;

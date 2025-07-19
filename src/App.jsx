@@ -118,7 +118,7 @@ function App() {
 
       const { count, error: countError } = await supabase
         .from('tiles')
-        .select('id, x, y, type, resource, owner, is_capital', { count: 'exact', head: true })
+        .select('id, x, y, type, resource, owner, is_capital, owner_username:public.get_username(owner)', { count: 'exact', head: true })
         .order('x', { ascending: true })
         .order('y', { ascending: true });
 
@@ -133,7 +133,7 @@ function App() {
       while (from < totalRows) {
         const { data, error } = await supabase
           .from('tiles')
-          .select('id, x, y, type, resource, owner, is_capital')
+          .select('id, x, y, type, resource, owner, is_capital, owner_username:public.get_username(owner)')
           .order('x', { ascending: true })
           .order('y', { ascending: true })
           .range(from, from + limit - 1);
@@ -146,6 +146,7 @@ function App() {
 
         const enrichedTiles = data.map(tile => ({
           ...tile,
+          owner_username: tile.owner_username || 'None',
           nations: tile.owner ? nationsMap[tile.owner] : null
         }));
 
@@ -300,8 +301,8 @@ function App() {
       setUserNation(nationData);
       setResources({
         lumber: nationData.lumber || 0,
-        oil: nationData.oil || 0,
-        ore: nationData.ore || 0
+        oil: nationData.lumber || 0,
+        ore: nationData.lumber || 0
       });
       setShowNationModal(false);
       setNationName('');
@@ -539,7 +540,7 @@ function App() {
                   className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${tile.is_capital && tile.owner === userNation?.id ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)}`}
                   data-x={tile.x}
                   data-y={tile.y}
-                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
+                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_username}`}
                   style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
                 >
                   {tile.is_capital && (
