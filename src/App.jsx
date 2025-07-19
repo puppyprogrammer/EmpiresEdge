@@ -28,33 +28,47 @@ function App() {
   const [userNation, setUserNation] = useState(null);
   const [nations, setNations] = useState({});
   const [resources, setResources] = useState({
-    lumber: 9999,
-    oil: 9999,
-    ore: 9999
+    lumber: 0,
+    oil: 0,
+    ore: 0
   });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      if (data.session) checkUserNation(data.session.user.id);
-    });
+  supabase.auth.getSession().then(({ data }) => {
+    setSession(data.session);
+    if (data.session) {
+      console.log('Initial session fetch, user:', data.session.user.id);
+      checkUserNation(data.session.user.id);
+    }
+  });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) checkUserNation(session.user.id);
-      else {
-        setUserNation(null);
-        setShowNationModal(false);
-      }
-      fetchTiles();
-    });
-
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    setSession(session);
+    if (session) {
+      console.log('Auth state changed, user:', session.user.id);
+      checkUserNation(session.user.id);
+    } else {
+      setUserNation(null);
+      setResources({ lumber: 0, oil: 0, ore: 0 });
+      setShowNationModal(false);
+    }
     fetchTiles();
+  });
 
-    return () => {
-      if (subscription) subscription.unsubscribe();
-    };
-  }, []);
+  const pollInterval = setInterval(async () => {
+    if (session?.user?.id) {
+      console.log('Polling nation data for user:', session.user.id);
+      await checkUserNation(session.user.id);
+    }
+  }, 3000);
+
+  fetchTiles();
+
+  return () => {
+    if (subscription) subscription.unsubscribe();
+    clearInterval(pollInterval);
+  };
+}, [session]);
 
   useEffect(() => {
     if (!userNation || !tiles || !mapScrollRef.current) return;
@@ -168,31 +182,44 @@ function App() {
   }
 
   async function checkUserNation(userId) {
-    try {
-      const { data, error } = await supabase
-        .from('nations')
-        .select('*')
-        .eq('owner_id', userId)
-        .single();
+  try {
+    const { data, error } = await supabase
+      .from('nations')
+      .select('id, name, color, capital_tile_x, capital_tile_y, owner_id, lumber, oil, ore')
+      .eq('owner_id', userId)
+      .single();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Check nation error:', error);
-        setError(error.message);
-        return;
-      }
-
-      if (data) {
-        setUserNation(data);
-        setShowNationModal(false);
-      } else {
-        setUserNation(null);
-        setShowNationModal(true);
-      }
-    } catch (err) {
-      console.error('Check nation error:', err);
-      setError('Failed to check nation: ' + err.message);
+    if (error && error.code !== 'PGRST116') {
+      console.error('Check nation error:', error);
+      setError(error.message);
+      return;
     }
+
+    if (data) {
+      console.log('Fetched nation:', {
+        id: data.id,
+        lumber: data.lumber,
+        oil: data.oil,
+        ore: data.ore
+      });
+      setUserNation(data);
+      setResources({
+        lumber: data.lumber || 0,
+        oil: data.oil || 0,
+        ore: data.ore || 0
+      });
+      setShowNationModal(false);
+    } else {
+      console.log('No nation found for user:', userId);
+      setUserNation(null);
+      setResources({ lumber: 0, oil: 0, ore: 0 });
+      setShowNationModal(true);
+    }
+  } catch (err) {
+    console.error('Check nation error:', err);
+    setError('Failed to check nation: ' + err.message);
   }
+}
 
   function tilesWithinDistance(centerTile, distance, tilesArr) {
     return tilesArr.filter(
