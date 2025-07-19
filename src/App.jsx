@@ -203,7 +203,7 @@ function App() {
 
     const candidates = tiles.filter((tile) => {
       return capitalTiles.every(
-        (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
+        (cap) => Math.abs(tile.x - cap.x) + Math.abs(t.y - cap.y) >= minDistance
       );
     });
 
