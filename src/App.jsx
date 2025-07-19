@@ -77,10 +77,9 @@ function App() {
 
   async function fetchTiles() {
     try {
-      // Fetch nations data
+      // Fetch nations data as anon to bypass RLS
       const { data: nationsData, error: nationsError } = await supabase
-        .from('nations')
-        .select('id, color');
+        .rpc('get_all_nations'); // Use RPC to fetch all nations
 
       if (nationsError) {
         console.error('Nations fetch error:', nationsError);
@@ -349,19 +348,19 @@ function App() {
     // Check if tile has owner and nation data
     if (!tile.owner) {
       if (isCapital) {
-        console.log(`No border for tile (${tile.x}, ${tile.y}): No owner, isCapital=${isCapital}`);
+        console.log(`No border for capital tile (${tile.x}, ${tile.y}): No owner`);
       }
       return '';
     }
     if (!tile.nations) {
       if (isCapital) {
-        console.log(`No border for tile (${tile.x}, ${tile.y}): No nations data, owner=${tile.owner}, isCapital=${isCapital}`);
+        console.log(`No border for capital tile (${tile.x}, ${tile.y}): No nations data, owner=${tile.owner}`);
       }
       return '';
     }
     if (!tile.nations.color) {
       if (isCapital) {
-        console.log(`No border for tile (${tile.x}, ${tile.y}): No nation color, owner=${tile.owner}, nations=${JSON.stringify(tile.nations)}, isCapital=${isCapital}`);
+        console.log(`No border for capital tile (${tile.x}, ${tile.y}): No nation color, owner=${tile.owner}, nations=${JSON.stringify(tile.nations)}`);
       }
       return '';
     }
