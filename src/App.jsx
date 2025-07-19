@@ -275,9 +275,9 @@ function App() {
           owner_id: session.user.id,
           capital_tile_x: capitalTile.x,
           capital_tile_y: capitalTile.y,
-          lumber: 100,  // Start with some initial resources
-          oil: 100,
-          ore: 100
+          lumber: 0,  // Start with some initial resources
+          oil: 0,
+          ore: 0
         },
       ])
       .select()
@@ -332,9 +332,9 @@ function App() {
     await fetchTiles();
     setUserNation(nationData);
     setResources({
-      lumber: nationData.lumber || 100,
-      oil: nationData.oil || 100,
-      ore: nationData.ore || 100
+      lumber: nationData.lumber || 0,
+      oil: nationData.oil || 0,
+      ore: nationData.ore || 0
     });
     setShowNationModal(false);
     setNationName('');
