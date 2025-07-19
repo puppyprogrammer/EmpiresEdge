@@ -26,9 +26,6 @@ function App() {
   const [nationName, setNationName] = useState('');
   const [nationColor, setNationColor] = useState('#2563eb');
   const [userNation, setUserNation] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [startY, setStartY] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -51,7 +48,6 @@ function App() {
       if (subscription) subscription.unsubscribe();
     };
   }, []);
-
 
   useEffect(() => {
     if (!userNation || !tiles || !mapScrollRef.current) return;
@@ -76,63 +72,6 @@ function App() {
       tileEl.classList.add('capital-highlight');
     }
   }, [userNation, tiles]);
-
-  useEffect(() => {
-    if (!tiles || !mapScrollRef.current) {
-      console.log('Tiles not loaded or container ref is null');
-      return;
-    }
-
-    const container = mapScrollRef.current;
-    console.log('Attaching event listeners to:', container);
-
-    const handleMouseDown = (e) => {
-      if (e.button === 0) {
-        console.log('Mouse down at:', e.pageX, e.pageY, 'isDragging:', isDragging);
-        setIsDragging(true);
-        setStartX(e.pageX - container.scrollLeft);
-        setStartY(e.pageY - container.scrollTop);
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
-    const handleMouseMove = (e) => {
-      if (!isDragging) {
-        console.log('Mouse move, isDragging:', isDragging);
-        return;
-      }
-
-      console.log('Dragging, scroll:', container.scrollLeft, container.scrollTop);
-      const diffX = e.pageX - startX;
-      const diffY = e.pageY - startY;
-
-      container.scrollLeft -= diffX;
-      container.scrollTop -= diffY;
-
-      setStartX(e.pageX - container.scrollLeft);
-      setStartY(e.pageY - container.scrollTop);
-    };
-
-    const handleMouseUpOrLeave = () => {
-      if (isDragging) {
-        console.log('Mouse up or leave, isDragging:', isDragging);
-        setIsDragging(false);
-      }
-    };
-
-    container.addEventListener('mousedown', handleMouseDown);
-    container.addEventListener('mousemove', handleMouseMove);
-    container.addEventListener('mouseup', handleMouseUpOrLeave);
-    container.addEventListener('mouseleave', handleMouseUpOrLeave);
-
-    return () => {
-      container.removeEventListener('mousedown', handleMouseDown);
-      container.removeEventListener('mousemove', handleMouseMove);
-      container.removeEventListener('mouseup', handleMouseUpOrLeave);
-      container.removeEventListener('mouseleave', handleMouseUpOrLeave);
-    };
-  }, [tiles]); // Only re-run on tiles change
 
   async function fetchTiles() {
     try {
@@ -479,7 +418,7 @@ function App() {
       )}
 
       {tiles === null && !error && <div className="loading-message">Loading map data...</div>}
-      <Analytics /> 
+      <Analytics />
     </div>
   );
 }
