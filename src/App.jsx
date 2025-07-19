@@ -41,6 +41,7 @@ function App() {
         setUserNation(null);
         setShowNationModal(false);
       }
+      fetchTiles(); // Refresh tiles on auth state change
     });
 
     fetchTiles();
@@ -131,17 +132,23 @@ function App() {
         }
 
         // Enrich tiles with nation color
-        const enrichedTiles = data.map(tile => ({
-          ...tile,
-          nations: tile.owner ? nationsMap[tile.owner] || { color: '#000000' } : null
-        }));
+        const enrichedTiles = data.map(tile => {
+          if (tile.owner && !nationsMap[tile.owner]) {
+            console.warn(`Orphaned tile (${tile.x}, ${tile.y}): owner ${tile.owner} not found in nationsMap`);
+            return { ...tile, nations: null };
+          }
+          return {
+            ...tile,
+            nations: tile.owner ? nationsMap[tile.owner] : null
+          };
+        });
 
         allTiles = [...allTiles, ...enrichedTiles];
         from += limit;
       }
 
       console.log('Number of tiles fetched:', allTiles.length, 'Total rows in table:', totalRows);
-      console.log('Sample enriched tiles:', allTiles.slice(0, 5));
+      console.log('Sample enriched tiles:', allTiles.filter(t => t.owner).slice(0, 5));
       setTiles(allTiles);
     } catch (err) {
       console.error('Fetch tiles error:', err);
@@ -287,6 +294,7 @@ function App() {
     } else {
       setLoginEmail('');
       setLoginPassword('');
+      fetchTiles(); // Refresh tiles after login
     }
   }
 
