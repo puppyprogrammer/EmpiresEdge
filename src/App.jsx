@@ -161,51 +161,35 @@ function App() {
   }
 
   async function checkUserNation(userId) {
-  try {
-    
-// Call the server-side resource update function
+    try {
+      const { data, error } = await supabase
+        .from('nations')
+        .select('id, name, color, capital_tile_x, capital_tile_y, owner_id, lumber, oil, ore')
+        .eq('owner_id', userId)
+        .single();
 
-    const { data: resourceData, error: resourceError } = await supabase.rpc('update_resources', { input_user_id: userId });
-    if (resourceError) {
-      console.error('Failed to update resources:', resourceError);
-      return;
-    }
-    if (resourceData && resourceData.length > 
-0
-) {
-      const nation = resourceData[0];
-      setUserNation(nation);
-      setResources({
-        lumber: nation.lumber || 
-0
-,
-        oil: nation.oil || 
-0
-,
-        ore: nation.ore || 
-0
+      if (error && error.code !== 'PGRST116') {
+        setError(error.message);
+        return;
+      }
 
-      });
-      setShowNationModal(
-false
-);
-    } else {
-      setUserNation(null);
-      setResources({ lumber: 
-0
-, oil: 
-0
-, ore: 
-0
- });
-      setShowNationModal(
-true
-);
+      if (data) {
+        setUserNation(data);
+        setResources({
+          lumber: data.lumber || 0,
+          oil: data.oil || 0,
+          ore: data.ore || 0
+        });
+        setShowNationModal(false);
+      } else {
+        setUserNation(null);
+        setResources({ lumber: 0, oil: 0, ore: 0 });
+        setShowNationModal(true);
+      }
+    } catch (err) {
+      setError('Failed to check nation: ' + err.message);
     }
-  } catch (err) {
-    setError('Failed to check nation: ' + err.message);
   }
-}
 
   function tilesWithinDistance(centerTile, distance, tilesArr) {
     return tilesArr.filter(
