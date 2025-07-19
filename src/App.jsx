@@ -343,27 +343,34 @@ function App() {
   }
 
   function getTileBorderClasses(tile) {
+    // Only log for capitals or owned tiles with borders
+    const isCapital = tile.is_capital;
+
     // Check if tile has owner and nation data
     if (!tile.owner) {
-      console.log(`No border for tile (${tile.x}, ${tile.y}): No owner`);
+      if (isCapital) {
+        console.log(`No border for tile (${tile.x}, ${tile.y}): No owner, isCapital=${isCapital}`);
+      }
       return '';
     }
     if (!tile.nations) {
-      console.log(`No border for tile (${tile.x}, ${tile.y}): No nations data, owner=${tile.owner}`);
+      if (isCapital) {
+        console.log(`No border for tile (${tile.x}, ${tile.y}): No nations data, owner=${tile.owner}, isCapital=${isCapital}`);
+      }
       return '';
     }
     if (!tile.nations.color) {
-      console.log(`No border for tile (${tile.x}, ${tile.y}): No nation color, owner=${tile.owner}, nations=${JSON.stringify(tile.nations)}`);
+      if (isCapital) {
+        console.log(`No border for tile (${tile.x}, ${tile.y}): No nation color, owner=${tile.owner}, nations=${JSON.stringify(tile.nations)}, isCapital=${isCapital}`);
+      }
       return '';
     }
 
     const ownerId = tile.owner;
     const borders = [];
 
-    // Create a Map for faster tile lookup
+    // Create a fresh Map for tile lookup
     const tileMap = new Map(tiles.map(t => [`${t.x},${t.y}`, t]));
-
-    console.log(`Processing borders for tile (${tile.x}, ${tile.y}): owner=${ownerId}, color=${tile.nations.color}`);
 
     const adjacentTiles = [
       { dx: -1, dy: 0, side: 'top' },    // Tile above
@@ -375,14 +382,25 @@ function App() {
     adjacentTiles.forEach(({ dx, dy, side }) => {
       const adjKey = `${tile.x + dx},${tile.y + dy}`;
       const adjacentTile = tileMap.get(adjKey);
-      console.log(`Checking adjacent tile (${tile.x + dx}, ${tile.y + dy}): exists=${!!adjacentTile}, owner=${adjacentTile ? adjacentTile.owner : 'none'}`);
       if (!adjacentTile || adjacentTile.owner !== ownerId) {
         borders.push(`border-${side}`);
       }
     });
 
     const borderClasses = borders.join(' ');
-    console.log(`Assigned borders for tile (${tile.x}, ${tile.y}): ${borderClasses || 'none'}`);
+
+    // Log only for capitals or tiles with borders
+    if (isCapital || borders.length > 0) {
+      console.log(`getTileBorderClasses for tile (${tile.x}, ${tile.y}): session=${!!session}, userNation=${userNation ? userNation.id : 'none'}, isCapital=${isCapital}`);
+      console.log(`Processing borders for tile (${tile.x}, ${tile.y}): owner=${ownerId}, color=${tile.nations.color}, isUserNation=${userNation && ownerId === userNation.id}`);
+      adjacentTiles.forEach(({ dx, dy, side }) => {
+        const adjKey = `${tile.x + dx},${tile.y + dy}`;
+        const adjacentTile = tileMap.get(adjKey);
+        console.log(`Checking adjacent tile (${tile.x + dx}, ${tile.y + dy}): exists=${!!adjacentTile}, owner=${adjacentTile ? adjacentTile.owner : 'none'}, matchesOwner=${adjacentTile ? adjacentTile.owner === ownerId : false}`);
+      });
+      console.log(`Assigned borders for tile (${tile.x}, ${tile.y}): ${borderClasses || 'none'}`);
+    }
+
     return borderClasses;
   }
 
