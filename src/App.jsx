@@ -82,6 +82,7 @@ function App() {
         .select('id, color');
 
       if (nationsError) {
+        console.error('Nations fetch error:', nationsError);
         setError('Failed to fetch nations: ' + nationsError.message);
         setTiles([]);
         return;
@@ -93,6 +94,7 @@ function App() {
         nationsMap[nation.id] = { color: nation.color };
       });
       setNations(nationsMap);
+      console.log('Fetched nations:', nationsMap);
 
       let allTiles = [];
       let from = 0;
@@ -105,6 +107,7 @@ function App() {
         .order('y', { ascending: true });
 
       if (countError) {
+        console.error('Tile count error:', countError);
         setError('Failed to fetch tile count: ' + countError.message);
         setTiles([]);
         return;
@@ -121,6 +124,7 @@ function App() {
           .range(from, from + limit - 1);
 
         if (error) {
+          console.error('Tile fetch error:', error);
           setError('Failed to fetch tiles: ' + error.message);
           setTiles([]);
           return;
@@ -129,7 +133,7 @@ function App() {
         // Enrich tiles with nation color
         const enrichedTiles = data.map(tile => ({
           ...tile,
-          nations: tile.owner ? nationsMap[tile.owner] : null
+          nations: tile.owner ? nationsMap[tile.owner] || { color: '#000000' } : null
         }));
 
         allTiles = [...allTiles, ...enrichedTiles];
@@ -137,8 +141,10 @@ function App() {
       }
 
       console.log('Number of tiles fetched:', allTiles.length, 'Total rows in table:', totalRows);
+      console.log('Sample enriched tiles:', allTiles.slice(0, 5));
       setTiles(allTiles);
     } catch (err) {
+      console.error('Fetch tiles error:', err);
       setError('Error fetching tiles: ' + err.message);
       setTiles([]);
     }
@@ -153,6 +159,7 @@ function App() {
         .single();
 
       if (error && error.code !== 'PGRST116') {
+        console.error('Check nation error:', error);
         setError(error.message);
         return;
       }
@@ -165,6 +172,7 @@ function App() {
         setShowNationModal(true);
       }
     } catch (err) {
+      console.error('Check nation error:', err);
       setError('Failed to check nation: ' + err.message);
     }
   }
@@ -220,6 +228,7 @@ function App() {
         .single();
 
       if (insertError) {
+        console.error('Nation insert error:', insertError);
         setError('Failed to create nation: ' + insertError.message);
         return;
       }
@@ -231,6 +240,7 @@ function App() {
         .eq('y', capitalTile.y);
 
       if (capTileErr) {
+        console.error('Capital tile update error:', capTileErr);
         setError('Failed to update capital tile: ' + capTileErr.message);
         return;
       }
@@ -247,6 +257,7 @@ function App() {
           .eq('y', tile.y);
 
         if (updateErr) {
+          console.error('Surrounding tile update error:', updateErr);
           setError('Failed to update surrounding tile: ' + updateErr.message);
           return;
         }
@@ -258,6 +269,7 @@ function App() {
       setShowNationModal(false);
       setNationName('');
     } catch (err) {
+      console.error('Start game error:', err);
       setError('Error creating nation: ' + err.message);
     }
   }
@@ -269,8 +281,10 @@ function App() {
       email: loginEmail,
       password: loginPassword,
     });
-    if (error) setError(error.message);
-    else {
+    if (error) {
+      console.error('Login error:', error);
+      setError(error.message);
+    } else {
       setLoginEmail('');
       setLoginPassword('');
     }
@@ -286,8 +300,10 @@ function App() {
         data: { username: registerUsername },
       },
     });
-    if (error) setError(error.message);
-    else {
+    if (error) {
+      console.error('Register error:', error);
+      setError(error.message);
+    } else {
       alert('Registration successful! Please check your email to confirm.');
       setRegisterEmail('');
       setRegisterPassword('');
@@ -297,14 +313,23 @@ function App() {
   }
 
   async function handleLogout() {
-    await supabase.auth.signOut();
-    setSession(null);
-    setUserNation(null);
-    setShowNationModal(false);
+    try {
+      await supabase.auth.signOut();
+      setSession(null);
+      setUserNation(null);
+      setShowNationModal(false);
+      fetchTiles(); // Refresh tiles to ensure borders persist
+    } catch (err) {
+      console.error('Logout error:', err);
+      setError('Failed to log out: ' + err.message);
+    }
   }
 
   function getTileBorderClasses(tile) {
-    if (!tile.owner || !tile.nations || !tile.nations.color) return '';
+    if (!tile.owner || !tile.nations || !tile.nations.color) {
+      console.log(`No border for tile (${tile.x}, ${tile.y}): owner=${tile.owner}, nations=${JSON.stringify(tile.nations)}`);
+      return '';
+    }
 
     const ownerId = tile.owner;
     const borders = [];
