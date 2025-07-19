@@ -77,9 +77,10 @@ function App() {
 
   async function fetchTiles() {
     try {
-      // Fetch nations data as anon to bypass RLS
+      // Fetch nations data
       const { data: nationsData, error: nationsError } = await supabase
-        .rpc('get_all_nations'); // Use RPC to fetch all nations
+        .from('nations')
+        .select('id, color');
 
       if (nationsError) {
         console.error('Nations fetch error:', nationsError);
