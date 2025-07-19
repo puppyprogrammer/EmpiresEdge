@@ -81,7 +81,7 @@ function App() {
 
       const { count, error: countError } = await supabase
         .from('tiles')
-        .select('id, x, y, type, resource, owner, is_capital', { count: 'exact', head: true })
+        .select('id, x, y, type, resource, owner, is_capital, nations!owner(color)', { count: 'exact', head: true })
         .order('x', { ascending: true })
         .order('y', { ascending: true });
 
@@ -96,7 +96,7 @@ function App() {
       while (from < totalRows) {
         const { data, error } = await supabase
           .from('tiles')
-          .select('id, x, y, type, resource, owner, is_capital')
+          .select('id, x, y, type, resource, owner, is_capital, nations!owner(color)')
           .order('x', { ascending: true })
           .order('y', { ascending: true })
           .range(from, from + limit - 1);
@@ -278,6 +278,29 @@ function App() {
     setShowNationModal(false);
   }
 
+  function getTileBorderClasses(tile) {
+    if (!tile.owner || !tile.nations || !tile.nations.color) return '';
+
+    const ownerId = tile.owner;
+    const borders = [];
+
+    const adjacentTiles = [
+      { dx: -1, dy: 0, side: 'top' },    // Tile above
+      { dx: 1, dy: 0, side: 'bottom' },  // Tile below
+      { dx: 0, dy: 1, side: 'right' },   // Tile to the right
+      { dx: 0, dy: -1, side: 'left' },   // Tile to the left
+    ];
+
+    adjacentTiles.forEach(({ dx, dy, side }) => {
+      const adjacentTile = tiles.find(t => t.x === tile.x + dx && t.y === tile.y + dy);
+      if (!adjacentTile || adjacentTile.owner !== ownerId) {
+        borders.push(`border-${side}`);
+      }
+    });
+
+    return borders.join(' ');
+  }
+
   return (
     <div className="app-container">
       <header className="app-header">
@@ -406,10 +429,11 @@ function App() {
               {tiles.map((tile) => (
                 <div
                   key={tile.id}
-                  className={`tile ${tile.type} ${tile.is_capital ? 'capital-highlight' : ''}`}
+                  className={`tile ${tile.type} ${tile.is_capital ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)}`}
                   data-x={tile.x}
                   data-y={tile.y}
                   title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner || 'None'}`}
+                  style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
                 />
               ))}
             </div>
