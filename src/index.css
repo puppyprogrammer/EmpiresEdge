@@ -154,19 +154,19 @@ html {
 
 /* Nation borders */
 .tile.border-top {
-  border-top: 2px solid var(--nation-color, #000);
+  border-top: 2px solid var(--nation-color, #808080); /* Gray fallback for debugging */
 }
 
 .tile.border-right {
-  border-right: 2px solid var(--nation-color, #000);
+  border-right: 2px solid var(--nation-color, #808080); /* Gray fallback for debugging */
 }
 
 .tile.border-bottom {
-  border-bottom: 2px solid var(--nation-color, #000);
+  border-bottom: 2px solid var(--nation-color, #808080); /* Gray fallback for debugging */
 }
 
 .tile.border-left {
-  border-left: 2px solid var(--nation-color, #000);
+  border-left: 2px solid var(--nation-color, #808080); /* Gray fallback for debugging */
 }
 
 /* Capital highlight */
