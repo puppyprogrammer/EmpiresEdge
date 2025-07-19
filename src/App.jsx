@@ -40,6 +40,7 @@ function App() {
       setSession(data.session);
       if (data.session) {
         checkUserNation(data.session.user.id);
+        fetchTiles();
       }
     });
 
@@ -47,12 +48,13 @@ function App() {
       setSession(session);
       if (session) {
         checkUserNation(session.user.id);
+        fetchTiles();
       } else {
         setUserNation(null);
         setResources({ lumber: 0, oil: 0, ore: 0 });
         setShowNationModal(false);
+        setTiles(null);
       }
-      fetchTiles();
     });
 
     if (session?.user?.id) {
@@ -60,8 +62,6 @@ function App() {
         await checkUserNation(session.user.id);
       }, 3000);
     }
-
-    fetchTiles();
 
     return () => {
       if (subscription) subscription.unsubscribe();
@@ -197,12 +197,14 @@ function App() {
   }
 
   function findCapitalTile() {
+    if (!tiles || tiles.length === 0) return null;
+
     const capitalTiles = tiles.filter((t) => t.is_capital);
     const minDistance = 3;
 
     const candidates = tiles.filter((tile) => {
       return capitalTiles.every(
-        (cap) => Math.abs(tile.x - cap.x) + Math.abs(t.y - cap.y) >= minDistance
+        (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
       );
     });
 
@@ -213,11 +215,20 @@ function App() {
   }
 
   async function handleStartGame() {
+    if (!session?.user?.id) {
+      setError('No user session available. Please log in again.');
+      return;
+    }
+
     if (!nationName.trim()) {
       setError('Nation name is required');
       return;
     }
-    setError(null);
+
+    if (!tiles || tiles.length === 0) {
+      setError('Map data not loaded. Please try again.');
+      return;
+    }
 
     const capitalTile = findCapitalTile();
     if (!capitalTile) {
