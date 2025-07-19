@@ -161,35 +161,54 @@ function App() {
   }
 
   async function checkUserNation(userId) {
-    try {
-      const { data, error } = await supabase
-        .from('nations')
-        .select('id, name, color, capital_tile_x, capital_tile_y, owner_id, lumber, oil, ore')
-        .eq('owner_id', userId)
-        .single();
+  try {
+    // Step 1: Fetch the user's nation
+    const { data: nation, error } = await supabase
+      .from('nations')
+      .select('id, name, color, capital_tile_x, capital_tile_y, owner_id, lumber, oil, ore')
+      .eq('owner_id', userId)
+      .single();
 
-      if (error && error.code !== 'PGRST116') {
-        setError(error.message);
-        return;
-      }
-
-      if (data) {
-        setUserNation(data);
-        setResources({
-          lumber: data.lumber || 0,
-          oil: data.oil || 0,
-          ore: data.ore || 0
-        });
-        setShowNationModal(false);
-      } else {
-        setUserNation(null);
-        setResources({ lumber: 0, oil: 0, ore: 0 });
-        setShowNationModal(true);
-      }
-    } catch (err) {
-      setError('Failed to check nation: ' + err.message);
+    // If an error occurred that isn't "No rows found" (PGRST116), show error
+    if (error && error.code !== 'PGRST116') {
+      setError(error.message);
+      return;
     }
+
+    // Step 2: Try to update resources via RPC
+    try {
+      const { data: resourceData, error: resourceError } = await supabase.rpc('update_resources', {
+        input_user_id: userId,
+      });
+
+      if (resourceError) {
+        console.error('Failed to update resources:', resourceError);
+        // Continue with existing nation data even if update fails
+      }
+    } catch (rpcError) {
+      console.error('RPC call error:', rpcError);
+    }
+
+    // Step 3: Set state based on nation data
+    if (nation) {
+      setUserNation(nation);
+      setResources({
+        lumber: nation.lumber || 0,
+        oil: nation.oil || 0,
+        ore: nation.ore || 0,
+      });
+      setShowNationModal(false);
+    } else {
+      // No nation found — show modal to create/select nation
+      setUserNation(null);
+      setResources({ lumber: 0, oil: 0, ore: 0 });
+      setShowNationModal(true);
+    }
+  } catch (err) {
+    setError('Failed to check nation: ' + err.message);
   }
+}
+
 
   function tilesWithinDistance(centerTile, distance, tilesArr) {
     return tilesArr.filter(
