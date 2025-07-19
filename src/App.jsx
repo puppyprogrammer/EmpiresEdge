@@ -26,6 +26,7 @@ function App() {
   const [nationName, setNationName] = useState('');
   const [nationColor, setNationColor] = useState('#2563eb');
   const [userNation, setUserNation] = useState(null);
+  const [nations, setNations] = useState({});
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -75,13 +76,31 @@ function App() {
 
   async function fetchTiles() {
     try {
+      // Fetch nations data
+      const { data: nationsData, error: nationsError } = await supabase
+        .from('nations')
+        .select('id, color');
+
+      if (nationsError) {
+        setError('Failed to fetch nations: ' + nationsError.message);
+        setTiles([]);
+        return;
+      }
+
+      // Map nation IDs to colors
+      const nationsMap = {};
+      nationsData.forEach(nation => {
+        nationsMap[nation.id] = { color: nation.color };
+      });
+      setNations(nationsMap);
+
       let allTiles = [];
       let from = 0;
       const limit = 1000;
 
       const { count, error: countError } = await supabase
         .from('tiles')
-        .select('id, x, y, type, resource, owner, is_capital, nations!owner(color)', { count: 'exact', head: true })
+        .select('id, x, y, type, resource, owner, is_capital', { count: 'exact', head: true })
         .order('x', { ascending: true })
         .order('y', { ascending: true });
 
@@ -96,7 +115,7 @@ function App() {
       while (from < totalRows) {
         const { data, error } = await supabase
           .from('tiles')
-          .select('id, x, y, type, resource, owner, is_capital, nations!owner(color)')
+          .select('id, x, y, type, resource, owner, is_capital')
           .order('x', { ascending: true })
           .order('y', { ascending: true })
           .range(from, from + limit - 1);
@@ -107,7 +126,13 @@ function App() {
           return;
         }
 
-        allTiles = [...allTiles, ...data];
+        // Enrich tiles with nation color
+        const enrichedTiles = data.map(tile => ({
+          ...tile,
+          nations: tile.owner ? nationsMap[tile.owner] : null
+        }));
+
+        allTiles = [...allTiles, ...enrichedTiles];
         from += limit;
       }
 
