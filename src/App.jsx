@@ -578,32 +578,7 @@ function App() {
           </div>
         </div>
       )}
-
-      {tiles && tiles.length > 0 && (
-        <div>
-          <div className="map-scroll-container" ref={mapScrollRef}>
-            <div className="map-grid">
-              {tiles.map((tile) => (
-                <div
-                  key={tile.id}
-                  className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${tile.is_capital && tile.owner === userNation?.id ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)}`}
-                  data-x={tile.x}
-                  data-y={tile.y}
-                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}`}
-                  style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
-                >
-                  {tile.is_capital && (
-                    <img
-                      src="/icons/building.svg"
-                      alt="Capital Building"
-                      className="capital-icon"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          {showMainMenu && (
+      {showMainMenu && (
             <div className="main-menu">
               test
               <div
@@ -657,6 +632,32 @@ function App() {
               </div>
             </div>
           )}
+
+      {tiles && tiles.length > 0 && (
+        <div>
+          <div className="map-scroll-container" ref={mapScrollRef}>
+            <div className="map-grid">
+              {tiles.map((tile) => (
+                <div
+                  key={tile.id}
+                  className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${tile.is_capital && tile.owner === userNation?.id ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)}`}
+                  data-x={tile.x}
+                  data-y={tile.y}
+                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}`}
+                  style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
+                >
+                  {tile.is_capital && (
+                    <img
+                      src="/icons/building.svg"
+                      alt="Capital Building"
+                      className="capital-icon"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          
           <div className="left-menu">
             <a>Rankings</a><br/>
             <a>Online Players</a><br/>
