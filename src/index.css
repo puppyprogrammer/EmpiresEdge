@@ -269,7 +269,7 @@ body, html {
   position: absolute;
   left: 0;
   top: 50px;
-  width: 100px;
+  width: 80px;
   background: rgba(0, 0, 0, 0.8);
   color: white;
   margin: 10px;
@@ -279,7 +279,7 @@ body, html {
 
 .main-menu {
   position: absolute;
-  left: 138px;
+  left: 118px;
   top: 50px;
   right: 0;
   background: rgba(0, 0, 0, 0.8);
