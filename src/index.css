@@ -192,7 +192,7 @@ body, html {
   filter: brightness(60%);
 }
 
-.tile.grass {
+.tile.plains {
   background-color: #22c55e;
 }
 
