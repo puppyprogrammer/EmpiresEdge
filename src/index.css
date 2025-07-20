@@ -349,15 +349,14 @@ body, html {
   .left-menu {
     width: 128px; /* Fixed 4 tiles */
     font-size: 1.2em;
-    padding: 20px;
+    margin: 20px;
   }
   .main-menu {
     top: 60px; /* Matched with Left Menu */
-    left: 128px; /* Adjusted to follow Left Menu */
-    padding: 20px;
+    margin: 20px;
   }
   .bottom-menu {
     height: 160px; /* Fixed 5 tiles */
-    padding: 20px;
+    margin: 20px;
   }
 }
