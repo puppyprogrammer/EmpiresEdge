@@ -208,19 +208,14 @@ function App() {
 
   function findCapitalTile() {
     if (!tiles || tiles.length === 0) {
-      console.error('No tiles available for capital selection');
       return null;
     }
-
-    console.log('Total tiles:', tiles.length);
     const capitalTiles = tiles.filter((tile) => {
       if (typeof tile.is_capital !== 'boolean') {
-        console.error('Invalid tile data:', tile);
         return false;
       }
       return tile.is_capital;
     });
-    console.log('Capital tiles:', capitalTiles.length);
 
     const minDistance = 3;
     const candidates = tiles.filter((tile) => {
@@ -232,9 +227,7 @@ function App() {
       );
     });
 
-    console.log('Candidate tiles:', candidates.length);
     if (candidates.length === 0) {
-      console.error('No valid capital tiles found');
       return null;
     }
 
@@ -250,19 +243,16 @@ function App() {
     });
 
     if (!session?.user?.id) {
-      console.error('No user session');
       setError('No user session available. Please log in again.');
       return;
     }
 
     if (!nationName.trim()) {
-      console.error('Nation name is empty');
       setError('Nation name is required');
       return;
     }
 
     if (!tiles || tiles.length === 0) {
-      console.error('Tiles not loaded');
       setError('Map data not loaded. Please try again.');
       return;
     }
@@ -275,22 +265,17 @@ function App() {
       .single();
 
     if (nameCheckError && nameCheckError.code !== 'PGRST116') {
-      console.error('Name check error:', nameCheckError);
       setError('Failed to check nation name: ' + nameCheckError.message);
       return;
     }
 
     if (existingNation) {
-      console.error('Nation name already exists:', nationName.trim());
       setError('Nation name "' + nationName.trim() + '" is already taken. Please choose another.');
       return;
     }
 
     const capitalTile = findCapitalTile();
-    console.log('Capital Tile:', capitalTile);
-
     if (!capitalTile) {
-      console.error('No capital tile found');
       setError('No available tile to place capital.');
       return;
     }
@@ -322,12 +307,9 @@ function App() {
         .single();
 
       if (insertError) {
-        console.error('Nation insert error:', insertError);
         setError('Failed to create nation: ' + insertError.message);
         return;
       }
-
-      console.log('Nation created:', nationData);
 
       const { error: capTileErr } = await supabase
         .from('tiles')
@@ -339,7 +321,6 @@ function App() {
         .eq('y', capitalTile.y);
 
       if (capTileErr) {
-        console.error('Capital tile update error:', capTileErr);
         setError('Failed to update capital tile: ' + capTileErr.message);
         return;
       }
@@ -347,8 +328,6 @@ function App() {
       const surroundingTiles = tilesWithinDistance(capitalTile, 1, tiles).filter(
         (t) => !(t.x === capitalTile.x && t.y === capitalTile.y)
       );
-
-      console.log('Surrounding tiles:', surroundingTiles);
 
       for (const tile of surroundingTiles) {
         const { error: updateErr } = await supabase
@@ -358,7 +337,6 @@ function App() {
           .eq('y', tile.y);
 
         if (updateErr) {
-          console.error(`Tile update error for (${tile.x}, ${tile.y}):`, updateErr);
           setError('Failed to update surrounding tile: ' + updateErr.message);
           return;
         }
@@ -374,7 +352,6 @@ function App() {
       setShowNationModal(false);
       setNationName('');
     } catch (err) {
-      console.error('Unexpected error creating nation:', err);
       setError('Error creating nation: ' + err.message);
     }
   }
