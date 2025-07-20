@@ -221,30 +221,37 @@ function App() {
 
   function findCapitalTile() {
     if (!tiles || tiles.length === 0) {
+      console.log('findCapitalTile: tiles is null or empty', { tiles });
       return null;
     }
     const capitalTiles = tiles.filter((tile) => {
       if (typeof tile.is_capital !== 'boolean') {
+        console.log('findCapitalTile: Skipping tile due to invalid is_capital', { tile });
         return false;
       }
       return tile.is_capital;
     });
+    console.log('findCapitalTile: Filtered capitalTiles', { capitalTiles });
 
     const minDistance = 3;
     const candidates = tiles.filter((tile) => {
       if (!tile.x || !tile.y) {
+        console.log('findCapitalTile: Skipping tile due to missing x or y', { tile });
         return false;
       }
       return capitalTiles.every(
         (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
       );
     });
+    console.log('findCapitalTile: Candidates', { candidates });
 
     if (candidates.length === 0) {
+      console.log('findCapitalTile: No candidates found', { candidates });
       return null;
     }
 
     const idx = Math.floor(Math.random * candidates.length);
+    console.log('findCapitalTile: Selected index', { idx, candidatesLength: candidates.length });
     return candidates[idx];
   }
 

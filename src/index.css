@@ -136,7 +136,7 @@ body, html {
   font-size: 1.125rem;
   margin: 1rem auto;
   text-align: center;
-  z-index: 1010; /* Above everything */
+  z-index: 1004; 
 }
 
 .loading-message {
