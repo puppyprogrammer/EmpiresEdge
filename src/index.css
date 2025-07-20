@@ -269,8 +269,7 @@ body, html {
   left: 0;
   top: 50px;
   width: 80px;
-  background: rgba(17, 24, 39, 0.9); /* Increased to 90% opacity for darker tint */
-  background: linear-gradient(135deg, rgba(17, 24, 39, 1), rgba(17, 24, 39, 0)); /* Adjusted gradient for darker effect */
+  background: rgba(17, 24, 39, 0.9); /* Solid tinted background without gradient */
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   color: white;
@@ -288,8 +287,7 @@ body, html {
   left: 118px;
   top: 50px;
   right: 0;
-  background: rgba(17, 24, 39, 0.9); /* Increased to 90% opacity for darker tint */
-  background: linear-gradient(135deg, rgba(17, 24, 39, 1), rgba(17, 24, 39, 0)); /* Adjusted gradient for darker effect */
+  background: rgba(17, 24, 39, 0.9); /* Solid tinted background without gradient */
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   color: white;
@@ -308,8 +306,7 @@ body, html {
   left: 0;
   right: 0;
   height: 160px;
-  background: rgba(17, 24, 39, 0.9); /* Increased to 90% opacity for darker tint */
-  background: linear-gradient(135deg, rgba(17, 24, 39, 1), rgba(17, 24, 39, 0)); /* Adjusted gradient for darker effect */
+  background: rgba(17, 24, 39, 0.9); /* Solid tinted background without gradient */
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   color: white;
