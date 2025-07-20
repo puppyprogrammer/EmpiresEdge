@@ -280,33 +280,39 @@ body, html {
   left: 0;
   top: 60px; /* Below header */
   width: 128px; /* 4 tiles x 32px */
-  background: rgba(0, 0, 0, 0.8);
+  background: linear-gradient(135deg, #40c4ff, #a100f2); /* Liquid gradient */
   color: white;
-  margin: 10px; /* Changed from padding to margin */
-  z-index: 1001; /* Above map, below modal */
+  padding: 20px; /* Restored with 20px */
+  border-radius: 15px; /* Rounded corners for liquid design */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Elevated shadow */
+  z-index: 1002; /* Above map grid and tiles */
 }
 
 .main-menu {
   position: absolute;
-  left: 128px; /* After Left Menu */
-  top: 30px; /* Below header with margin */
+  left: 0; /* Aligned with Left Menu */
+  top: 60px; /* Matched with Left Menu */
   right: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: linear-gradient(135deg, #40c4ff, #a100f2); /* Liquid gradient */
   color: white;
-  margin: 30px; /* Changed from padding to margin */
-  z-index: 1001; /* Above map, below modal */
+  padding: 20px; /* Restored with 20px */
+  border-radius: 15px; /* Rounded corners */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Elevated shadow */
+  z-index: 1002; /* Above map grid and tiles */
 }
 
 .bottom-menu {
   position: absolute;
   bottom: 0;
-  left: 0;
+  left: 0; /* Aligned with Left Menu */
   right: 0;
   height: 160px; /* 5 tiles x 32px */
-  background: rgba(0, 0, 0, 0.8);
+  background: linear-gradient(135deg, #40c4ff, #a100f2); /* Liquid gradient */
   color: white;
-  margin: 30px; /* Changed from padding to margin */
-  z-index: 1001; /* Above map, below modal */
+  padding: 20px; /* Restored with 20px */
+  border-radius: 15px; /* Rounded corners */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Elevated shadow */
+  z-index: 1002; /* Above map grid and tiles */
 }
 
 /* Responsive Adjustments */
@@ -320,15 +326,16 @@ body, html {
   .left-menu {
     width: 128px; /* Fixed 4 tiles */
     font-size: 0.8em;
-    margin: 5px; /* Reduced margin for small screens */
+    padding: 10px; /* Reduced padding for small screens */
   }
   .main-menu {
-    left: 128px;
-    margin: 15px; /* Reduced margin for small screens */
+    top: 60px; /* Matched with Left Menu */
+    left: 128px; /* Adjusted to follow Left Menu */
+    padding: 10px; /* Reduced padding for small screens */
   }
   .bottom-menu {
     height: 160px; /* Fixed 5 tiles */
-    margin: 15px; /* Reduced margin for small screens */
+    padding: 10px; /* Reduced padding for small screens */
   }
 }
 
@@ -342,14 +349,15 @@ body, html {
   .left-menu {
     width: 128px; /* Fixed 4 tiles */
     font-size: 1.2em;
-    margin: 10px; /* Adjusted margin */
+    padding: 20px;
   }
   .main-menu {
-    left: 128px;
-    margin: 30px;
+    top: 60px; /* Matched with Left Menu */
+    left: 128px; /* Adjusted to follow Left Menu */
+    padding: 20px;
   }
   .bottom-menu {
     height: 160px; /* Fixed 5 tiles */
-    margin: 30px;
+    padding: 20px;
   }
 }
