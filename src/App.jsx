@@ -149,7 +149,7 @@ async function fetchTiles() {
           start_row: from,
           end_row: from + limit - 1
         });
-      console.log('Fetched tiles data:', data); // Log to verify
+      console.log('Fetched tiles data sample:', data.map(tile => ({ id: tile.id, x: tile.x, y: tile.y }))); // Enhanced log with specific fields
 
       if (error) {
         setError(`Failed to fetch tiles: ${error.message} (code: ${error.code}, details: ${error.details})`);
