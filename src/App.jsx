@@ -34,12 +34,12 @@ function App() {
     oil: 0,
     ore: 0
   });
-  const [showMainMenu, setShowMainMenu] = useState(true); // Debug: Log initial state
-  const [showBottomMenu, setShowBottomMenu] = useState(true); // Debug: Log initial state
+  const [showMainMenu, setShowMainMenu] = useState(true);
+  const [showBottomMenu, setShowBottomMenu] = useState(true);
   const [selectedPage, setSelectedPage] = useState(null);
 
   useEffect(() => {
-    console.log('Mounting App, initial showMainMenu:', showMainMenu, 'showBottomMenu:', showBottomMenu);
+    console.log('Mounting App, initial showMainMenu:', showMainMenu, 'showBottomMenu:', showBottomMenu, 'tiles:', tiles);
     let pollInterval = null;
 
     supabase.auth.getSession().then(({ data }) => {
@@ -53,6 +53,7 @@ function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      console.log('Auth state change, session:', session, 'showMainMenu:', showMainMenu, 'showBottomMenu:', showBottomMenu);
       if (session) {
         checkUserNation(session.user.id);
         fetchTiles();
@@ -61,8 +62,7 @@ function App() {
         setResources({ lumber: 0, oil: 0, ore: 0 });
         setShowNationModal(false);
         fetchTiles();
-        // Debug: Ensure menus stay visible on logout
-        setShowMainMenu(true);
+        setShowMainMenu(true); // Ensure menus stay visible on logout
         setShowBottomMenu(true);
       }
     });
@@ -78,6 +78,10 @@ function App() {
       if (pollInterval) clearInterval(pollInterval);
     };
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    console.log('State updated - showMainMenu:', showMainMenu, 'showBottomMenu:', showBottomMenu, 'tiles:', tiles);
+  }, [showMainMenu, showBottomMenu, tiles]);
 
   useEffect(() => {
     if (!userNation || !tiles || !mapScrollRef.current) return;
@@ -378,8 +382,7 @@ function App() {
       setLoginEmail('');
       setLoginPassword('');
       fetchTiles();
-      // Debug: Ensure menus are visible after login
-      setShowMainMenu(true);
+      setShowMainMenu(true); // Ensure menus are visible after login
       setShowBottomMenu(true);
     }
   }
@@ -402,8 +405,7 @@ function App() {
       setRegisterPassword('');
       setRegisterUsername('');
       setShowRegister(false);
-      // Debug: Ensure menus are visible after register
-      setShowMainMenu(true);
+      setShowMainMenu(true); // Ensure menus are visible after register
       setShowBottomMenu(true);
     }
   }
@@ -416,8 +418,7 @@ function App() {
       setShowNationModal(false);
       setTiles(null);
       fetchTiles();
-      // Debug: Ensure menus stay visible on logout
-      setShowMainMenu(true);
+      setShowMainMenu(true); // Ensure menus stay visible on logout
       setShowBottomMenu(true);
     } catch (err) {
       setError('Failed to log out: ' + err.message);
@@ -597,104 +598,103 @@ function App() {
         </div>
       )}
 
-      {tiles && tiles.length > 0 && (
-        <div>
-          <div className="map-scroll-container" ref={mapScrollRef}>
-            <div className="map-grid">
-              {tiles.map((tile) => (
-                <div
-                  key={tile.id}
-                  className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${tile.is_capital && tile.owner === userNation?.id ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)}`}
-                  data-x={tile.x}
-                  data-y={tile.y}
-                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}`}
-                  style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
-                >
-                  {tile.is_capital && (
-                    <img
-                      src="/icons/building.svg"
-                      alt="Capital Building"
-                      className="capital-icon"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          {showMainMenu && (
-            <div className="main-menu">
-              <div>Debug: showMainMenu is {showMainMenu.toString()}</div> {/* Debug */}
-              {selectedPage === 'Rankings' && <RankingsPage />}
-              {selectedPage === 'OnlinePlayers' && <OnlinePlayersPage />}
+      {/* Temporarily remove tiles condition to test menu visibility */}
+      <div>
+        <div className="map-scroll-container" ref={mapScrollRef}>
+          <div className="map-grid">
+            {tiles?.map((tile) => (
               <div
-                className="close-menu"
-                onClick={() => {
-                  console.log('Closing main menu, setting showMainMenu to false');
-                  setShowMainMenu(false);
-                }}
-                style={{
-                  position: 'absolute',
-                  top: '5px',
-                  right: '5px',
-                  width: '20px',
-                  height: '20px',
-                  background: 'rgba(139, 0, 0, 0.8)',
-                  color: 'white',
-                  textAlign: 'center',
-                  lineHeight: '20px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s ease',
-                }}
-                onMouseEnter={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 1)')}
-                onMouseLeave={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 0.8)')}
+                key={tile.id}
+                className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${tile.is_capital && tile.owner === userNation?.id ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)}`}
+                data-x={tile.x}
+                data-y={tile.y}
+                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}`}
+                style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
               >
-                X
+                {tile.is_capital && (
+                  <img
+                    src="/icons/building.svg"
+                    alt="Capital Building"
+                    className="capital-icon"
+                  />
+                )}
               </div>
-            </div>
-          )}
-          {showBottomMenu && (
-            <div className="bottom-menu">
-              <div>Debug: showBottomMenu is {showBottomMenu.toString()}</div> {/* Debug */}
-              test
-              <div
-                className="close-menu"
-                onClick={() => {
-                  console.log('Closing bottom menu, setting showBottomMenu to false');
-                  setShowBottomMenu(false);
-                }}
-                style={{
-                  position: 'absolute',
-                  top: '5px',
-                  right: '5px',
-                  width: '20px',
-                  height: '20px',
-                  background: 'rgba(139, 0, 0, 0.8)',
-                  color: 'white',
-                  textAlign: 'center',
-                  lineHeight: '20px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s ease',
-                }}
-                onMouseEnter={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 1)')}
-                onMouseLeave={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 0.8)')}
-              >
-                X
-              </div>
-            </div>
-          )}
-          <div className="left-menu">
-            <a href="#" onClick={(e) => { e.preventDefault(); setSelectedPage('Rankings'); setShowMainMenu(true); }}>Rankings</a><br/>
-            <a href="#" onClick={(e) => { e.preventDefault(); setSelectedPage('OnlinePlayers'); setShowMainMenu(true); }}>Online Players</a><br/>
-            <a>Messages</a><br/>
-            <a>Forum</a><br/>
-            <a>My Nation</a><br/>
-            <a>Infrastructure</a><br/>
-            <a>Diplomacy</a><br/>
+            ))}
           </div>
         </div>
-      )}
+        {showMainMenu && (
+          <div className="main-menu">
+            <div>Debug: showMainMenu is {showMainMenu.toString()}</div>
+            {selectedPage === 'Rankings' && <RankingsPage />}
+            {selectedPage === 'OnlinePlayers' && <OnlinePlayersPage />}
+            <div
+              className="close-menu"
+              onClick={() => {
+                console.log('Closing main menu, setting showMainMenu to false');
+                setShowMainMenu(false);
+              }}
+              style={{
+                position: 'absolute',
+                top: '5px',
+                right: '5px',
+                width: '20px',
+                height: '20px',
+                background: 'rgba(139, 0, 0, 0.8)',
+                color: 'white',
+                textAlign: 'center',
+                lineHeight: '20px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 1)')}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 0.8)')}
+            >
+              X
+            </div>
+          </div>
+        )}
+        {showBottomMenu && (
+          <div className="bottom-menu">
+            <div>Debug: showBottomMenu is {showBottomMenu.toString()}</div>
+            test
+            <div
+              className="close-menu"
+              onClick={() => {
+                console.log('Closing bottom menu, setting showBottomMenu to false');
+                setShowBottomMenu(false);
+              }}
+              style={{
+                position: 'absolute',
+                top: '5px',
+                right: '5px',
+                width: '20px',
+                height: '20px',
+                background: 'rgba(139, 0, 0, 0.8)',
+                color: 'white',
+                textAlign: 'center',
+                lineHeight: '20px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 1)')}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 0.8)')}
+            >
+              X
+            </div>
+          </div>
+        )}
+        <div className="left-menu">
+          <a href="#" onClick={(e) => { e.preventDefault(); setSelectedPage('Rankings'); setShowMainMenu(true); }}>Rankings</a><br/>
+          <a href="#" onClick={(e) => { e.preventDefault(); setSelectedPage('OnlinePlayers'); setShowMainMenu(true); }}>Online Players</a><br/>
+          <a>Messages</a><br/>
+          <a>Forum</a><br/>
+          <a>My Nation</a><br/>
+          <a>Infrastructure</a><br/>
+          <a>Diplomacy</a><br/>
+        </div>
+      </div>
 
       {tiles === null && !error && <div className="loading-message">Loading map data...</div>}
       <Analytics />
