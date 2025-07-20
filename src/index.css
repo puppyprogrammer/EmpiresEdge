@@ -284,8 +284,8 @@ body, html {
   right: 0;
   background: rgba(0, 0, 0, 0.8);
   color: white;
-  margin: 30px;
-  padding: 30px;
+  margin: 10px;
+  padding: 10px;
   z-index: 1001;
 }
 
@@ -297,45 +297,7 @@ body, html {
   height: 160px;
   background: rgba(0, 0, 0, 0.8);
   color: white;
-  margin: 30px;
-  padding: 30px;
+  margin: 10px;
+  padding: 10px;
   z-index: 1001;
-}
-
-@media (max-width: 384px) {
-  .left-menu {
-    width: 128px;
-    font-size: 0.8em;
-    margin: 5px;
-    padding: 5px;
-  }
-  .main-menu {
-    left: 128px;
-    margin: 15px;
-    padding: 15px;
-  }
-  .bottom-menu {
-    height: 160px;
-    margin: 15px;
-    padding: 15px;
-  }
-}
-
-@media (min-width: 2560px) {
-  .left-menu {
-    width: 128px;
-    font-size: 1.2em;
-    margin: 20px;
-    padding: 20px;
-  }
-  .main-menu {
-    left: 128px;
-    margin: 30px;
-    padding: 30px;
-  }
-  .bottom-menu {
-    height: 160px;
-    margin: 30px;
-    padding: 30px;
-  }
 }
