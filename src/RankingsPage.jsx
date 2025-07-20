@@ -33,7 +33,7 @@ const RankingsPage = () => {
 
   return (
     <div className="rankings-page">
-      <h2>Nation Rankings</h2>
+      <div>Nation Rankings</div>
       {rankings.length === 0 ? (
         <p>No nations ranked yet.</p>
       ) : (
