@@ -74,7 +74,7 @@ function App() {
     if (!userNation || !tiles || !mapScrollRef.current) return;
 
     const capitalTile = tiles.find(
-      (t) => t.x === userNation.capital_tile_x && t.y === userNation.capital_tile_y && t.is_capital
+      (tile) => tile.x === userNation.capital_tile_x && tile.y === userNation.capital_tile_y && tile.is_capital
     );
     if (!capitalTile) return;
 
@@ -153,6 +153,7 @@ function App() {
         from += limit;
       }
 
+      console.log('Tiles loaded:', allTiles.length, allTiles.slice(0, 5));
       setTiles(allTiles);
     } catch (err) {
       setError(`Error fetching tiles: ${err.message}`);
@@ -201,148 +202,164 @@ function App() {
 
   function tilesWithinDistance(centerTile, distance, tilesArr) {
     return tilesArr.filter(
-      (t) => Math.abs(t.x - centerTile.x) + Math.abs(t.y - centerTile.y) <= distance
+      (tile) => Math.abs(tile.x - centerTile.x) + Math.abs(tile.y - centerTile.y) <= distance
     );
   }
 
   function findCapitalTile() {
-    if (!tiles || tiles.length === 0) return null;
+    if (!tiles || tiles.length === 0) {
+      console.error('No tiles available for capital selection');
+      return null;
+    }
 
-    const capitalTiles = tiles.filter((t) => t.is_capital);
+    console.log('Total tiles:', tiles.length);
+    const capitalTiles = tiles.filter((tile) => {
+      if (typeof tile.is_capital !== 'boolean') {
+        console.error('Invalid tile data:', tile);
+        return false;
+      }
+      return tile.is_capital;
+    });
+    console.log('Capital tiles:', capitalTiles.length);
+
     const minDistance = 3;
-
     const candidates = tiles.filter((tile) => {
+      if (!tile.x || !tile.y) {
+        console.error('Tile missing x or y:', tile);
+        return false;
+      }
       return capitalTiles.every(
-        (cap) => Math.abs(tile.x - cap.x) + Math.abs(t.y - cap.y) >= minDistance
+        (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
       );
     });
 
-    if (candidates.length === 0) return null;
+    console.log('Candidate tiles:', candidates.length);
+    if (candidates.length === 0) {
+      console.error('No valid capital tiles found');
+      return null;
+    }
 
     const idx = Math.floor(Math.random() * candidates.length);
     return candidates[idx];
   }
 
   async function handleStartGame() {
-  console.log('Starting game with:', {
-    userId: session?.user?.id,
-    nationName: nationName.trim(),
-    tilesLoaded: tiles && tiles.length > 0
-  });
-
-  if (!session?.user?.id) {
-    console.error('No user session');
-    setError('No user session available. Please log in again.');
-    return;
-  }
-
-  if (!nationName.trim()) {
-    console.error('Nation name is empty');
-    setError('Nation name is required');
-    return;
-  }
-
-  if (!tiles || tiles.length === 0) {
-    console.error('Tiles not loaded');
-    setError('Map data not loaded. Please try again.');
-    return;
-  }
-
-  const capitalTile = findCapitalTile();
-  console.log('Capital Tile:', capitalTile);
-
-  if (!capitalTile) {
-    console.error('No capital tile found');
-    setError('No available tile to place capital.');
-    return;
-  }
-
-  try {
-    console.log('Inserting nation with data:', {
-      name: nationName.trim(),
-      color: nationColor,
-      owner_id: session.user.id,
-      capital_tile_x: capitalTile.x,
-      capital_tile_y: capitalTile.y
+    console.log('Starting game with:', {
+      userId: session?.user?.id,
+      nationName: nationName.trim(),
+      tilesLoaded: tiles && tiles.length > 0
     });
 
-    const { data: nationData, error: insertError } = await supabase
-      .from('nations')
-      .insert([
-        {
-          name: nationName.trim(),
-          color: nationColor,
-          owner_id: session.user.id,
-          capital_tile_x: capitalTile.x,
-          capital_tile_y: capitalTile.y,
-          lumber: 0,  // Start with some initial resources
-          oil: 0,
-          ore: 0
-        },
-      ])
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('Nation insert error:', insertError);
-      setError('Failed to create nation: ' + insertError.message);
+    if (!session?.user?.id) {
+      console.error('No user session');
+      setError('No user session available. Please log in again.');
       return;
     }
 
-    console.log('Nation created:', nationData);
-
-    // Update capital tile
-    const { error: capTileErr } = await supabase
-      .from('tiles')
-      .update({ 
-        owner: nationData.id, 
-        is_capital: true 
-      })
-      .eq('x', capitalTile.x)
-      .eq('y', capitalTile.y);
-
-    if (capTileErr) {
-      console.error('Capital tile update error:', capTileErr);
-      setError('Failed to update capital tile: ' + capTileErr.message);
+    if (!nationName.trim()) {
+      console.error('Nation name is empty');
+      setError('Nation name is required');
       return;
     }
 
-    // Update surrounding tiles
-    const surroundingTiles = tilesWithinDistance(capitalTile, 1, tiles).filter(
-      (t) => !(t.x === capitalTile.x && t.y === capitalTile.y)
-    );
+    if (!tiles || tiles.length === 0) {
+      console.error('Tiles not loaded');
+      setError('Map data not loaded. Please try again.');
+      return;
+    }
 
-    console.log('Surrounding tiles:', surroundingTiles);
+    const capitalTile = findCapitalTile();
+    console.log('Capital Tile:', capitalTile);
 
-    for (const tile of surroundingTiles) {
-      const { error: updateErr } = await supabase
-        .from('tiles')
-        .update({ owner: nationData.id })
-        .eq('x', tile.x)
-        .eq('y', tile.y);
+    if (!capitalTile) {
+      console.error('No capital tile found');
+      setError('No available tile to place capital.');
+      return;
+    }
 
-      if (updateErr) {
-        console.error(`Tile update error for (${tile.x}, ${tile.y}):`, updateErr);
-        setError('Failed to update surrounding tile: ' + updateErr.message);
+    try {
+      console.log('Inserting nation with data:', {
+        name: nationName.trim(),
+        color: nationColor,
+        owner_id: session.user.id,
+        capital_tile_x: capitalTile.x,
+        capital_tile_y: capitalTile.y
+      });
+
+      const { data: nationData, error: insertError } = await supabase
+        .from('nations')
+        .insert([
+          {
+            name: nationName.trim(),
+            color: nationColor,
+            owner_id: session.user.id,
+            capital_tile_x: capitalTile.x,
+            capital_tile_y: capitalTile.y,
+            lumber: 0,
+            oil: 0,
+            ore: 0
+          },
+        ])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Nation insert error:', insertError);
+        setError('Failed to create nation: ' + insertError.message);
         return;
       }
-    }
 
-    // Refresh data
-    await fetchTiles();
-    setUserNation(nationData);
-    setResources({
-      lumber: nationData.lumber || 0,
-      oil: nationData.oil || 0,
-      ore: nationData.ore || 0
-    });
-    setShowNationModal(false);
-    setNationName('');
-  } catch (err) {
-    console.error('Unexpected error creating nation:', err);
-    setError('Error creating nation: ' + err.message);
+      console.log('Nation created:', nationData);
+
+      const { error: capTileErr } = await supabase
+        .from('tiles')
+        .update({ 
+          owner: nationData.id, 
+          is_capital: true 
+        })
+        .eq('x', capitalTile.x)
+        .eq('y', capitalTile.y);
+
+      if (capTileErr) {
+        console.error('Capital tile update error:', capTileErr);
+        setError('Failed to update capital tile: ' + capTileErr.message);
+        return;
+      }
+
+      const surroundingTiles = tilesWithinDistance(capitalTile, 1, tiles).filter(
+        (t) => !(t.x === capitalTile.x && t.y === capitalTile.y)
+      );
+
+      console.log('Surrounding tiles:', surroundingTiles);
+
+      for (const tile of surroundingTiles) {
+        const { error: updateErr } = await supabase
+          .from('tiles')
+          .update({ owner: nationData.id })
+          .eq('x', tile.x)
+          .eq('y', tile.y);
+
+        if (updateErr) {
+          console.error(`Tile update error for (${tile.x}, ${tile.y}):`, updateErr);
+          setError('Failed to update surrounding tile: ' + updateErr.message);
+          return;
+        }
+      }
+
+      await fetchTiles();
+      setUserNation(nationData);
+      setResources({
+        lumber: nationData.lumber || 0,
+        oil: nationData.oil || 0,
+        ore: data.ore || 0
+      });
+      setShowNationModal(false);
+      setNationName('');
+    } catch (err) {
+      console.error('Unexpected error creating nation:', err);
+      setError('Error creating nation: ' + err.message);
+    }
   }
-}
 
   async function handleLogin(e) {
     e.preventDefault();
