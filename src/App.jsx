@@ -225,7 +225,6 @@ function App() {
     const minDistance = 3;
     const candidates = tiles.filter((tile) => {
       if (!tile.x || !tile.y) {
-        console.error('Tile missing x or y:', tile);
         return false;
       }
       return capitalTiles.every(
