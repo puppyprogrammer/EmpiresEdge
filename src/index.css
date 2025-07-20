@@ -270,12 +270,16 @@ body, html {
   left: 0;
   top: 50px;
   width: 80px;
-  background: rgba(221, 221, 221, 0.2);
+  background: rgba(255, 255, 255, 0.1); /* Base semi-transparent white */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)); /* Reflective gradient */
+  backdrop-filter: blur(5px); /* Frosted glass effect */
+  -webkit-backdrop-filter: blur(5px); /* Safari support */
   color: white;
   margin: 10px;
   padding: 10px;
   z-index: 1001;
   border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border for glass edge */
 }
 
 .main-menu {
@@ -283,12 +287,16 @@ body, html {
   left: 118px;
   top: 50px;
   right: 0;
-  background: rgba(221, 221, 221, 0.2);
+  background: rgba(255, 255, 255, 0.1); /* Base semi-transparent white */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)); /* Reflective gradient */
+  backdrop-filter: blur(5px); /* Frosted glass effect */
+  -webkit-backdrop-filter: blur(5px); /* Safari support */
   color: white;
   margin: 10px;
   padding: 10px;
   z-index: 1001;
   border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border for glass edge */
 }
 
 .bottom-menu {
@@ -297,10 +305,14 @@ body, html {
   left: 0;
   right: 0;
   height: 160px;
-  background: rgba(221, 221, 221, 0.2);
+  background: rgba(255, 255, 255, 0.1); /* Base semi-transparent white */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)); /* Reflective gradient */
+  backdrop-filter: blur(5px); /* Frosted glass effect */
+  -webkit-backdrop-filter: blur(5px); /* Safari support */
   color: white;
   margin: 10px;
   padding: 10px;
   z-index: 1001;
   border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border for glass edge */
 }
