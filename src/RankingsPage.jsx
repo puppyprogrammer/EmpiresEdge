@@ -38,14 +38,6 @@ const RankingsPage = () => {
         <p>No nations ranked yet.</p>
       ) : (
         <table>
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Name</th>
-              <th>Capital (X, Y)</th>
-              <th>Total Resources</th>
-            </tr>
-          </thead>
           <tbody>
             {rankings.map((nation, index) => (
               <tr key={nation.nation_id}>
