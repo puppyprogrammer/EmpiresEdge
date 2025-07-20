@@ -345,18 +345,3 @@ body, html {
 .close-menu:hover {
   background-color: rgba(139, 0, 0, 1);
 }
-
-.rankings-page table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.rankings-page th,
-.rankings-page td {
-  padding: 2px;
-  text-align: left;
-}
-
-.rankings-page th {
-  background-color: #f2f2f2;
-}
