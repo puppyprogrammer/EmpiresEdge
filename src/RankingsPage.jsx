@@ -13,10 +13,7 @@ const RankingsPage = () => {
   useEffect(() => {
     const fetchRankings = async () => {
       try {
-        const { data, error } = await supabase
-          .from('nations')
-          .select('id, name, owner_id, capital_tile_x, capital_tile_y, color, lumber, oil, ore, total_resources')
-          .order('total_resources', { ascending: false }); // Now uses the computed column
+        const { data, error } = await supabase.rpc('get_nation_resource_rankings');
 
         if (error) throw error;
 
@@ -31,8 +28,38 @@ const RankingsPage = () => {
     fetchRankings();
   }, []);
 
-  // Rest of the component remains the same
-  // ...
+  if (loading) return <div>Loading rankings...</div>;
+  if (error) return <div>{error}</div>;
+
+  return (
+    <div className="rankings-page">
+      <h2>Nation Rankings</h2>
+      {rankings.length === 0 ? (
+        <p>No nations ranked yet.</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Name</th>
+              <th>Capital (X, Y)</th>
+              <th>Total Resources</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rankings.map((nation, index) => (
+              <tr key={nation.nation_id}>
+                <td>{index + 1}</td>
+                <td style={{ color: nation.color }}>{nation.nation_name}</td>
+                <td>({nation.capital_tile_x}, {nation.capital_tile_y})</td>
+                <td>{nation.total_resources}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
 };
 
 export default RankingsPage;
