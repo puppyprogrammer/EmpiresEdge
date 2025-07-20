@@ -272,7 +272,7 @@ body, html {
   background: rgba(17, 24, 39, 0.7);
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
-  color: rgb(241, 214, 91); /* Changed to yellow */
+  color: rgb(194, 172, 75); /* Changed to yellow */
   font-size: 0.85rem;
   font-weight: 500;
   line-height: 1.8em;
