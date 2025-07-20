@@ -333,13 +333,16 @@ body, html {
     width: 128px;
     font-size: 1.2em;
     margin: 20px;
+    padding: 20px;
   }
   .main-menu {
     left: 128px;
     margin: 20px;
+    padding: 20px;
   }
   .bottom-menu {
     height: 160px;
     margin: 20px;
+    padding: 20px;
   }
 }
