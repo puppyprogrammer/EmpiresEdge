@@ -603,6 +603,9 @@ function App() {
               ))}
             </div>
           </div>
+          <div className="left-menu">test</div>
+          <div className="main-menu">test</div>
+          <div className="bottom-menu">test</div>
         </div>
       )}
 
