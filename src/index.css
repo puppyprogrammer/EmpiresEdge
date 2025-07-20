@@ -181,7 +181,15 @@ body, html {
   border-radius: 4px;
   box-sizing: border-box;
   position: relative;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition: filter 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.tile:hover {
+  filter: brightness(80%);
+}
+
+.tile-clicked {
+  filter: brightness(60%);
 }
 
 .tile.grass {
@@ -351,11 +359,22 @@ table {
   min-width: 20%;
   max-width: 600px;
   margin: 1rem 0 1rem 10px;
+  background-color: #111827;
+  border: 1px solid #374151;
 }
 
 th, td {
   padding: 8px 12px;
   text-align: left;
+  border-bottom: 1px solid #374151;
   color: #e5e7eb;
   font-size: 0.9rem;
+}
+
+tr:nth-child(even) {
+  background-color: #1f2937;
+}
+
+tr:hover {
+  background-color: #374151;
 }
