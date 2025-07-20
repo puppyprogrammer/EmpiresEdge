@@ -342,13 +342,16 @@ body, html {
   .left-menu {
     width: 128px; /* Fixed 4 tiles */
     font-size: 1.2em;
+    margin: 20px;
   }
   .main-menu {
     left: 128px;
     padding: 30px;
+    margin: 20px;
   }
   .bottom-menu {
     height: 160px; /* Fixed 5 tiles */
     padding: 30px;
+    margin: 20px;
   }
 }
