@@ -351,22 +351,11 @@ table {
   min-width: 20%;
   max-width: 600px;
   margin: 1rem 0 1rem 10px;
-  background-color: #111827;
-  border: 1px solid #374151;
 }
 
 th, td {
   padding: 8px 12px;
   text-align: left;
-  border-bottom: 1px solid #374151;
   color: #e5e7eb;
   font-size: 0.9rem;
-}
-
-tr:nth-child(even) {
-  background-color: #1f2937;
-}
-
-tr:hover {
-  background-color: #374151;
 }
