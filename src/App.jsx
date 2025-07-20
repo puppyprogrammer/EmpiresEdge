@@ -603,6 +603,60 @@ function App() {
               ))}
             </div>
           </div>
+          {showMainMenu && (
+            <div className="main-menu">
+              test
+              <div
+                className="close-menu"
+                onClick={() => setShowMainMenu(false)}
+                style={{
+                  position: 'absolute',
+                  top: '5px',
+                  right: '5px',
+                  width: '20px',
+                  height: '20px',
+                  background: 'rgba(139, 0, 0, 0.8)',
+                  color: 'white',
+                  textAlign: 'center',
+                  lineHeight: '20px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease',
+                }}
+                onMouseEnter={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 1)')}
+                onMouseLeave={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 0.8)')}
+              >
+                X
+              </div>
+            </div>
+          )}
+          {showBottomMenu && (
+            <div className="bottom-menu">
+              test
+              <div
+                className="close-menu"
+                onClick={() => setShowBottomMenu(false)}
+                style={{
+                  position: 'absolute',
+                  top: '5px',
+                  right: '5px',
+                  width: '20px',
+                  height: '20px',
+                  background: 'rgba(139, 0, 0, 0.8)',
+                  color: 'white',
+                  textAlign: 'center',
+                  lineHeight: '20px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease',
+                }}
+                onMouseEnter={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 1)')}
+                onMouseLeave={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 0.8)')}
+              >
+                X
+              </div>
+            </div>
+          )}
           <div className="left-menu">
             <a>Rankings</a><br/>
             <a>Online Players</a><br/>
