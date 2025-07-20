@@ -2,63 +2,57 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
+const supabaseKey =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const OnlinePlayersPage = () => {
-  const [onlinePlayers, setOnlinePlayers] = useState([]);
+  const [onlineNations, setOnlineNations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchOnlinePlayers = async () => {
+    const fetchOnlineNations = async () => {
       try {
-        const { data, error } = await supabase.rpc('get_online_players');
-
-        if (error) throw error;
-
-        setOnlinePlayers(data || []);
+        const { data, error } = await supabase.rpc('get_recently_online_nations');
+        if (error) {
+          throw new Error(`Failed to fetch online nations: ${error.message} (code: ${error.code})`);
+        }
+        setOnlineNations(data || []);
       } catch (err) {
-        setError('Failed to fetch online players: ' + err.message);
+        console.error('Error fetching online nations:', err);
+        setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchOnlinePlayers();
-    
-    // Optional: Set up polling to refresh online players every 30 seconds
-    const intervalId = setInterval(fetchOnlinePlayers, 30000);
+    fetchOnlineNations();
 
-    // Cleanup interval on component unmount
+    const intervalId = setInterval(fetchOnlineNations, 15000);
+
     return () => clearInterval(intervalId);
   }, []);
 
-  if (loading) return <div>Loading online players...</div>;
-  if (error) return <div>{error}</div>;
+  if (loading) return <div>Loading online nations...</div>;
+  if (error) return <div className="error-box">{error}</div>;
 
   return (
     <div className="online-players-page">
-      <h3>Online Players</h3>
-      {onlinePlayers.length === 0 ? (
-        <p>No players online right now.</p>
+      <h3>Online Nations</h3>
+      {onlineNations.length === 0 ? (
+        <p>No nations online in the last 5 minutes.</p>
       ) : (
         <table>
           <thead>
             <tr>
-              <th>Username</th>
               <th>Nation</th>
-              <th>Last Seen</th>
             </tr>
           </thead>
           <tbody>
-            {onlinePlayers.map((player) => (
-              <tr key={player.username}>
-                <td>{player.username}</td>
-                <td style={{ color: player.nation_color }}>
-                  {player.nation_name || 'No Nation'}
-                </td>
-                <td>{new Date(player.last_seen).toLocaleString()}</td>
+            {onlineNations.map((nation) => (
+              <tr key={nation.nation_name}>
+                <td>{nation.nation_name}</td>
               </tr>
             ))}
           </tbody>
