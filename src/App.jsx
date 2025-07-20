@@ -268,6 +268,25 @@ function App() {
       return;
     }
 
+    // Check for duplicate nation name
+    const { data: existingNation, error: nameCheckError } = await supabase
+      .from('nations')
+      .select('id')
+      .eq('name', nationName.trim())
+      .single();
+
+    if (nameCheckError && nameCheckError.code !== 'PGRST116') {
+      console.error('Name check error:', nameCheckError);
+      setError('Failed to check nation name: ' + nameCheckError.message);
+      return;
+    }
+
+    if (existingNation) {
+      console.error('Nation name already exists:', nationName.trim());
+      setError('Nation name "' + nationName.trim() + '" is already taken. Please choose another.');
+      return;
+    }
+
     const capitalTile = findCapitalTile();
     console.log('Capital Tile:', capitalTile);
 
@@ -351,7 +370,7 @@ function App() {
       setResources({
         lumber: nationData.lumber || 0,
         oil: nationData.oil || 0,
-        ore: data.ore || 0
+        ore: nationData.ore || 0
       });
       setShowNationModal(false);
       setNationName('');
@@ -552,7 +571,11 @@ function App() {
         )}
       </header>
 
-      {error && <div className="error-box">{error}</div>}
+      {error && (
+        <div className="error-box" style={{ zIndex: 1000, position: 'fixed', top: '10px', left: '50%', transform: 'translateX(-50%)', background: '#ff4d4d', color: 'white', padding: '10px', borderRadius: '5px' }}>
+          {error}
+        </div>
+      )}
 
       {showNationModal && (
         <div className="modal-overlay">
