@@ -604,16 +604,13 @@ function App() {
             </div>
           </div>
           <div className="left-menu">
-            test<br/>
-            test<br/>
-            test<br/>
-            test<br/>
-            test<br/>
-            test<br/>
-            test<br/>
-            test<br/>
-            test<br/>
-            test<br/>
+            Rankings<br/>
+            Online Players<br/>
+            Messages<br/>
+            Forum<br/>
+            My Nation<br/>
+            Infrastructure<br/>
+            Diplomacy<br/>
           </div>
           <div className="main-menu">test</div>
           <div className="bottom-menu">test</div>
