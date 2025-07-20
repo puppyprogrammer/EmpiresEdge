@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
-const supabaseKey =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const OnlinePlayersPage = () => {
@@ -35,24 +34,20 @@ const OnlinePlayersPage = () => {
   }, []);
 
   if (loading) return <div>Loading online nations...</div>;
-  if (error) return <div className="error-box">{error}</div>;
+  if (error) return <div>{error}</div>;
 
   return (
     <div className="online-players-page">
-      <h3>Online Nations</h3>
+      <div>Online Nations</div>
       {onlineNations.length === 0 ? (
         <p>No nations online in the last 5 minutes.</p>
       ) : (
         <table>
-          <thead>
-            <tr>
-              <th>Nation</th>
-            </tr>
-          </thead>
           <tbody>
-            {onlineNations.map((nation) => (
+            {onlineNations.map((nation, index) => (
               <tr key={nation.nation_name}>
-                <td>{nation.nation_name}</td>
+                <td>{index + 1}</td>
+                <td style={{ color: nation.color }}>{nation.nation_name}</td>
               </tr>
             ))}
           </tbody>
