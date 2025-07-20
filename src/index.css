@@ -344,3 +344,24 @@ body, html {
 .close-menu:hover {
   background-color: rgba(139, 0, 0, 1);
 }
+
+.rankings-page {
+  padding: 20px;
+}
+
+.rankings-page table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.rankings-page th,
+.rankings-page td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.rankings-page th {
+  background-color: #f2f2f2;
+}
