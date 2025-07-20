@@ -270,16 +270,16 @@ body, html {
   left: 0;
   top: 50px;
   width: 80px;
-  background: rgba(0, 0, 0, 0.1); /* Base semi-transparent black */
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0)); /* Reflective gradient in black */
-  backdrop-filter: blur(5px); /* Frosted glass effect */
-  -webkit-backdrop-filter: blur(5px); /* Safari support */
-  color: white;
+  background: rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  color: black;
   margin: 10px;
   padding: 10px;
   z-index: 1001;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border for glass edge */
+  border: 1px solid #111827;
 }
 
 .main-menu {
@@ -287,16 +287,16 @@ body, html {
   left: 118px;
   top: 50px;
   right: 0;
-  background: rgba(0, 0, 0, 0.1); /* Base semi-transparent black */
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0)); /* Reflective gradient in black */
-  backdrop-filter: blur(5px); /* Frosted glass effect */
-  -webkit-backdrop-filter: blur(5px); /* Safari support */
-  color: white;
+  background: rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  color: black;
   margin: 10px;
   padding: 10px;
   z-index: 1001;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border for glass edge */
+  border: 1px solid #111827;
 }
 
 .bottom-menu {
@@ -305,14 +305,14 @@ body, html {
   left: 0;
   right: 0;
   height: 160px;
-  background: rgba(0, 0, 0, 0.1); /* Base semi-transparent black */
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0)); /* Reflective gradient in black */
-  backdrop-filter: blur(5px); /* Frosted glass effect */
-  -webkit-backdrop-filter: blur(5px); /* Safari support */
-  color: white;
+  background: rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  color: black;
   margin: 10px;
   padding: 10px;
   z-index: 1001;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border for glass edge */
+  border: 1px solid #111827;
 }
