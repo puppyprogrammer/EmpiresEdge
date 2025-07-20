@@ -695,13 +695,13 @@ async function fetchTiles() {
           </div>
         )}
         <div className="left-menu">
-          <a href="#" onClick={(e) => { e.preventDefault(); setSelectedPage('Rankings'); setShowMainMenu(true); }}>Rankings</a><br/>
-          <a href="#" onClick={(e) => { e.preventDefault(); setSelectedPage('OnlinePlayers'); setShowMainMenu(true); }}>Online Players</a><br/>
-          <a>Messages</a><br/>
-          <a>Forum</a><br/>
-          <a>My Nation</a><br/>
-          <a>Infrastructure</a><br/>
-          <a>Diplomacy</a><br/>
+          <div onClick={() => { setSelectedPage('Rankings'); setShowMainMenu(true); }}>Rankings</div><br />
+          <div onClick={() => { setSelectedPage('OnlinePlayers'); setShowMainMenu(true); }}>Online Players</div><br />
+          <div>Messages</div><br />
+          <div>Forum</div><br />
+          <div>My Nation</div><br />
+          <div>Infrastructure</div><br />
+          <div>Diplomacy</div>
         </div>
       </div>
 
