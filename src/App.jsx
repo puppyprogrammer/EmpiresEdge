@@ -107,72 +107,75 @@ function App() {
     }
   }, [userNation, tiles]);
 
-  async function fetchTiles() {
-    try {
-      const { data: nationsData, error: nationsError } = await supabase
-        .from('nations')
-        .select('id, color');
+async function fetchTiles() {
+  try {
+    const { data: nationsData, error: nationsError } = await supabase
+      .from('nations')
+      .select('id, color');
 
-      if (nationsError) {
-        setError('Failed to fetch nations: ' + nationsError.message);
-        setTiles([]);
-        return;
-      }
-
-      const nationsMap = {};
-      nationsData.forEach(nation => {
-        nationsMap[nation.id] = { color: nation.color };
-      });
-      setNations(nationsMap);
-
-      let allTiles = [];
-      let from = 0;
-      const limit = 1000;
-
-      const { count, error: countError } = await supabase
-        .from('tiles')
-        .select('id', { count: 'exact', head: true })
-        .order('x', { ascending: true })
-        .order('y', { ascending: true });
-
-      if (countError) {
-        setError(`Failed to fetch tile count: ${countError.message} (code: ${countError.code}, details: ${countError.details})`);
-        setTiles([]);
-        return;
-      }
-
-      const totalRows = count || 10000;
-
-      while (from < totalRows) {
-        const { data, error } = await supabase
-          .rpc('get_tiles_with_username', {
-            start_row: from,
-            end_row: from + limit - 1
-          });
-
-        if (error) {
-          setError(`Failed to fetch tiles: ${error.message} (code: ${error.code}, details: ${error.details})`);
-          setTiles([]);
-          return;
-        }
-
-        const enrichedTiles = data.map(tile => ({
-          ...tile,
-          owner_nation_name: tile.owner_nation_name || 'None',
-          nations: tile.owner ? nationsMap[tile.owner] : null
-        }));
-
-        allTiles = [...allTiles, ...enrichedTiles];
-        from += limit;
-      }
-
-      console.log('Tiles loaded:', allTiles.length, allTiles.slice(0, 5));
-      setTiles(allTiles);
-    } catch (err) {
-      setError(`Error fetching tiles: ${err.message}`);
+    if (nationsError) {
+      setError('Failed to fetch nations: ' + nationsError.message);
       setTiles([]);
+      return;
     }
+
+    const nationsMap = {};
+    nationsData.forEach(nation => {
+      nationsMap[nation.id] = { color: nation.color };
+    });
+    setNations(nationsMap);
+
+    let allTiles = [];
+    let from = 0;
+    const limit = 1000;
+
+    const { count, error: countError } = await supabase
+      .from('tiles')
+      .select('id', { count: 'exact', head: true })
+      .order('x', { ascending: true })
+      .order('y', { ascending: true });
+
+    if (countError) {
+      setError(`Failed to fetch tile count: ${countError.message} (code: ${countError.code}, details: ${countError.details})`);
+      setTiles([]);
+      return;
+    }
+
+    const totalRows = count || 10000;
+
+    while (from < totalRows) {
+      const { data, error } = await supabase
+        .rpc('get_tiles_with_username', {
+          start_row: from,
+          end_row: from + limit - 1
+        });
+      console.log('Fetched tiles data:', data); // Log raw data to inspect structure
+
+      if (error) {
+        setError(`Failed to fetch tiles: ${error.message} (code: ${error.code}, details: ${error.details})`);
+        setTiles([]);
+        return;
+      }
+
+      const enrichedTiles = data.map(tile => ({
+        ...tile,
+        owner_nation_name: tile.owner_nation_name || 'None',
+        nations: tile.owner ? nationsMap[tile.owner] : null,
+        x: tile.x || null, // Ensure x is included, default to null if missing
+        y: tile.y || null  // Ensure y is included, default to null if missing
+      }));
+
+      allTiles = [...allTiles, ...enrichedTiles];
+      from += limit;
+    }
+
+    console.log('Tiles loaded:', allTiles.length, allTiles.slice(0, 5));
+    setTiles(allTiles);
+  } catch (err) {
+    setError(`Error fetching tiles: ${err.message}`);
+    setTiles([]);
   }
+}
 
   async function checkUserNation(userId) {
     try {
