@@ -282,18 +282,18 @@ body, html {
   width: 128px; /* 4 tiles x 32px */
   background: rgba(0, 0, 0, 0.8);
   color: white;
-  padding: 10px;
+  margin: 10px; /* Changed from padding to margin */
   z-index: 1001; /* Above map, below modal */
 }
 
 .main-menu {
   position: absolute;
   left: 128px; /* After Left Menu */
-  top: 60px; /* Below header */
+  top: 30px; /* Below header with margin */
   right: 0;
   background: rgba(0, 0, 0, 0.8);
   color: white;
-  padding: 30px;
+  margin: 30px; /* Changed from padding to margin */
   z-index: 1001; /* Above map, below modal */
 }
 
@@ -305,7 +305,7 @@ body, html {
   height: 160px; /* 5 tiles x 32px */
   background: rgba(0, 0, 0, 0.8);
   color: white;
-  padding: 30px;
+  margin: 30px; /* Changed from padding to margin */
   z-index: 1001; /* Above map, below modal */
 }
 
@@ -320,15 +320,15 @@ body, html {
   .left-menu {
     width: 128px; /* Fixed 4 tiles */
     font-size: 0.8em;
-    padding: 5px; /* Reduced padding for small screens */
+    margin: 5px; /* Reduced margin for small screens */
   }
   .main-menu {
     left: 128px;
-    padding: 15px; /* Reduced padding for small screens */
+    margin: 15px; /* Reduced margin for small screens */
   }
   .bottom-menu {
     height: 160px; /* Fixed 5 tiles */
-    padding: 15px; /* Reduced padding for small screens */
+    margin: 15px; /* Reduced margin for small screens */
   }
 }
 
@@ -342,13 +342,14 @@ body, html {
   .left-menu {
     width: 128px; /* Fixed 4 tiles */
     font-size: 1.2em;
+    margin: 10px; /* Adjusted margin */
   }
   .main-menu {
     left: 128px;
-    padding: 30px;
+    margin: 30px;
   }
   .bottom-menu {
     height: 160px; /* Fixed 5 tiles */
-    padding: 30px;
+    margin: 30px;
   }
 }
