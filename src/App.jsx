@@ -34,11 +34,12 @@ function App() {
     oil: 0,
     ore: 0
   });
-  const [showMainMenu, setShowMainMenu] = useState(true); // Menu visibility
-  const [showBottomMenu, setShowBottomMenu] = useState(true); // Menu visibility
-  const [selectedPage, setSelectedPage] = useState(null); // New state for selected page
+  const [showMainMenu, setShowMainMenu] = useState(true); // Debug: Log initial state
+  const [showBottomMenu, setShowBottomMenu] = useState(true); // Debug: Log initial state
+  const [selectedPage, setSelectedPage] = useState(null);
 
   useEffect(() => {
+    console.log('Mounting App, initial showMainMenu:', showMainMenu, 'showBottomMenu:', showBottomMenu);
     let pollInterval = null;
 
     supabase.auth.getSession().then(({ data }) => {
@@ -60,6 +61,9 @@ function App() {
         setResources({ lumber: 0, oil: 0, ore: 0 });
         setShowNationModal(false);
         fetchTiles();
+        // Debug: Ensure menus stay visible on logout
+        setShowMainMenu(true);
+        setShowBottomMenu(true);
       }
     });
 
@@ -374,6 +378,9 @@ function App() {
       setLoginEmail('');
       setLoginPassword('');
       fetchTiles();
+      // Debug: Ensure menus are visible after login
+      setShowMainMenu(true);
+      setShowBottomMenu(true);
     }
   }
 
@@ -395,6 +402,9 @@ function App() {
       setRegisterPassword('');
       setRegisterUsername('');
       setShowRegister(false);
+      // Debug: Ensure menus are visible after register
+      setShowMainMenu(true);
+      setShowBottomMenu(true);
     }
   }
 
@@ -406,6 +416,9 @@ function App() {
       setShowNationModal(false);
       setTiles(null);
       fetchTiles();
+      // Debug: Ensure menus stay visible on logout
+      setShowMainMenu(true);
+      setShowBottomMenu(true);
     } catch (err) {
       setError('Failed to log out: ' + err.message);
     }
@@ -610,11 +623,15 @@ function App() {
           </div>
           {showMainMenu && (
             <div className="main-menu">
+              <div>Debug: showMainMenu is {showMainMenu.toString()}</div> {/* Debug */}
               {selectedPage === 'Rankings' && <RankingsPage />}
               {selectedPage === 'OnlinePlayers' && <OnlinePlayersPage />}
               <div
                 className="close-menu"
-                onClick={() => setShowMainMenu(false)}
+                onClick={() => {
+                  console.log('Closing main menu, setting showMainMenu to false');
+                  setShowMainMenu(false);
+                }}
                 style={{
                   position: 'absolute',
                   top: '5px',
@@ -638,10 +655,14 @@ function App() {
           )}
           {showBottomMenu && (
             <div className="bottom-menu">
+              <div>Debug: showBottomMenu is {showBottomMenu.toString()}</div> {/* Debug */}
               test
               <div
                 className="close-menu"
-                onClick={() => setShowBottomMenu(false)}
+                onClick={() => {
+                  console.log('Closing bottom menu, setting showBottomMenu to false');
+                  setShowBottomMenu(false);
+                }}
                 style={{
                   position: 'absolute',
                   top: '5px',
@@ -664,8 +685,8 @@ function App() {
             </div>
           )}
           <div className="left-menu">
-            <a href="#" onClick={() => setSelectedPage('Rankings')}>Rankings</a><br/>
-            <a href="#" onClick={() => setSelectedPage('OnlinePlayers')}>Online Players</a><br/>
+            <a href="#" onClick={(e) => { e.preventDefault(); setSelectedPage('Rankings'); setShowMainMenu(true); }}>Rankings</a><br/>
+            <a href="#" onClick={(e) => { e.preventDefault(); setSelectedPage('OnlinePlayers'); setShowMainMenu(true); }}>Online Players</a><br/>
             <a>Messages</a><br/>
             <a>Forum</a><br/>
             <a>My Nation</a><br/>
