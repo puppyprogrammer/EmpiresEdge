@@ -268,7 +268,7 @@ body, html {
 .left-menu {
   position: absolute;
   left: 0;
-  top: 60px;
+  top: 30px;
   width: 100px;
   background: rgba(0, 0, 0, 0.8);
   color: white;
@@ -280,7 +280,7 @@ body, html {
 .main-menu {
   position: absolute;
   left: 138px;
-  top: 60px;
+  top: 30px;
   right: 0;
   background: rgba(0, 0, 0, 0.8);
   color: white;
