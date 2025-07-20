@@ -289,7 +289,6 @@ body, html {
 
 .main-menu {
   position: absolute;
-  display: none;
   left: 118px;
   top: 50px;
   right: 0;

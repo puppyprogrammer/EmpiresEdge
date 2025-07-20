@@ -34,7 +34,7 @@ function App() {
     oil: 0,
     ore: 0
   });
-  const [showMainMenu, setShowMainMenu] = useState(true);
+  const [showMainMenu, setShowMainMenu] = useState(false);
   const [showBottomMenu, setShowBottomMenu] = useState(true);
   const [selectedPage, setSelectedPage] = useState(null);
 
