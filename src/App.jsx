@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import './index.css';
 import { User, LogOut } from 'lucide-react';
 import { Analytics } from "@vercel/analytics/react";
+import RankingsPage from './RankingsPage';
+import OnlinePlayersPage from './OnlinePlayersPage';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
 const supabaseKey =
@@ -32,8 +34,9 @@ function App() {
     oil: 0,
     ore: 0
   });
-  const [showMainMenu, setShowMainMenu] = useState(true); // New state for main menu
-  const [showBottomMenu, setShowBottomMenu] = useState(true); // New state for bottom menu
+  const [showMainMenu, setShowMainMenu] = useState(true); // Menu visibility
+  const [showBottomMenu, setShowBottomMenu] = useState(true); // Menu visibility
+  const [selectedPage, setSelectedPage] = useState(null); // New state for selected page
 
   useEffect(() => {
     let pollInterval = null;
@@ -607,7 +610,8 @@ function App() {
           </div>
           {showMainMenu && (
             <div className="main-menu">
-              test
+              {selectedPage === 'Rankings' && <RankingsPage />}
+              {selectedPage === 'OnlinePlayers' && <OnlinePlayersPage />}
               <div
                 className="close-menu"
                 onClick={() => setShowMainMenu(false)}
@@ -660,8 +664,8 @@ function App() {
             </div>
           )}
           <div className="left-menu">
-            <a>Rankings</a><br/>
-            <a>Online Players</a><br/>
+            <a href="#" onClick={() => setSelectedPage('Rankings')}>Rankings</a><br/>
+            <a href="#" onClick={() => setSelectedPage('OnlinePlayers')}>Online Players</a><br/>
             <a>Messages</a><br/>
             <a>Forum</a><br/>
             <a>My Nation</a><br/>
