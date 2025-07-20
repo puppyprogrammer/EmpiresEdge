@@ -270,12 +270,12 @@ body, html {
   left: 0;
   top: 50px;
   width: 80px;
-  background: rgba(0, 0, 0, 0.3); /* Increased tint for better contrast */
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0)); /* Adjusted gradient to match tint */
+  background: rgba(0, 0, 0, 0.5); /* Darker tint for better contrast */
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0)); /* Adjusted gradient to match darker tint */
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   color: white;
-  font-size: 11pt; /* Reduced text size */
+  font-size: 11pt;
   margin: 10px;
   padding: 10px;
   z-index: 1001;
@@ -287,12 +287,12 @@ body, html {
   left: 118px;
   top: 50px;
   right: 0;
-  background: rgba(0, 0, 0, 0.3); /* Increased tint for better contrast */
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0)); /* Adjusted gradient to match tint */
+  background: rgba(0, 0, 0, 0.5); /* Darker tint for better contrast */
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0)); /* Adjusted gradient to match darker tint */
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   color: white;
-  font-size: 11pt; /* Reduced text size */
+  font-size: 11pt;
   margin: 10px;
   padding: 10px;
   z-index: 1001;
@@ -305,12 +305,12 @@ body, html {
   left: 0;
   right: 0;
   height: 160px;
-  background: rgba(0, 0, 0, 0.3); /* Increased tint for better contrast */
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0)); /* Adjusted gradient to match tint */
+  background: rgba(0, 0, 0, 0.5); /* Darker tint for better contrast */
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0)); /* Adjusted gradient to match darker tint */
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   color: white;
-  font-size: 11pt; /* Reduced text size */
+  font-size: 11pt;
   margin: 10px;
   padding: 10px;
   z-index: 1001;
