@@ -272,10 +272,11 @@ body, html {
   background: rgba(17, 24, 39, 0.9);
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
-  color: rgb(229, 231, 235); /* Match .resource-value color */
-  font-size: 0.85rem; /* Match .resource-value size */
-  font-weight: 500; /* Match .resource-value weight */
-  line-height: 1.8em; /* Adjusted for new font size */
+  color: rgb(229, 231, 235);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.8em;
+  text-decoration: underline; /* Added underline to all text */
   margin: 10px;
   padding: 10px;
   z-index: 1001;
@@ -290,10 +291,11 @@ body, html {
   background: rgba(17, 24, 39, 0.9);
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
-  color: rgb(229, 231, 235); /* Match .resource-value color */
-  font-size: 0.85rem; /* Match .resource-value size */
-  font-weight: 500; /* Match .resource-value weight */
-  line-height: 1.8em; /* Adjusted for new font size */
+  color: rgb(229, 231, 235);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.8em;
+  text-decoration: underline; /* Added underline to all text */
   margin: 10px;
   padding: 10px;
   z-index: 1001;
@@ -309,10 +311,11 @@ body, html {
   background: rgba(17, 24, 39, 0.9);
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
-  color: rgb(229, 231, 235); /* Match .resource-value color */
-  font-size: 0.85rem; /* Match .resource-value size */
-  font-weight: 500; /* Match .resource-value weight */
-  line-height: 1.8em; /* Adjusted for new font size */
+  color: rgb(229, 231, 235);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.8em;
+  text-decoration: underline; /* Added underline to all text */
   margin: 10px;
   padding: 10px;
   z-index: 1001;
