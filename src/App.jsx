@@ -603,7 +603,18 @@ function App() {
               ))}
             </div>
           </div>
-          <div className="left-menu">test</div>
+          <div className="left-menu">
+            test<br/>
+            test<br/>
+            test<br/>
+            test<br/>
+            test<br/>
+            test<br/>
+            test<br/>
+            test<br/>
+            test<br/>
+            test<br/>
+          </div>
           <div className="main-menu">test</div>
           <div className="bottom-menu">test</div>
         </div>
