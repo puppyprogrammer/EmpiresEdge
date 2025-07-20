@@ -274,12 +274,11 @@ body, html {
   background: linear-gradient(135deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
-  color: black;
+  color: white;
   margin: 10px;
   padding: 10px;
   z-index: 1001;
   border-radius: 4px;
-  border: 1px solid #111827;
 }
 
 .main-menu {
@@ -291,12 +290,11 @@ body, html {
   background: linear-gradient(135deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
-  color: black;
+  color: white;
   margin: 10px;
   padding: 10px;
   z-index: 1001;
   border-radius: 4px;
-  border: 1px solid #111827;
 }
 
 .bottom-menu {
@@ -309,10 +307,9 @@ body, html {
   background: linear-gradient(135deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
-  color: black;
+  color: white;
   margin: 10px;
   padding: 10px;
   z-index: 1001;
   border-radius: 4px;
-  border: 1px solid #111827;
 }
