@@ -32,6 +32,8 @@ function App() {
     oil: 0,
     ore: 0
   });
+  const [showMainMenu, setShowMainMenu] = useState(true); // New state for main menu
+  const [showBottomMenu, setShowBottomMenu] = useState(true); // New state for bottom menu
 
   useEffect(() => {
     let pollInterval = null;
@@ -231,7 +233,7 @@ function App() {
       return null;
     }
 
-    const idx = Math.floor(Math.random() * candidates.length);
+    const idx = Math.floor(Math.random * candidates.length);
     return candidates[idx];
   }
 
@@ -578,7 +580,32 @@ function App() {
           </div>
         </div>
       )}
-      {showMainMenu && (
+
+      {tiles && tiles.length > 0 && (
+        <div>
+          <div className="map-scroll-container" ref={mapScrollRef}>
+            <div className="map-grid">
+              {tiles.map((tile) => (
+                <div
+                  key={tile.id}
+                  className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${tile.is_capital && tile.owner === userNation?.id ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)}`}
+                  data-x={tile.x}
+                  data-y={tile.y}
+                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}`}
+                  style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
+                >
+                  {tile.is_capital && (
+                    <img
+                      src="/icons/building.svg"
+                      alt="Capital Building"
+                      className="capital-icon"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          {showMainMenu && (
             <div className="main-menu">
               test
               <div
@@ -632,32 +659,6 @@ function App() {
               </div>
             </div>
           )}
-
-      {tiles && tiles.length > 0 && (
-        <div>
-          <div className="map-scroll-container" ref={mapScrollRef}>
-            <div className="map-grid">
-              {tiles.map((tile) => (
-                <div
-                  key={tile.id}
-                  className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${tile.is_capital && tile.owner === userNation?.id ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)}`}
-                  data-x={tile.x}
-                  data-y={tile.y}
-                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}`}
-                  style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
-                >
-                  {tile.is_capital && (
-                    <img
-                      src="/icons/building.svg"
-                      alt="Capital Building"
-                      className="capital-icon"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          
           <div className="left-menu">
             <a>Rankings</a><br/>
             <a>Online Players</a><br/>
@@ -666,57 +667,6 @@ function App() {
             <a>My Nation</a><br/>
             <a>Infrastructure</a><br/>
             <a>Diplomacy</a><br/>
-          </div>
-          <div className="main-menu" style={{ display: showMainMenu ? 'block' : 'none' }}>
-            test
-            <div
-              className="close-menu"
-              onClick={() => setShowMainMenu(false)}
-              style={{
-                position: 'absolute',
-                top: '5px',
-                right: '5px',
-                width: '20px',
-                height: '20px',
-                background: 'rgba(139, 0, 0, 0.8)',
-                color: 'white',
-                textAlign: 'center',
-                lineHeight: '20px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s ease',
-              }}
-              onMouseEnter={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 1)')}
-              onMouseLeave={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 0.8)')}
-            >
-              X
-            </div>
-          </div>
-
-          <div className="bottom-menu" style={{ display: showBottomMenu ? 'block' : 'none' }}>
-            test
-            <div
-              className="close-menu"
-              onClick={() => setShowBottomMenu(false)}
-              style={{
-                position: 'absolute',
-                top: '5px',
-                right: '5px',
-                width: '20px',
-                height: '20px',
-                background: 'rgba(139, 0, 0, 0.8)',
-                color: 'white',
-                textAlign: 'center',
-                lineHeight: '20px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s ease',
-              }}
-              onMouseEnter={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 1)')}
-              onMouseLeave={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 0.8)')}
-            >
-              X
-            </div>
           </div>
         </div>
       )}
