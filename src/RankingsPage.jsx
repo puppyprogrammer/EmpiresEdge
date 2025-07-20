@@ -42,7 +42,7 @@ const RankingsPage = () => {
             {rankings.map((nation, index) => (
               <tr key={nation.nation_id}>
                 <td>{index + 1}</td>
-                <td style={{ color: nation.color }}>{nation.nation_name}</td>
+                <td>{nation.nation_name}</td>
                 <td>{nation.total_resources}</td>
               </tr>
             ))}
