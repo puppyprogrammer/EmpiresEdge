@@ -280,11 +280,11 @@ body, html {
   left: 0;
   top: 60px; /* Below header */
   width: 128px; /* 4 tiles x 32px */
-  background: linear-gradient(135deg, #40c4ff, #a100f2); /* Liquid gradient */
+  background: rgba(0, 0, 0, 0.95); /* Solid dark with reduced transparency */
   color: white;
   padding: 20px; /* Restored with 20px */
   border-radius: 15px; /* Rounded corners for liquid design */
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Elevated shadow */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); /* Enhanced shadow for floating effect */
   z-index: 1002; /* Above map grid and tiles */
 }
 
@@ -293,11 +293,11 @@ body, html {
   left: 0; /* Aligned with Left Menu */
   top: 60px; /* Matched with Left Menu */
   right: 0;
-  background: linear-gradient(135deg, #40c4ff, #a100f2); /* Liquid gradient */
+  background: rgba(0, 0, 0, 0.95); /* Solid dark with reduced transparency */
   color: white;
   padding: 20px; /* Restored with 20px */
   border-radius: 15px; /* Rounded corners */
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Elevated shadow */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); /* Enhanced shadow */
   z-index: 1002; /* Above map grid and tiles */
 }
 
@@ -307,11 +307,11 @@ body, html {
   left: 0; /* Aligned with Left Menu */
   right: 0;
   height: 160px; /* 5 tiles x 32px */
-  background: linear-gradient(135deg, #40c4ff, #a100f2); /* Liquid gradient */
+  background: rgba(0, 0, 0, 0.95); /* Solid dark with reduced transparency */
   color: white;
   padding: 20px; /* Restored with 20px */
   border-radius: 15px; /* Rounded corners */
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Elevated shadow */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); /* Enhanced shadow */
   z-index: 1002; /* Above map grid and tiles */
 }
 
