@@ -138,6 +138,7 @@ body, html {
   text-align: center;
   z-index: 1004; 
   position: fixed;
+  top: 90px;
 }
 
 .loading-message {

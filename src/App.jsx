@@ -578,7 +578,7 @@ async function fetchTiles() {
       </header>
 
       {error && (
-        <div className="error-box" style={{ zIndex: 1000, position: 'fixed', top: '10px', left: '50%', transform: 'translateX(-50%)', background: '#ff4d4d', color: 'white', padding: '10px', borderRadius: '5px' }}>
+        <div className="error-box" style={{ zIndex: 1004, position: 'fixed', top: '90px', left: '50%', transform: 'translateX(-50%)', background: '#ff4d4d', color: 'white', padding: '10px', borderRadius: '5px' }}>
           {error}
         </div>
       )}
