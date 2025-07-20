@@ -149,7 +149,7 @@ async function fetchTiles() {
           start_row: from,
           end_row: from + limit - 1
         });
-      console.log('Fetched tiles data:', data); // Log raw data to inspect structure
+      console.log('Fetched tiles data:', data); // Log to verify
 
       if (error) {
         setError(`Failed to fetch tiles: ${error.message} (code: ${error.code}, details: ${error.details})`);
@@ -161,8 +161,8 @@ async function fetchTiles() {
         ...tile,
         owner_nation_name: tile.owner_nation_name || 'None',
         nations: tile.owner ? nationsMap[tile.owner] : null,
-        x: tile.x || null, // Ensure x is included, default to null if missing
-        y: tile.y || null  // Ensure y is included, default to null if missing
+        x: tile.x, // Use the value from RPC, which should now be valid
+        y: tile.y  // Use the value from RPC, which should now be valid
       }));
 
       allTiles = [...allTiles, ...enrichedTiles];
@@ -223,40 +223,41 @@ async function fetchTiles() {
   }
 
   function findCapitalTile() {
-    if (!tiles || tiles.length === 0) {
-      console.log('findCapitalTile: tiles is null or empty', { tiles });
-      return null;
-    }
-    const capitalTiles = tiles.filter((tile) => {
-      if (typeof tile.is_capital !== 'boolean') {
-        console.log('findCapitalTile: Skipping tile due to invalid is_capital', { tile });
-        return false;
-      }
-      return tile.is_capital;
-    });
-    console.log('findCapitalTile: Filtered capitalTiles', { capitalTiles });
-
-    const minDistance = 3;
-    const candidates = tiles.filter((tile) => {
-      if (!tile.x || !tile.y) {
-        console.log('findCapitalTile: Skipping tile due to missing x or y', { tile });
-        return false;
-      }
-      return capitalTiles.every(
-        (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
-      );
-    });
-    console.log('findCapitalTile: Candidates', { candidates });
-
-    if (candidates.length === 0) {
-      console.log('findCapitalTile: No candidates found', { candidates });
-      return null;
-    }
-
-    const idx = Math.floor(Math.random * candidates.length);
-    console.log('findCapitalTile: Selected index', { idx, candidatesLength: candidates.length });
-    return candidates[idx];
+  if (!tiles || tiles.length === 0) {
+    console.log('findCapitalTile: tiles is null or empty', { tiles });
+    return null;
   }
+  console.log('findCapitalTile: Full tiles data', { tiles });
+  const capitalTiles = tiles.filter((tile) => {
+    if (typeof tile.is_capital !== 'boolean') {
+      console.log('findCapitalTile: Skipping tile due to invalid is_capital', { tile });
+      return false;
+    }
+    return tile.is_capital;
+  });
+  console.log('findCapitalTile: Filtered capitalTiles', { capitalTiles });
+
+  const minDistance = 3;
+  const candidates = tiles.filter((tile) => {
+    if (tile.x === undefined || tile.y === undefined) {
+      console.log('findCapitalTile: Skipping tile due to undefined x or y', { tile });
+      return false;
+    }
+    return capitalTiles.every(
+      (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
+    );
+  });
+  console.log('findCapitalTile: Candidates', { candidates });
+
+  if (candidates.length === 0) {
+    console.log('findCapitalTile: No candidates found', { candidates });
+    return null;
+  }
+
+  const idx = Math.floor(Math.random() * candidates.length);
+  console.log('findCapitalTile: Selected index', { idx, candidatesLength: candidates.length });
+  return candidates[idx];
+}
 
   async function handleStartGame() {
     console.log('Starting game with:', {
