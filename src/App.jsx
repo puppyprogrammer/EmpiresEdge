@@ -635,7 +635,6 @@ async function fetchTiles() {
         </div>
         {showMainMenu && (
           <div className="main-menu">
-            <div>Debug: showMainMenu is {showMainMenu.toString()}</div>
             {selectedPage === 'Rankings' && <RankingsPage />}
             {selectedPage === 'OnlinePlayers' && <OnlinePlayersPage />}
             <div
@@ -667,7 +666,6 @@ async function fetchTiles() {
         )}
         {showBottomMenu && (
           <div className="bottom-menu">
-            <div>Debug: showBottomMenu is {showBottomMenu.toString()}</div>
             test
             <div
               className="close-menu"
