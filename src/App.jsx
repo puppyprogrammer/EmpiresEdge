@@ -82,7 +82,7 @@ function App() {
             if (!prevTiles) return prevTiles;
             const updatedTile = {
               ...payload.new,
-              owner_nation_name: payload.new.nations?.name || 'None',
+              owner_nation_name: payload.new.owner_nation_name || 'None',
               nations: payload.new.owner ? nations[payload.new.owner] : null,
               x: payload.new.x,
               y: payload.new.y,
@@ -149,7 +149,7 @@ function App() {
     try {
       const { data: nationsData, error: nationsError } = await supabase
         .from('nations')
-        .select('id, color, name');
+        .select('id, color');
 
       if (nationsError) {
         setError('Failed to fetch nations: ' + nationsError.message);
@@ -159,7 +159,7 @@ function App() {
 
       const nationsMap = {};
       nationsData.forEach(nation => {
-        nationsMap[nation.id] = { color: nation.color, name: nation.name };
+        nationsMap[nation.id] = { color: nation.color };
       });
       setNations(nationsMap);
 
@@ -183,11 +183,10 @@ function App() {
 
       while (from < totalRows) {
         const { data, error } = await supabase
-          .from('tiles')
-          .select('id, x, y, type, resource, owner, is_capital, building, nations!owner(name)')
-          .order('x', { ascending: true })
-          .order('y', { ascending: true })
-          .range(from, from + limit - 1);
+          .rpc('get_tiles_with_username', {
+            start_row: from,
+            end_row: from + limit - 1
+          });
 
         if (error) {
           setError(`Failed to fetch tiles: ${error.message} (code: ${error.code}, details: ${error.details})`);
@@ -198,7 +197,7 @@ function App() {
         const enrichedTiles = data.map(tile => {
           const tileData = {
             ...tile,
-            owner_nation_name: tile.nations?.name || 'None',
+            owner_nation_name: tile.owner_nation_name || 'None',
             nations: tile.owner ? nationsMap[tile.owner] : null,
             x: tile.x,
             y: tile.y,
