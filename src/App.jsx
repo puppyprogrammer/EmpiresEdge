@@ -82,16 +82,20 @@ function App() {
             if (!prevTiles) return prevTiles;
             const updatedTile = {
               ...payload.new,
-              owner_nation_name: payload.new.owner_nation_name || 'None',
+              owner_nation_name: payload.new.nations?.name || 'None',
               nations: payload.new.owner ? nations[payload.new.owner] : null,
               x: payload.new.x,
               y: payload.new.y,
               building: payload.new.building || null
             };
+            if (payload.new.x === 49 && payload.new.y === 27) {
+              console.log('Real-time update for tile (49, 27):', updatedTile);
+            }
             const newTiles = prevTiles.map((tile) =>
               tile.id === payload.new.id ? updatedTile : tile
             );
             if (selectedTile && selectedTile.id === payload.new.id) {
+              console.log('Updating selectedTile with building:', updatedTile.building);
               setSelectedTile(updatedTile);
             }
             return newTiles;
@@ -145,7 +149,7 @@ function App() {
     try {
       const { data: nationsData, error: nationsError } = await supabase
         .from('nations')
-        .select('id, color');
+        .select('id, color, name');
 
       if (nationsError) {
         setError('Failed to fetch nations: ' + nationsError.message);
@@ -155,7 +159,7 @@ function App() {
 
       const nationsMap = {};
       nationsData.forEach(nation => {
-        nationsMap[nation.id] = { color: nation.color };
+        nationsMap[nation.id] = { color: nation.color, name: nation.name };
       });
       setNations(nationsMap);
 
@@ -179,11 +183,11 @@ function App() {
 
       while (from < totalRows) {
         const { data, error } = await supabase
-          .rpc('get_tiles_with_username', {
-            start_row: from,
-            end_row: from + limit - 1
-          });
-        console.log('Fetched tiles data sample:', data.map(tile => ({ id: tile.id, x: tile.x, y: tile.y, building: tile.building })));
+          .from('tiles')
+          .select('id, x, y, type, resource, owner, is_capital, building, nations!owner(name)')
+          .order('x', { ascending: true })
+          .order('y', { ascending: true })
+          .range(from, from + limit - 1);
 
         if (error) {
           setError(`Failed to fetch tiles: ${error.message} (code: ${error.code}, details: ${error.details})`);
@@ -191,14 +195,20 @@ function App() {
           return;
         }
 
-        const enrichedTiles = data.map(tile => ({
-          ...tile,
-          owner_nation_name: tile.owner_nation_name || 'None',
-          nations: tile.owner ? nationsMap[tile.owner] : null,
-          x: tile.x,
-          y: tile.y,
-          building: tile.building || null
-        }));
+        const enrichedTiles = data.map(tile => {
+          const tileData = {
+            ...tile,
+            owner_nation_name: tile.nations?.name || 'None',
+            nations: tile.owner ? nationsMap[tile.owner] : null,
+            x: tile.x,
+            y: tile.y,
+            building: tile.building || null
+          };
+          if (tile.x === 49 && tile.y === 27) {
+            console.log('Tile (49, 27) fetched:', tileData);
+          }
+          return tileData;
+        });
 
         allTiles = [...allTiles, ...enrichedTiles];
         from += limit;
@@ -615,7 +625,7 @@ function App() {
       </header>
 
       {error && (
-        <div className="error-box" style={{ zIndex: 1004, position: 'fixed', top: '90px', left: '50%', transform: 'translateX(-50%)', background: '#ff4d4d', color: 'white', padding: '10px', borderRadius: '5px' }}>
+        <div className="error-box" style={{ zIndex: 1004, position: 'fixed', top: '90px', left: '50%', transform: 'translateX(-50%)', background: '#ff4d4d', color: 'white', padding: '10px', borderRadius: '4px' }}>
           {error}
         </div>
       )}
@@ -692,7 +702,7 @@ function App() {
                 lineHeight: '20px',
                 borderRadius: '4px',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s ease',
+                transition: 'backgroundColor 0.2s ease',
               }}
               onMouseEnter={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 1)')}
               onMouseLeave={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 0.8)')}
@@ -730,7 +740,7 @@ function App() {
                 lineHeight: '20px',
                 borderRadius: '4px',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s ease',
+                transition: 'backgroundColor 0.2s ease',
               }}
               onMouseEnter={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 1)')}
               onMouseLeave={(e) => (e.target.style.backgroundColor = 'rgba(139, 0, 0, 0.8)')}
