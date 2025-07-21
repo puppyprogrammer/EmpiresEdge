@@ -393,9 +393,6 @@ th, td {
   width: 60px;
 }
 
-.tile-info-value {
-}
-
 .building-options {
   display: flex;
   width: 100%; /* Expand to full width of parent */
@@ -423,6 +420,7 @@ th, td {
   width: 24px; /* Matches JSX */
   height: 24px;
   color: rgb(194, 172, 75);
+  stroke: rgb(194, 172, 75); /* Matches left menu text color */
 }
 
 .building-option span {
