@@ -227,7 +227,7 @@ body, html {
 }
 
 .tile.selected-tile {
-  box-shadow: 0 0 8px 3px #2563eb; /* Blue glow matching login button */
+  box-shadow: 0 0 8px 3px #2563eb, inset 0 0 8px 3px #2563eb; /* Outer and inner blue glow */
   animation: selected-glow 1.5s ease-in-out infinite;
 }
 
@@ -253,11 +253,11 @@ body, html {
 
 @keyframes selected-glow {
   0%, 100% {
-    box-shadow: 0 0 8px 3px #2563eb;
+    box-shadow: 0 0 8px 3px #2563eb, inset 0 0 8px 3px #2563eb;
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 15px 6px #2563eb;
+    box-shadow: 0 0 15px 6px #2563eb, inset 0 0 15px 6px #2563eb;
     transform: scale(1.1);
   }
 }
