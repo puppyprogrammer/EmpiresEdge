@@ -36,8 +36,9 @@ function App() {
     ore: 0
   });
   const [showMainMenu, setShowMainMenu] = useState(false);
-  const [showBottomMenu, setShowBottomMenu] = useState(true);
+  const [showBottomMenu, setShowBottomMenu] = useState(false);
   const [selectedPage, setSelectedPage] = useState(null);
+  const [selectedTile, setSelectedTile] = useState(null);
 
   useEffect(() => {
     console.log('Mounting App, initial showMainMenu:', showMainMenu, 'showBottomMenu:', showBottomMenu, 'tiles:', tiles);
@@ -65,6 +66,7 @@ function App() {
         fetchTiles();
         setShowMainMenu(false);
         setShowBottomMenu(false);
+        setSelectedTile(null);
       }
     });
 
@@ -395,6 +397,7 @@ function App() {
       fetchTiles();
       setShowMainMenu(false);
       setShowBottomMenu(false);
+      setSelectedTile(null);
     }
   }
 
@@ -418,6 +421,7 @@ function App() {
       setShowRegister(false);
       setShowMainMenu(false);
       setShowBottomMenu(false);
+      setSelectedTile(null);
     }
   }
 
@@ -431,6 +435,7 @@ function App() {
       fetchTiles();
       setShowMainMenu(false);
       setShowBottomMenu(false);
+      setSelectedTile(null);
     } catch (err) {
       setError('Failed to log out: ' + err.message);
     }
@@ -620,7 +625,7 @@ function App() {
                 data-y={tile.y}
                 title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}`}
                 style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
-                onClick={() => { setShowBottomMenu(true); }}
+                onClick={() => { setShowBottomMenu(true); setSelectedTile(tile); }}
               >
                 {tile.is_capital && (
                   <img
@@ -666,12 +671,13 @@ function App() {
         )}
         {showBottomMenu && (
           <div className="bottom-menu">
-            <TileInformationPage />
+            <TileInformationPage selectedTile={selectedTile} />
             <div
               className="close-menu"
               onClick={() => {
                 console.log('Closing bottom menu, setting showBottomMenu to false');
                 setShowBottomMenu(false);
+                setSelectedTile(null);
               }}
               style={{
                 position: 'absolute',

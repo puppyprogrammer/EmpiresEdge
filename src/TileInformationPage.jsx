@@ -1,4 +1,4 @@
-function TileInformationPage() {
+function TileInformationPage({ selectedTile }) {
   return (
     <div className="tile-info-container">
       <div className="tile-info-table">
@@ -6,19 +6,27 @@ function TileInformationPage() {
           <tbody>
             <tr>
               <td className="tile-info-label">Tile</td>
-              <td className="tile-info-value">X, Y</td>
+              <td className="tile-info-value">
+                {selectedTile ? `${selectedTile.x}, ${selectedTile.y}` : 'None'}
+              </td>
             </tr>
             <tr>
               <td className="tile-info-label">Owner</td>
-              <td className="tile-info-value">None</td>
+              <td className="tile-info-value">
+                {selectedTile ? selectedTile.owner_nation_name : 'None'}
+              </td>
             </tr>
             <tr>
               <td className="tile-info-label">Type</td>
-              <td className="tile-info-value">Mountain</td>
+              <td className="tile-info-value">
+                {selectedTile ? selectedTile.type : 'None'}
+              </td>
             </tr>
             <tr>
               <td className="tile-info-label">Resource</td>
-              <td className="tile-info-value">None</td>
+              <td className="tile-info-value">
+                {selectedTile ? (selectedTile.resource || 'None') : 'None'}
+              </td>
             </tr>
           </tbody>
         </table>
