@@ -41,7 +41,6 @@ function App() {
   const [selectedTile, setSelectedTile] = useState(null);
 
   useEffect(() => {
-    console.log('Mounting App, initial showMainMenu:', showMainMenu, 'showBottomMenu:', showBottomMenu, 'tiles:', tiles);
     let pollInterval = null;
 
     supabase.auth.getSession().then(({ data }) => {
@@ -55,7 +54,6 @@ function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      console.log('Auth state change, session:', session, 'showMainMenu:', showMainMenu, 'showBottomMenu:', showBottomMenu);
       if (session) {
         checkUserNation(session.user.id);
         fetchTiles();
@@ -101,9 +99,6 @@ function App() {
               y: payload.new.y,
               building: payload.new.building ?? null
             };
-            if (payload.new.x === 49 && payload.new.y === 27) {
-              console.log('Real-time update for tile (49, 27):', updatedTile);
-            }
             const newTiles = prevTiles.map((tile) =>
               tile.id === payload.new.id ? updatedTile : tile
             );
@@ -131,7 +126,7 @@ function App() {
   }, [session?.user?.id, nations]);
 
   useEffect(() => {
-    console.log('State updated - showMainMenu:', showMainMenu, 'showBottomMenu:', showBottomMenu, 'tiles:', tiles);
+
   }, [showMainMenu, showBottomMenu, tiles]);
 
   useEffect(() => {
@@ -216,9 +211,6 @@ function App() {
             y: tile.y,
             building: tile.building ?? null
           };
-          if (tile.x === 49 && tile.y === 27) {
-            console.log('Tile (49, 27) fetched:', tileData);
-          }
           return tileData;
         });
 
@@ -226,7 +218,6 @@ function App() {
         from += limit;
       }
 
-      console.log('Tiles loaded:', allTiles.length, allTiles.slice(0, 5));
       setTiles(allTiles);
     } catch (err) {
       setError(`Error fetching tiles: ${err.message}`);
@@ -281,38 +272,30 @@ function App() {
 
   function findCapitalTile() {
     if (!tiles || tiles.length === 0) {
-      console.log('findCapitalTile: tiles is null or empty', { tiles });
       return null;
     }
-    console.log('findCapitalTile: Full tiles data', { tiles });
     const capitalTiles = tiles.filter((tile) => {
       if (typeof tile.is_capital !== 'boolean') {
-        console.log('findCapitalTile: Skipping tile due to invalid is_capital', { tile });
         return false;
       }
       return tile.is_capital;
     });
-    console.log('findCapitalTile: Filtered capitalTiles', { capitalTiles });
 
     const minDistance = 3;
     const candidates = tiles.filter((tile) => {
       if (tile.x === undefined || tile.y === undefined) {
-        console.log('findCapitalTile: Skipping tile due to undefined x or y', { tile });
         return false;
       }
       return capitalTiles.every(
         (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
       );
     });
-    console.log('findCapitalTile: Candidates', { candidates });
 
     if (candidates.length === 0) {
-      console.log('findCapitalTile: No candidates found', { candidates });
       return null;
     }
 
     const idx = Math.floor(Math.random() * candidates.length);
-    console.log('findCapitalTile: Selected index', { idx, candidatesLength: candidates.length });
     return candidates[idx];
   }
 
@@ -699,7 +682,6 @@ function App() {
             <div
               className="close-menu"
               onClick={() => {
-                console.log('Closing main menu, setting showMainMenu to false');
                 setShowMainMenu(false);
               }}
               style={{
@@ -736,7 +718,6 @@ function App() {
             <div
               className="close-menu"
               onClick={() => {
-                console.log('Closing bottom menu, setting showBottomMenu to false');
                 setShowBottomMenu(false);
                 setSelectedTile(null);
               }}
