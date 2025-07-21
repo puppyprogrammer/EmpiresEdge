@@ -383,7 +383,6 @@ th, td {
 }
 
 .tile-info-table table {
-  width: 100%;
   border-collapse: collapse;
   color: #e5e7eb;
   font-size: 0.65rem; /* Smaller font to fit 4 rows */
@@ -391,14 +390,14 @@ th, td {
 
 .tile-info-table td {
   padding: 1px 4px; /* Minimal padding */
-  border: none; /* Remove borders */
+  border: none;
   line-height: 10px; /* Tight line height */
 }
 
 .tile-info-label {
   font-weight: bold;
   background: #1f2937;
-  width: 60px; /* Reduced width */
+  width: 60px;
 }
 
 .tile-info-value {
