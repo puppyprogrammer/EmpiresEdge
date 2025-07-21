@@ -75,7 +75,6 @@ function App() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'tiles' },
         async (payload) => {
-          console.log('Tiles table updated:', payload);
           let owner_nation_name = 'None';
           if (payload.new.owner) {
             const { data, error } = await supabase
@@ -84,7 +83,6 @@ function App() {
               .eq('id', payload.new.owner)
               .single();
             if (error) {
-              console.error('Error fetching nation name for tile update:', error);
             } else {
               owner_nation_name = data?.name || 'None';
             }
