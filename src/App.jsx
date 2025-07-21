@@ -78,7 +78,6 @@ function App() {
         { event: 'UPDATE', schema: 'public', table: 'tiles' },
         async (payload) => {
           console.log('Tiles table updated:', payload);
-          // Fetch nation name for the updated tile's owner
           let owner_nation_name = 'None';
           if (payload.new.owner) {
             const { data, error } = await supabase
@@ -100,7 +99,7 @@ function App() {
               nations: payload.new.owner ? nations[payload.new.owner] : null,
               x: payload.new.x,
               y: payload.new.y,
-              building: payload.new.building || null
+              building: payload.new.building ?? null
             };
             if (payload.new.x === 49 && payload.new.y === 27) {
               console.log('Real-time update for tile (49, 27):', updatedTile);
@@ -215,7 +214,7 @@ function App() {
             nations: tile.owner ? nationsMap[tile.owner] : null,
             x: tile.x,
             y: tile.y,
-            building: tile.building || null
+            building: tile.building ?? null
           };
           if (tile.x === 49 && tile.y === 27) {
             console.log('Tile (49, 27) fetched:', tileData);
@@ -428,7 +427,7 @@ function App() {
       setResources({
         lumber: nationData.lumber || 0,
         oil: nationData.oil || 0,
-        ore: data.ore || 0
+        ore: nationData.ore || 0
       });
       setShowNationModal(false);
       setNationName('');
@@ -678,7 +677,7 @@ function App() {
                 className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${tile.is_capital && tile.owner === userNation?.id ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)} ${selectedTile?.id === tile.id ? 'selected-tile' : ''}`}
                 data-x={tile.x}
                 data-y={tile.y}
-                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}, Building: ${tile.building || 'None'}`}
+                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}, Building: ${tile.building ?? 'None'}`}
                 style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
                 onClick={() => { setShowBottomMenu(true); setSelectedTile(tile); }}
               >
