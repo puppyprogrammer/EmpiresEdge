@@ -367,3 +367,70 @@ th, td {
   color: #e5e7eb;
   font-size: 0.9rem;
 }
+
+/* New styles for TileInformationPage */
+.tile-info-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 20px;
+  align-items: center;
+  padding: 0 10px;
+}
+
+.tile-info-table {
+  flex: 1;
+}
+
+.tile-info-table table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #e5e7eb;
+}
+
+.tile-info-table td {
+  padding: 8px 12px;
+  border: 1px solid #374151;
+}
+
+.tile-info-label {
+  font-weight: bold;
+  background: #1f2937;
+  width: 100px;
+}
+
+.tile-info-value {
+  background: #111827;
+}
+
+.building-options {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.building-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 4px;
+  background: #1f2937;
+  transition: background-color 0.2s ease;
+}
+
+.building-option:hover {
+  background: #374151;
+}
+
+.building-option svg {
+  width: 40px;
+  height: 40px;
+}
+
+.building-option span {
+  font-size: 0.85rem;
+  color: #e5e7eb;
+}
