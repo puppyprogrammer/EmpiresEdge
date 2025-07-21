@@ -168,16 +168,16 @@ body, html {
   display: grid;
   grid-template-columns: repeat(100, 32px);
   grid-template-rows: repeat(100, 32px);
+  gap: 2px;
   width: 3398px;
   height: 3398px;
   margin: auto;
-  box-sizing: content-box;
+  box-sizing: content-content;
 }
 
 .tile {
   width: 32px;
   height: 32px;
-  margin: 1px; /* Replace gap with margin */
   border-radius: 4px;
   box-sizing: border-box;
   position: relative;
@@ -225,11 +225,6 @@ body, html {
   animation: glow 1.5s ease-in-out infinite;
 }
 
-.tile.selected-tile {
-  box-shadow: 0 0 8px 3px #2563eb; /* Blue glow matching login button */
-  animation: selected-glow 1.5s ease-in-out infinite;
-}
-
 .capital-icon {
   position: absolute;
   top: 50%;
@@ -246,17 +241,6 @@ body, html {
   }
   50% {
     box-shadow: 0 0 15px 6px gold;
-    transform: scale(1.1);
-  }
-}
-
-@keyframes selected-glow {
-  0%, 100% {
-    box-shadow: 0 0 8px 3px #2563eb;
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 15px 6px #2563eb;
     transform: scale(1.1);
   }
 }
@@ -407,9 +391,6 @@ th, td {
 .tile-info-label {
   font-weight: bold;
   width: 60px;
-}
-
-.tile-info-value {
 }
 
 .building-options {
