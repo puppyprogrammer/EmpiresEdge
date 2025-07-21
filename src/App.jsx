@@ -70,6 +70,36 @@ function App() {
       }
     });
 
+    // Subscribe to real-time updates on tiles table
+    const tilesSubscription = supabase
+      .channel('tiles_changes')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'tiles' },
+        (payload) => {
+          console.log('Tiles table updated:', payload);
+          setTiles((prevTiles) => {
+            if (!prevTiles) return prevTiles;
+            const updatedTile = {
+              ...payload.new,
+              owner_nation_name: payload.new.owner_nation_name || 'None',
+              nations: payload.new.owner ? nations[payload.new.owner] : null,
+              x: payload.new.x,
+              y: payload.new.y,
+              building: payload.new.building || null
+            };
+            const newTiles = prevTiles.map((tile) =>
+              tile.id === payload.new.id ? updatedTile : tile
+            );
+            if (selectedTile && selectedTile.id === payload.new.id) {
+              setSelectedTile(updatedTile);
+            }
+            return newTiles;
+          });
+        }
+      )
+      .subscribe();
+
     if (session?.user?.id) {
       pollInterval = setInterval(async () => {
         await checkUserNation(session.user.id);
@@ -79,8 +109,9 @@ function App() {
     return () => {
       if (subscription) subscription.unsubscribe();
       if (pollInterval) clearInterval(pollInterval);
+      supabase.removeChannel(tilesSubscription);
     };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, nations]);
 
   useEffect(() => {
     console.log('State updated - showMainMenu:', showMainMenu, 'showBottomMenu:', showBottomMenu, 'tiles:', tiles);
@@ -672,7 +703,14 @@ function App() {
         )}
         {showBottomMenu && (
           <div className="bottom-menu">
-            <TileInformationPage selectedTile={selectedTile} userNation={userNation} />
+            <TileInformationPage
+              selectedTile={selectedTile}
+              userNation={userNation}
+              setError={setError}
+              fetchTiles={fetchTiles}
+              setSelectedTile={setSelectedTile}
+              tiles={tiles}
+            />
             <div
               className="close-menu"
               onClick={() => {

@@ -182,7 +182,7 @@ body, html {
   box-sizing: border-box;
   position: relative;
   transition: filter 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-  margin: -1px; /* Slightly overlap tiles to capture border clicks */
+  margin: -1px;
 }
 
 .tile:hover {
@@ -227,7 +227,7 @@ body, html {
 }
 
 .tile.selected-tile {
-  box-shadow: 0 0 8px 3px #2563eb, inset 0 0 8px 3px #2563eb; /* Outer and inner blue glow */
+  box-shadow: 0 0 8px 3px #2563eb, inset 0 0 8px 3px #2563eb;
   animation: selected-glow 1.5s ease-in-out infinite;
 }
 
@@ -397,11 +397,11 @@ th, td {
 .tile-info-table table {
   border-collapse: collapse;
   color: #e5e7eb;
-  font-size: 0.65rem; /* Smaller font to fit 4 rows */
+  font-size: 0.65rem;
 }
 
 .tile-info-table td {
-  padding: 1px 4px; /* Minimal padding */
+  padding: 1px 4px;
   border: none;
 }
 
@@ -415,9 +415,9 @@ th, td {
 
 .building-options {
   display: flex;
-  width: 100%; /* Expand to full width of parent */
-  justify-content: space-evenly; /* Evenly space child divs */
-  gap: 10px; /* Maintain reduced gap */
+  width: 100%;
+  justify-content: space-evenly;
+  gap: 10px;
   align-items: center;
 }
 
@@ -425,9 +425,9 @@ th, td {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px; /* Reduced gap */
+  gap: 2px;
   cursor: pointer;
-  padding: 4px; /* Reduced padding */
+  padding: 4px;
   border-radius: 4px;
   transition: background-color 0.2s ease;
 }
@@ -437,13 +437,40 @@ th, td {
 }
 
 .building-option svg {
-  width: 24px; /* Matches JSX */
+  width: 24px;
   height: 24px;
   color: rgb(194, 172, 75);
-  stroke: rgb(194, 172, 75); /* Matches left menu text color */
+  stroke: rgb(194, 172, 75);
 }
 
 .building-option span {
-  font-size: 0.65rem; /* Smaller font */
+  font-size: 0.65rem;
   color: rgb(194, 172, 75);
+}
+
+.delete-building-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.delete-building-option:hover {
+  background: #4b0000;
+}
+
+.delete-building-option svg {
+  width: 24px;
+  height: 24px;
+  color: #f87171;
+  stroke: #f87171;
+}
+
+.delete-building-option span {
+  font-size: 0.65rem;
+  color: #f87171;
 }

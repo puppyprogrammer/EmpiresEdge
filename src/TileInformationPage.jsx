@@ -5,8 +5,24 @@ const supabaseKey =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-function TileInformationPage({ selectedTile, userNation, setError, fetchTiles }) {
+function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, setSelectedTile, tiles }) {
   const isOwnTile = selectedTile && userNation && selectedTile.owner === userNation.id && !selectedTile.is_capital;
+
+  console.log('TileInformationPage render - selectedTile:', {
+    id: selectedTile?.id,
+    x: selectedTile?.x,
+    y: selectedTile?.y,
+    building: selectedTile?.building,
+    isOwnTile
+  });
+
+  const updateSelectedTile = () => {
+    if (!selectedTile || !tiles) return;
+    const updatedTile = tiles.find(t => t.id === selectedTile.id);
+    if (updatedTile) {
+      setSelectedTile(updatedTile);
+    }
+  };
 
   const handleBuildRoad = async () => {
     if (!selectedTile) return;
@@ -23,6 +39,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles })
       }
 
       await fetchTiles();
+      updateSelectedTile();
     } catch (err) {
       setError('Error building road: ' + err.message);
     }
@@ -43,6 +60,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles })
       }
 
       await fetchTiles();
+      updateSelectedTile();
     } catch (err) {
       setError('Error building factory: ' + err.message);
     }
@@ -63,6 +81,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles })
       }
 
       await fetchTiles();
+      updateSelectedTile();
     } catch (err) {
       setError('Error building mine: ' + err.message);
     }
@@ -83,6 +102,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles })
       }
 
       await fetchTiles();
+      updateSelectedTile();
     } catch (err) {
       setError('Error deleting building: ' + err.message);
     }
@@ -147,7 +167,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles })
       )}
       {isOwnTile && selectedTile.building && (
         <div className="building-options">
-          <div className="building-option" title="Delete Building" onClick={handleDeleteBuilding}>
+          <div className="delete-building-option" title="Delete Building" onClick={handleDeleteBuilding}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" strokeWidth="2">
               <path d="M3 6h18M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2M10 11v6M14 11v6M6 6l2 14h8l2-14" />
             </svg>
