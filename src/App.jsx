@@ -76,13 +76,27 @@ function App() {
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'tiles' },
-        (payload) => {
+        async (payload) => {
           console.log('Tiles table updated:', payload);
+          // Fetch nation name for the updated tile's owner
+          let owner_nation_name = 'None';
+          if (payload.new.owner) {
+            const { data, error } = await supabase
+              .from('nations')
+              .select('name')
+              .eq('id', payload.new.owner)
+              .single();
+            if (error) {
+              console.error('Error fetching nation name for tile update:', error);
+            } else {
+              owner_nation_name = data?.name || 'None';
+            }
+          }
           setTiles((prevTiles) => {
             if (!prevTiles) return prevTiles;
             const updatedTile = {
               ...payload.new,
-              owner_nation_name: payload.new.owner_nation_name || 'None',
+              owner_nation_name,
               nations: payload.new.owner ? nations[payload.new.owner] : null,
               x: payload.new.x,
               y: payload.new.y,
@@ -414,7 +428,7 @@ function App() {
       setResources({
         lumber: nationData.lumber || 0,
         oil: nationData.oil || 0,
-        ore: nationData.ore || 0
+        ore: data.ore || 0
       });
       setShowNationModal(false);
       setNationName('');
