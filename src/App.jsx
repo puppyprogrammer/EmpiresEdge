@@ -5,6 +5,7 @@ import { User, LogOut } from 'lucide-react';
 import { Analytics } from "@vercel/analytics/react";
 import RankingsPage from './RankingsPage';
 import OnlinePlayersPage from './OnlinePlayersPage';
+import TileInformationPage from './TileInformationPage';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
 const supabaseKey =
@@ -665,7 +666,7 @@ function App() {
         )}
         {showBottomMenu && (
           <div className="bottom-menu">
-            test
+            <TileInformationPage />
             <div
               className="close-menu"
               onClick={() => {
