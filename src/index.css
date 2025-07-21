@@ -182,6 +182,7 @@ body, html {
   box-sizing: border-box;
   position: relative;
   transition: filter 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  margin: -1px; /* Slightly overlap tiles to capture border clicks */
 }
 
 .tile:hover {
@@ -225,6 +226,11 @@ body, html {
   animation: glow 1.5s ease-in-out infinite;
 }
 
+.tile.selected-tile {
+  box-shadow: 0 0 8px 3px #2563eb; /* Blue glow matching login button */
+  animation: selected-glow 1.5s ease-in-out infinite;
+}
+
 .capital-icon {
   position: absolute;
   top: 50%;
@@ -241,6 +247,17 @@ body, html {
   }
   50% {
     box-shadow: 0 0 15px 6px gold;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes selected-glow {
+  0%, 100% {
+    box-shadow: 0 0 8px 3px #2563eb;
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 15px 6px #2563eb;
     transform: scale(1.1);
   }
 }
@@ -391,6 +408,9 @@ th, td {
 .tile-info-label {
   font-weight: bold;
   width: 60px;
+}
+
+.tile-info-value {
 }
 
 .building-options {
