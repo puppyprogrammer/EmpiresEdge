@@ -62,8 +62,8 @@ function App() {
         setResources({ lumber: 0, oil: 0, ore: 0 });
         setShowNationModal(false);
         fetchTiles();
-        setShowMainMenu(true); // Ensure menus stay visible on logout
-        setShowBottomMenu(true);
+        setShowMainMenu(false);
+        setShowBottomMenu(false);
       }
     });
 
@@ -393,8 +393,8 @@ async function fetchTiles() {
       setLoginEmail('');
       setLoginPassword('');
       fetchTiles();
-      setShowMainMenu(true); // Ensure menus are visible after login
-      setShowBottomMenu(true);
+      setShowMainMenu(false); // Ensure menus are visible after login
+      setShowBottomMenu(false);
     }
   }
 
@@ -416,8 +416,8 @@ async function fetchTiles() {
       setRegisterPassword('');
       setRegisterUsername('');
       setShowRegister(false);
-      setShowMainMenu(true); // Ensure menus are visible after register
-      setShowBottomMenu(true);
+      setShowMainMenu(false);
+      setShowBottomMenu(false);
     }
   }
 
@@ -429,8 +429,8 @@ async function fetchTiles() {
       setShowNationModal(false);
       setTiles(null);
       fetchTiles();
-      setShowMainMenu(true); // Ensure menus stay visible on logout
-      setShowBottomMenu(true);
+      setShowMainMenu(false);
+      setShowBottomMenu(false);
     } catch (err) {
       setError('Failed to log out: ' + err.message);
     }
