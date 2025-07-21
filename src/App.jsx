@@ -152,7 +152,7 @@ function App() {
             start_row: from,
             end_row: from + limit - 1
           });
-        console.log('Fetched tiles data sample:', data.map(tile => ({ id: tile.id, x: tile.x, y: tile.y })));
+        console.log('Fetched tiles data sample:', data.map(tile => ({ id: tile.id, x: tile.x, y: tile.y, building: tile.building })));
 
         if (error) {
           setError(`Failed to fetch tiles: ${error.message} (code: ${error.code}, details: ${error.details})`);
@@ -165,7 +165,8 @@ function App() {
           owner_nation_name: tile.owner_nation_name || 'None',
           nations: tile.owner ? nationsMap[tile.owner] : null,
           x: tile.x,
-          y: tile.y
+          y: tile.y,
+          building: tile.building || null
         }));
 
         allTiles = [...allTiles, ...enrichedTiles];
@@ -623,7 +624,7 @@ function App() {
                 className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${tile.is_capital && tile.owner === userNation?.id ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)} ${selectedTile?.id === tile.id ? 'selected-tile' : ''}`}
                 data-x={tile.x}
                 data-y={tile.y}
-                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}`}
+                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}, Building: ${tile.building || 'None'}`}
                 style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
                 onClick={() => { setShowBottomMenu(true); setSelectedTile(tile); }}
               >

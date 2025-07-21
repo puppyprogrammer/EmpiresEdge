@@ -1,5 +1,32 @@
-function TileInformationPage({ selectedTile, userNation }) {
-  const isOwnTile = selectedTile && userNation && selectedTile.owner === userNation.id;
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
+const supabaseKey =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+function TileInformationPage({ selectedTile, userNation, setError, fetchTiles }) {
+  const isOwnTile = selectedTile && userNation && selectedTile.owner === userNation.id && !selectedTile.is_capital;
+
+  const handleBuildRoad = async () => {
+    if (!selectedTile) return;
+
+    try {
+      const { error } = await supabase
+        .from('tiles')
+        .update({ building: 'road' })
+        .eq('id', selectedTile.id);
+
+      if (error) {
+        setError('Failed to build road: ' + error.message);
+        return;
+      }
+
+      await fetchTiles();
+    } catch (err) {
+      setError('Error building road: ' + err.message);
+    }
+  };
 
   return (
     <div className="tile-info-container">
@@ -35,7 +62,7 @@ function TileInformationPage({ selectedTile, userNation }) {
       </div>
       {isOwnTile && (
         <div className="building-options">
-          <div className="building-option" title="Build Road">
+          <div className="building-option" title="Build Road" onClick={handleBuildRoad}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" strokeWidth="2">
               <path d="M4 12h16M12 4v16" />
             </svg>
