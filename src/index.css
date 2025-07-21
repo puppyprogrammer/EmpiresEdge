@@ -422,6 +422,7 @@ th, td {
 .building-option svg {
   width: 24px; /* Matches JSX */
   height: 24px;
+  color: rgb(194, 172, 75);
 }
 
 .building-option span {
