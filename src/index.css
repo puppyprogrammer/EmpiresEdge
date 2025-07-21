@@ -360,7 +360,6 @@ table {
 }
 
 th, td {
-  padding: 8px 12px;
   text-align: left;
   color: #e5e7eb;
 }
@@ -400,7 +399,6 @@ th, td {
 
 .building-options {
   display: flex;
-  color: rgb(194, 172, 75);
   gap: 10px; /* Reduced gap */
   align-items: center;
   margin-left: 10px;
@@ -428,5 +426,5 @@ th, td {
 
 .building-option span {
   font-size: 0.65rem; /* Smaller font */
-  color: #e5e7eb;
+  color: rgb(194, 172, 75);
 }
