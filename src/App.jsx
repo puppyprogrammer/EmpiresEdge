@@ -107,75 +107,75 @@ function App() {
     }
   }, [userNation, tiles]);
 
-async function fetchTiles() {
-  try {
-    const { data: nationsData, error: nationsError } = await supabase
-      .from('nations')
-      .select('id, color');
+  async function fetchTiles() {
+    try {
+      const { data: nationsData, error: nationsError } = await supabase
+        .from('nations')
+        .select('id, color');
 
-    if (nationsError) {
-      setError('Failed to fetch nations: ' + nationsError.message);
-      setTiles([]);
-      return;
-    }
-
-    const nationsMap = {};
-    nationsData.forEach(nation => {
-      nationsMap[nation.id] = { color: nation.color };
-    });
-    setNations(nationsMap);
-
-    let allTiles = [];
-    let from = 0;
-    const limit = 1000;
-
-    const { count, error: countError } = await supabase
-      .from('tiles')
-      .select('id', { count: 'exact', head: true })
-      .order('x', { ascending: true })
-      .order('y', { ascending: true });
-
-    if (countError) {
-      setError(`Failed to fetch tile count: ${countError.message} (code: ${countError.code}, details: ${countError.details})`);
-      setTiles([]);
-      return;
-    }
-
-    const totalRows = count || 10000;
-
-    while (from < totalRows) {
-      const { data, error } = await supabase
-        .rpc('get_tiles_with_username', {
-          start_row: from,
-          end_row: from + limit - 1
-        });
-      console.log('Fetched tiles data sample:', data.map(tile => ({ id: tile.id, x: tile.x, y: tile.y }))); // Enhanced log with specific fields
-
-      if (error) {
-        setError(`Failed to fetch tiles: ${error.message} (code: ${error.code}, details: ${error.details})`);
+      if (nationsError) {
+        setError('Failed to fetch nations: ' + nationsError.message);
         setTiles([]);
         return;
       }
 
-      const enrichedTiles = data.map(tile => ({
-        ...tile,
-        owner_nation_name: tile.owner_nation_name || 'None',
-        nations: tile.owner ? nationsMap[tile.owner] : null,
-        x: tile.x, // Use the value from RPC, which should now be valid
-        y: tile.y  // Use the value from RPC, which should now be valid
-      }));
+      const nationsMap = {};
+      nationsData.forEach(nation => {
+        nationsMap[nation.id] = { color: nation.color };
+      });
+      setNations(nationsMap);
 
-      allTiles = [...allTiles, ...enrichedTiles];
-      from += limit;
+      let allTiles = [];
+      let from = 0;
+      const limit = 1000;
+
+      const { count, error: countError } = await supabase
+        .from('tiles')
+        .select('id', { count: 'exact', head: true })
+        .order('x', { ascending: true })
+        .order('y', { ascending: true });
+
+      if (countError) {
+        setError(`Failed to fetch tile count: ${countError.message} (code: ${countError.code}, details: ${countError.details})`);
+        setTiles([]);
+        return;
+      }
+
+      const totalRows = count || 10000;
+
+      while (from < totalRows) {
+        const { data, error } = await supabase
+          .rpc('get_tiles_with_username', {
+            start_row: from,
+            end_row: from + limit - 1
+          });
+        console.log('Fetched tiles data sample:', data.map(tile => ({ id: tile.id, x: tile.x, y: tile.y })));
+
+        if (error) {
+          setError(`Failed to fetch tiles: ${error.message} (code: ${error.code}, details: ${error.details})`);
+          setTiles([]);
+          return;
+        }
+
+        const enrichedTiles = data.map(tile => ({
+          ...tile,
+          owner_nation_name: tile.owner_nation_name || 'None',
+          nations: tile.owner ? nationsMap[tile.owner] : null,
+          x: tile.x,
+          y: tile.y
+        }));
+
+        allTiles = [...allTiles, ...enrichedTiles];
+        from += limit;
+      }
+
+      console.log('Tiles loaded:', allTiles.length, allTiles.slice(0, 5));
+      setTiles(allTiles);
+    } catch (err) {
+      setError(`Error fetching tiles: ${err.message}`);
+      setTiles([]);
     }
-
-    console.log('Tiles loaded:', allTiles.length, allTiles.slice(0, 5));
-    setTiles(allTiles);
-  } catch (err) {
-    setError(`Error fetching tiles: ${err.message}`);
-    setTiles([]);
   }
-}
 
   async function checkUserNation(userId) {
     try {
@@ -223,41 +223,41 @@ async function fetchTiles() {
   }
 
   function findCapitalTile() {
-  if (!tiles || tiles.length === 0) {
-    console.log('findCapitalTile: tiles is null or empty', { tiles });
-    return null;
-  }
-  console.log('findCapitalTile: Full tiles data', { tiles });
-  const capitalTiles = tiles.filter((tile) => {
-    if (typeof tile.is_capital !== 'boolean') {
-      console.log('findCapitalTile: Skipping tile due to invalid is_capital', { tile });
-      return false;
+    if (!tiles || tiles.length === 0) {
+      console.log('findCapitalTile: tiles is null or empty', { tiles });
+      return null;
     }
-    return tile.is_capital;
-  });
-  console.log('findCapitalTile: Filtered capitalTiles', { capitalTiles });
+    console.log('findCapitalTile: Full tiles data', { tiles });
+    const capitalTiles = tiles.filter((tile) => {
+      if (typeof tile.is_capital !== 'boolean') {
+        console.log('findCapitalTile: Skipping tile due to invalid is_capital', { tile });
+        return false;
+      }
+      return tile.is_capital;
+    });
+    console.log('findCapitalTile: Filtered capitalTiles', { capitalTiles });
 
-  const minDistance = 3;
-  const candidates = tiles.filter((tile) => {
-    if (tile.x === undefined || tile.y === undefined) {
-      console.log('findCapitalTile: Skipping tile due to undefined x or y', { tile });
-      return false;
+    const minDistance = 3;
+    const candidates = tiles.filter((tile) => {
+      if (tile.x === undefined || tile.y === undefined) {
+        console.log('findCapitalTile: Skipping tile due to undefined x or y', { tile });
+        return false;
+      }
+      return capitalTiles.every(
+        (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
+      );
+    });
+    console.log('findCapitalTile: Candidates', { candidates });
+
+    if (candidates.length === 0) {
+      console.log('findCapitalTile: No candidates found', { candidates });
+      return null;
     }
-    return capitalTiles.every(
-      (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
-    );
-  });
-  console.log('findCapitalTile: Candidates', { candidates });
 
-  if (candidates.length === 0) {
-    console.log('findCapitalTile: No candidates found', { candidates });
-    return null;
+    const idx = Math.floor(Math.random() * candidates.length);
+    console.log('findCapitalTile: Selected index', { idx, candidatesLength: candidates.length });
+    return candidates[idx];
   }
-
-  const idx = Math.floor(Math.random() * candidates.length);
-  console.log('findCapitalTile: Selected index', { idx, candidatesLength: candidates.length });
-  return candidates[idx];
-}
 
   async function handleStartGame() {
     console.log('Starting game with:', {
@@ -281,7 +281,6 @@ async function fetchTiles() {
       return;
     }
 
-    // Check for duplicate nation name
     const { data: existingNation, error: nameCheckError } = await supabase
       .from('nations')
       .select('id')
@@ -393,7 +392,7 @@ async function fetchTiles() {
       setLoginEmail('');
       setLoginPassword('');
       fetchTiles();
-      setShowMainMenu(false); // Ensure menus are visible after login
+      setShowMainMenu(false);
       setShowBottomMenu(false);
     }
   }
@@ -609,7 +608,6 @@ async function fetchTiles() {
         </div>
       )}
 
-      {/* Temporarily remove tiles condition to test menu visibility */}
       <div>
         <div className="map-scroll-container" ref={mapScrollRef}>
           <div className="map-grid">
@@ -621,6 +619,7 @@ async function fetchTiles() {
                 data-y={tile.y}
                 title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}`}
                 style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
+                onClick={() => { setShowBottomMenu(true); }}
               >
                 {tile.is_capital && (
                   <img
