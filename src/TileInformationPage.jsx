@@ -28,6 +28,66 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles })
     }
   };
 
+  const handleBuildFactory = async () => {
+    if (!selectedTile) return;
+
+    try {
+      const { error } = await supabase
+        .from('tiles')
+        .update({ building: 'factory' })
+        .eq('id', selectedTile.id);
+
+      if (error) {
+        setError('Failed to build factory: ' + error.message);
+        return;
+      }
+
+      await fetchTiles();
+    } catch (err) {
+      setError('Error building factory: ' + err.message);
+    }
+  };
+
+  const handleBuildMine = async () => {
+    if (!selectedTile) return;
+
+    try {
+      const { error } = await supabase
+        .from('tiles')
+        .update({ building: 'mine' })
+        .eq('id', selectedTile.id);
+
+      if (error) {
+        setError('Failed to build mine: ' + error.message);
+        return;
+      }
+
+      await fetchTiles();
+    } catch (err) {
+      setError('Error building mine: ' + err.message);
+    }
+  };
+
+  const handleDeleteBuilding = async () => {
+    if (!selectedTile) return;
+
+    try {
+      const { error } = await supabase
+        .from('tiles')
+        .update({ building: null })
+        .eq('id', selectedTile.id);
+
+      if (error) {
+        setError('Failed to delete building: ' + error.message);
+        return;
+      }
+
+      await fetchTiles();
+    } catch (err) {
+      setError('Error deleting building: ' + err.message);
+    }
+  };
+
   return (
     <div className="tile-info-container">
       <div className="tile-info-table">
@@ -60,7 +120,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles })
           </tbody>
         </table>
       </div>
-      {isOwnTile && (
+      {isOwnTile && !selectedTile.building && (
         <div className="building-options">
           <div className="building-option" title="Build Road" onClick={handleBuildRoad}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" strokeWidth="2">
@@ -68,7 +128,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles })
             </svg>
             <span>Road</span>
           </div>
-          <div className="building-option" title="Build Factory">
+          <div className="building-option" title="Build Factory" onClick={handleBuildFactory}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" strokeWidth="2">
               <rect x="2" y="6" width="20" height="12" />
               <path d="M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" />
@@ -76,12 +136,22 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles })
             </svg>
             <span>Factory</span>
           </div>
-          <div className="building-option" title="Build Mine">
+          <div className="building-option" title="Build Mine" onClick={handleBuildMine}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" strokeWidth="2">
               <path d="M12 2v6m-4-2l8 4m0-4l-8 4" />
               <rect x="2" y="8" width="20" height="14" />
             </svg>
             <span>Mine</span>
+          </div>
+        </div>
+      )}
+      {isOwnTile && selectedTile.building && (
+        <div className="building-options">
+          <div className="building-option" title="Delete Building" onClick={handleDeleteBuilding}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" strokeWidth="2">
+              <path d="M3 6h18M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2M10 11v6M14 11v6M6 6l2 14h8l2-14" />
+            </svg>
+            <span>Delete</span>
           </div>
         </div>
       )}
