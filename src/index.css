@@ -368,35 +368,39 @@ th, td {
   font-size: 0.9rem;
 }
 
-/* New styles for TileInformationPage */
+/* Updated styles for TileInformationPage */
 .tile-info-container {
   display: flex;
   width: 100%;
-  height: 100%;
-  gap: 20px;
+  height: 40px; /* Fits within 60px bottom-menu with 10px padding */
+  gap: 10px;
   align-items: center;
-  padding: 0 10px;
+  padding: 0 5px;
 }
 
 .tile-info-table {
   flex: 1;
+  max-height: 40px;
+  overflow: hidden;
 }
 
 .tile-info-table table {
   width: 100%;
   border-collapse: collapse;
   color: #e5e7eb;
+  font-size: 0.75rem; /* Smaller font to fit */
 }
 
 .tile-info-table td {
-  padding: 8px 12px;
+  padding: 2px 6px; /* Reduced padding */
   border: 1px solid #374151;
+  line-height: 1.2;
 }
 
 .tile-info-label {
   font-weight: bold;
   background: #1f2937;
-  width: 100px;
+  width: 80px; /* Slightly smaller width */
 }
 
 .tile-info-value {
@@ -405,7 +409,7 @@ th, td {
 
 .building-options {
   display: flex;
-  gap: 20px;
+  gap: 10px; /* Reduced gap */
   align-items: center;
 }
 
@@ -413,9 +417,9 @@ th, td {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 2px; /* Reduced gap */
   cursor: pointer;
-  padding: 10px;
+  padding: 5px; /* Reduced padding */
   border-radius: 4px;
   background: #1f2937;
   transition: background-color 0.2s ease;
@@ -426,11 +430,11 @@ th, td {
 }
 
 .building-option svg {
-  width: 40px;
-  height: 40px;
+  width: 24px; /* Smaller SVG size */
+  height: 24px;
 }
 
 .building-option span {
-  font-size: 0.85rem;
+  font-size: 0.7rem; /* Smaller font */
   color: #e5e7eb;
 }
