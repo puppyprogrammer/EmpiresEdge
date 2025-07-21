@@ -2,16 +2,26 @@ function TileInformationPage() {
   return (
     <div className="tile-info-container">
       <div className="tile-info-table">
-        <div className="tile-info-row">
-          <span className="tile-info-label">Tile:</span>
-          <span className="tile-info-value">X, Y</span>
-          <span className="tile-info-label">Owner:</span>
-          <span className="tile-info-value">None</span>
-          <span className="tile-info-label">Type:</span>
-          <span className="tile-info-value">Mountain</span>
-          <span className="tile-info-label">Resource:</span>
-          <span className="tile-info-value">None</span>
-        </div>
+        <table>
+          <tbody>
+            <tr>
+              <td className="tile-info-label">Tile</td>
+              <td className="tile-info-value">X, Y</td>
+            </tr>
+            <tr>
+              <td className="tile-info-label">Owner</td>
+              <td className="tile-info-value">None</td>
+            </tr>
+            <tr>
+              <td className="tile-info-label">Type</td>
+              <td className="tile-info-value">Mountain</td>
+            </tr>
+            <tr>
+              <td className="tile-info-label">Resource</td>
+              <td className="tile-info-value">None</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
       <div className="building-options">
         <div className="building-option" title="Build Road">

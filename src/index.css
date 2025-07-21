@@ -172,7 +172,7 @@ body, html {
   width: 3398px;
   height: 3398px;
   margin: auto;
-  box-sizing: content-box;
+  box-sizing: content-content;
 }
 
 .tile {
@@ -358,7 +358,7 @@ table {
   border-collapse: collapse;
   min-width: 20%;
   max-width: 600px;
-  margin: 1rem 0 1rem 10px;
+  margin: 0;
 }
 
 th, td {
@@ -388,19 +388,19 @@ th, td {
   width: 100%;
   border-collapse: collapse;
   color: #e5e7eb;
-  font-size: 0.75rem; /* Smaller font to fit */
+  font-size: 0.65rem; /* Smaller font to fit 4 rows */
 }
 
 .tile-info-table td {
-  padding: 2px 6px; /* Reduced padding */
-  border: 1px solid #374151;
-  line-height: 1.2;
+  padding: 1px 4px; /* Minimal padding */
+  border: none; /* Remove borders */
+  line-height: 10px; /* Tight line height */
 }
 
 .tile-info-label {
   font-weight: bold;
   background: #1f2937;
-  width: 80px; /* Slightly smaller width */
+  width: 60px; /* Reduced width */
 }
 
 .tile-info-value {
@@ -409,7 +409,7 @@ th, td {
 
 .building-options {
   display: flex;
-  gap: 10px; /* Reduced gap */
+  gap: 8px; /* Reduced gap */
   align-items: center;
 }
 
@@ -419,7 +419,7 @@ th, td {
   align-items: center;
   gap: 2px; /* Reduced gap */
   cursor: pointer;
-  padding: 5px; /* Reduced padding */
+  padding: 4px; /* Reduced padding */
   border-radius: 4px;
   background: #1f2937;
   transition: background-color 0.2s ease;
@@ -430,11 +430,11 @@ th, td {
 }
 
 .building-option svg {
-  width: 24px; /* Smaller SVG size */
+  width: 24px; /* Matches JSX */
   height: 24px;
 }
 
 .building-option span {
-  font-size: 0.7rem; /* Smaller font */
+  font-size: 0.65rem; /* Smaller font */
   color: #e5e7eb;
 }
