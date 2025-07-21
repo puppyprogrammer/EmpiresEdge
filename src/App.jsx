@@ -671,7 +671,7 @@ function App() {
         )}
         {showBottomMenu && (
           <div className="bottom-menu">
-            <TileInformationPage selectedTile={selectedTile} />
+            <TileInformationPage selectedTile={selectedTile} userNation={userNation} />
             <div
               className="close-menu"
               onClick={() => {
