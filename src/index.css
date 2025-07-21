@@ -394,14 +394,14 @@ th, td {
 }
 
 .tile-info-value {
-
 }
 
 .building-options {
   display: flex;
-  gap: 10px; /* Reduced gap */
+  width: 100%; /* Expand to full width of parent */
+  justify-content: space-evenly; /* Evenly space child divs */
+  gap: 10px; /* Maintain reduced gap */
   align-items: center;
-  margin-left: 10px;
 }
 
 .building-option {
