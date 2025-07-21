@@ -363,7 +363,6 @@ th, td {
   padding: 8px 12px;
   text-align: left;
   color: #e5e7eb;
-  font-size: 0.9rem;
 }
 
 /* Updated styles for TileInformationPage */
@@ -388,7 +387,6 @@ th, td {
 .tile-info-table td {
   padding: 1px 4px; /* Minimal padding */
   border: none;
-  line-height: 10px; /* Tight line height */
 }
 
 .tile-info-label {
@@ -404,6 +402,7 @@ th, td {
   display: flex;
   gap: 8px; /* Reduced gap */
   align-items: center;
+  margin-left: 10px;
 }
 
 .building-option {
