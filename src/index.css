@@ -400,7 +400,8 @@ th, td {
 
 .building-options {
   display: flex;
-  gap: 8px; /* Reduced gap */
+  color: rgb(194, 172, 75);
+  gap: 10px; /* Reduced gap */
   align-items: center;
   margin-left: 10px;
 }
