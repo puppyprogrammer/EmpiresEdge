@@ -329,8 +329,6 @@ body, html {
   padding: 10px;
   color: rgb(229, 231, 235);
   font-size: 0.85rem;
-  font-weight: 500;
-  line-height: 1.8em;
   border-radius: 4px 4px 0 0;
 }
 
@@ -395,12 +393,11 @@ th, td {
 
 .tile-info-label {
   font-weight: bold;
-  background: #1f2937;
   width: 60px;
 }
 
 .tile-info-value {
-  background: #111827;
+
 }
 
 .building-options {
@@ -417,7 +414,6 @@ th, td {
   cursor: pointer;
   padding: 4px; /* Reduced padding */
   border-radius: 4px;
-  background: #1f2937;
   transition: background-color 0.2s ease;
 }
 
