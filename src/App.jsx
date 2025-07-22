@@ -16,6 +16,7 @@ function App() {
   const subscriptionRef = useRef(null);
   const lastNationRef = useRef(null);
   const lastResourcesRef = useRef({ lumber: 0, oil: 0, ore: 0 });
+  const hasInitialized = useRef(false); // Prevent multiple initializations
   const TILE_SIZE = 32;
   const renderCount = useRef(0);
 
@@ -74,6 +75,12 @@ function App() {
 
   // Initialize game state
   const initializeGameState = async () => {
+    if (hasInitialized.current) {
+      console.log('initializeGameState: Already initialized, skipping');
+      return;
+    }
+    hasInitialized.current = true;
+    console.log('initializeGameState: Starting');
     try {
       setLoading(true);
       const [gameStateRes, resourcesRes] = await Promise.all([
@@ -163,6 +170,10 @@ function App() {
   // Session check and initial load
   useEffect(() => {
     async function checkSessionAndInitialize() {
+      if (hasInitialized.current) {
+        console.log('checkSessionAndInitialize: Already initialized, skipping');
+        return;
+      }
       try {
         setLoading(true);
         const { data } = await supabase.auth.getSession();
@@ -175,7 +186,7 @@ function App() {
         }
       } catch (err) {
         console.error('Error checking session:', { ...err });
-        setError(`Error initializing app: ${err.message}. Please try refreshing.`);
+        setError(`Error initializing app: ${err.message}.`);
         setLoading(false);
         setIsInitialized(true);
       }
@@ -183,88 +194,6 @@ function App() {
 
     checkSessionAndInitialize();
   }, []);
-
-  // Update single tile
-  const updateSingleTile = async (x, y) => {
-    try {
-      const { data: tileData, error: tileError } = await supabase
-        .from('tiles')
-        .select('x, y, owner, building, is_capital')
-        .eq('x', x)
-        .eq('y', y)
-        .single();
-      if (tileError) {
-        console.error('Failed to fetch tile:', { ...tileError });
-        setError('Failed to update tile: ' + tileError.message);
-        return;
-      }
-
-      let owner_nation_name = 'None';
-      if (tileData.owner) {
-        const { data: nationData, error: nationError } = await supabase
-          .from('nations')
-          .select('name')
-          .eq('id', tileData.owner)
-          .single();
-        if (nationError) {
-          console.error('Failed to fetch nation name:', { ...nationError });
-        } else {
-          owner_nation_name = nationData.name || 'None';
-        }
-      }
-
-      const key = `${tileData.x}_${tileData.y}`;
-      setGameState((prevState) => {
-        const currentTile = prevState.dynamicTiles[key] || {};
-        if (
-          currentTile.owner === tileData.owner &&
-          currentTile.building === tileData.building &&
-          currentTile.is_capital === tileData.is_capital &&
-          currentTile.owner_nation_name === owner_nation_name
-        ) {
-          console.log('updateSingleTile: No changes needed for tile:', { x, y, building: tileData.building });
-          return prevState;
-        }
-        console.log('updateSingleTile: Updating gameState for tile:', { x, y, building: tileData.building });
-        return {
-          ...prevState,
-          dynamicTiles: {
-            ...prevState.dynamicTiles,
-            [key]: {
-              owner: tileData.owner || null,
-              building: tileData.building || null,
-              owner_nation_name,
-              nations: tileData.owner && prevState.nations[tileData.owner] ? prevState.nations[tileData.owner] : null,
-              is_capital: tileData.is_capital || false,
-            },
-          },
-        };
-      });
-
-      if (selectedTile?.x === x && selectedTile?.y === y) {
-        const newTile = {
-          ...staticTilesRef.current[key],
-          ...tileData,
-          id: key,
-          owner_nation_name,
-        };
-        if (
-          selectedTile.owner === newTile.owner &&
-          selectedTile.building === newTile.building &&
-          selectedTile.is_capital === newTile.is_capital &&
-          selectedTile.owner_nation_name === newTile.owner_nation_name
-        ) {
-          console.log('updateSingleTile: No changes needed for selectedTile:', { x, y });
-          return;
-        }
-        console.log('updateSingleTile: Updating selectedTile:', { ...newTile });
-        setSelectedTile(newTile);
-      }
-    } catch (err) {
-      console.error('Error updating single tile:', { ...err });
-      setError('Error updating tile: ' + err.message);
-    }
-  };
 
   // Resource tick
   useEffect(() => {
@@ -484,33 +413,49 @@ function App() {
     };
   }, [session?.user?.id, loading]);
 
-  // Auth state change listener
+  // Auth state change listener with debouncing
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (!session) {
-        setGameState({
-          dynamicTiles: {},
-          nations: {},
-          userNation: null,
-          resources: { lumber: 0, oil: 0, ore: 0 },
-          version: null,
-        });
-        staticTilesRef.current = {};
-        lastNationRef.current = null;
-        lastResourcesRef.current = { lumber: 0, oil: 0, ore: 0 };
-        setShowNationModal(false);
-        setShowMainMenu(false);
-        setShowBottomMenu(false);
-        setSelectedTile(null);
-        setLoading(false);
-        setIsInitialized(true);
-      } else {
-        initializeGameState();
+    let timeoutId = null;
+    const handleAuthChange = async (event, session) => {
+      console.log('onAuthStateChange triggered:', { event, session });
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
-    });
+      timeoutId = setTimeout(async () => {
+        setSession(session);
+        if (!session) {
+          console.log('onAuthStateChange: No session, resetting state');
+          setGameState({
+            dynamicTiles: {},
+            nations: {},
+            userNation: null,
+            resources: { lumber: 0, oil: 0, ore: 0 },
+            version: null,
+          });
+          staticTilesRef.current = {};
+          lastNationRef.current = null;
+          lastResourcesRef.current = { lumber: 0, oil: 0, ore: 0 };
+          setShowNationModal(false);
+          setShowMainMenu(false);
+          setShowBottomMenu(false);
+          setSelectedTile(null);
+          setLoading(false);
+          setIsInitialized(true);
+          hasInitialized.current = false; // Allow re-initialization on next login
+        } else {
+          await initializeGameState();
+        }
+      }, 100);
+    };
 
-    return () => subscription.unsubscribe();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Map centering
@@ -717,6 +662,7 @@ function App() {
       setSelectedTile(null);
       setLoading(false);
       setIsInitialized(true);
+      hasInitialized.current = false; // Allow re-initialization on next login
     } catch (err) {
       console.error('Error logging out:', { ...err });
       setError('Failed to log out: ' + err.message);
