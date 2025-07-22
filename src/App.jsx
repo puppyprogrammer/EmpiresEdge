@@ -282,13 +282,12 @@ function App() {
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
-      timeoutId = setTimeout(centerMap, 10000); // 10 seconds delay
+      timeoutId = setTimeout(centerMap, 4000); // 4 seconds delay
     };
 
     resetTimer();
 
     const handleInteraction = () => {
-      console.log('User interaction detected, resetting centering timer');
       resetTimer();
     };
 
@@ -442,7 +441,6 @@ function App() {
       { dx: -1, dy: 0, side: 'left' },   // Tile to left (x, y - 1)
     ];
 
-    console.log(`Checking borders for tile (${tile.x}, ${tile.y}), owner: ${tile.owner}, nation: ${tile.owner_nation_name}`);
     adjacentTiles.forEach(({ dx, dy, side }) => {
       const adjKey = `${tile.x + dx}_${tile.y + dy}`;
       const adjacentTile = gameState.dynamicTiles[adjKey];
