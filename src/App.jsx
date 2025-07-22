@@ -15,7 +15,7 @@ function App() {
   const mapScrollRef = useRef(null);
   const TILE_SIZE = 32;
 
-  const [gameState, setGameState] = useState(null); // Single source of truth
+  const [gameState, setGameState] = useState(null);
   const [error, setError] = useState(null);
   const [session, setSession] = useState(null);
   const [showRegister, setShowRegister] = useState(false);
@@ -32,11 +32,9 @@ function App() {
   const [selectedPage, setSelectedPage] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
 
-  // Initialize session and fetch initial game state
   useEffect(() => {
     let pollInterval = null;
 
-    // Fetch session
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session) {
@@ -45,7 +43,6 @@ function App() {
       fetchGameState();
     });
 
-    // Handle auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
@@ -60,7 +57,6 @@ function App() {
       }
     });
 
-    // Subscribe to real-time tile updates
     const tilesSubscription = supabase
       .channel('game_state_changes')
       .on(
@@ -89,7 +85,6 @@ function App() {
       )
       .subscribe();
 
-    // Poll for nation updates every 3 seconds if user is logged in
     if (session?.user?.id) {
       pollInterval = setInterval(() => {
         checkUserNation(session.user.id);
@@ -103,7 +98,6 @@ function App() {
     };
   }, [session?.user?.id]);
 
-  // Center map on user's capital
   useEffect(() => {
     if (!gameState?.userNation || !gameState?.tiles || !mapScrollRef.current) return;
 
@@ -137,7 +131,6 @@ function App() {
         return;
       }
 
-      // Transform tiles array into an object for faster lookup
       const tilesMap = {};
       data.tiles.forEach((tile) => {
         tilesMap[`${tile.x}_${tile.y}`] = tile;

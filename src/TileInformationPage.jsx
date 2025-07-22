@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
-const supabaseKey =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, setSelectedTile, tiles }) {
@@ -13,14 +12,28 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
     x: selectedTile?.x,
     y: selectedTile?.y,
     building: selectedTile?.building,
-    isOwnTile
+    isOwnTile,
   });
 
   const updateSelectedTile = () => {
     if (!selectedTile || !tiles) return;
-    const updatedTile = tiles.find(t => t.id === selectedTile.id);
+    const updatedTile = tiles[`${selectedTile.x}_${selectedTile.y}`];
     if (updatedTile) {
       setSelectedTile(updatedTile);
+    }
+  };
+
+  const updateLastTickTime = async () => {
+    try {
+      const { error } = await supabase
+        .from('server_state')
+        .update({ last_tick_time: new Date().toISOString() })
+        .eq('id', (await supabase.from('server_state').select('id').order('id', { ascending: false }).limit(1)).data[0].id);
+      if (error) {
+        setError('Failed to update server state: ' + error.message);
+      }
+    } catch (err) {
+      setError('Error updating server state: ' + err.message);
     }
   };
 
@@ -38,6 +51,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         return;
       }
 
+      await updateLastTickTime();
       await fetchTiles();
       updateSelectedTile();
     } catch (err) {
@@ -59,6 +73,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         return;
       }
 
+      await updateLastTickTime();
       await fetchTiles();
       updateSelectedTile();
     } catch (err) {
@@ -80,6 +95,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         return;
       }
 
+      await updateLastTickTime();
       await fetchTiles();
       updateSelectedTile();
     } catch (err) {
@@ -101,6 +117,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         return;
       }
 
+      await updateLastTickTime();
       await fetchTiles();
       updateSelectedTile();
     } catch (err) {
