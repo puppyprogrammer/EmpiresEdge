@@ -1,3 +1,4 @@
+import React from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
@@ -19,16 +20,26 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
     if (!selectedTile || !tiles) return;
     const updatedTile = tiles[`${selectedTile.x}_${selectedTile.y}`];
     if (updatedTile) {
-      setSelectedTile(updatedTile);
+      setSelectedTile({ ...selectedTile, ...updatedTile });
     }
   };
 
   const updateLastTickTime = async () => {
     try {
+      const { data: serverState } = await supabase
+        .from('server_state')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1)
+        .single();
+      if (!serverState) {
+        setError('Server state not found.');
+        return;
+      }
       const { error } = await supabase
         .from('server_state')
         .update({ last_tick_time: new Date().toISOString() })
-        .eq('id', (await supabase.from('server_state').select('id').order('id', { ascending: false }).limit(1)).data[0].id);
+        .eq('id', serverState.id);
       if (error) {
         setError('Failed to update server state: ' + error.message);
       }
@@ -38,90 +49,172 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
   };
 
   const handleBuildRoad = async () => {
-    if (!selectedTile) return;
-
+    if (!selectedTile || typeof selectedTile.x !== 'number' || typeof selectedTile.y !== 'number') {
+      setError('Invalid tile selected. Please select a valid tile.');
+      console.error('Invalid selectedTile for road:', selectedTile);
+      return;
+    }
+    if (!userNation?.id) {
+      setError('No nation selected. Please create a nation first.');
+      return;
+    }
     try {
-      const { error } = await supabase
-        .from('tiles')
-        .update({ building: 'road' })
-        .eq('id', selectedTile.id);
-
+      console.log('Building road:', {
+        tile_x: selectedTile.x,
+        tile_y: selectedTile.y,
+        user_nation_id: userNation.id,
+        timestamp: new Date().toISOString(),
+      });
+      const { error } = await supabase.rpc('build_road', {
+        user_id: userNation.id,
+        tile_x: selectedTile.x,
+        tile_y: selectedTile.y,
+      });
       if (error) {
         setError('Failed to build road: ' + error.message);
+        console.error('Road build error:', error);
         return;
       }
-
+      console.log('Road built successfully:', {
+        tile_x: selectedTile.x,
+        tile_y: selectedTile.y,
+        user_nation_id: userNation.id,
+        timestamp: new Date().toISOString(),
+      });
       await updateLastTickTime();
       await fetchTiles();
       updateSelectedTile();
     } catch (err) {
       setError('Error building road: ' + err.message);
+      console.error('Error building road:', err);
     }
   };
 
   const handleBuildFactory = async () => {
-    if (!selectedTile) return;
-
+    if (!selectedTile || typeof selectedTile.x !== 'number' || typeof selectedTile.y !== 'number') {
+      setError('Invalid tile selected. Please select a valid tile.');
+      console.error('Invalid selectedTile for factory:', selectedTile);
+      return;
+    }
+    if (!userNation?.id) {
+      setError('No nation selected. Please create a nation first.');
+      return;
+    }
     try {
-      const { error } = await supabase
-        .from('tiles')
-        .update({ building: 'factory' })
-        .eq('id', selectedTile.id);
-
+      console.log('Building factory:', {
+        tile_x: selectedTile.x,
+        tile_y: selectedTile.y,
+        user_nation_id: userNation.id,
+        timestamp: new Date().toISOString(),
+      });
+      const { error } = await supabase.rpc('build_factory', {
+        user_id: userNation.id,
+        tile_x: selectedTile.x,
+        tile_y: selectedTile.y,
+      });
       if (error) {
         setError('Failed to build factory: ' + error.message);
+        console.error('Factory build error:', error);
         return;
       }
-
+      console.log('Factory built successfully:', {
+        tile_x: selectedTile.x,
+        tile_y: selectedTile.y,
+        user_nation_id: userNation.id,
+        timestamp: new Date().toISOString(),
+      });
       await updateLastTickTime();
       await fetchTiles();
       updateSelectedTile();
     } catch (err) {
       setError('Error building factory: ' + err.message);
+      console.error('Error building factory:', err);
     }
   };
 
   const handleBuildMine = async () => {
-    if (!selectedTile) return;
-
+    if (!selectedTile || typeof selectedTile.x !== 'number' || typeof selectedTile.y !== 'number') {
+      setError('Invalid tile selected. Please select a valid tile.');
+      console.error('Invalid selectedTile for mine:', selectedTile);
+      return;
+    }
+    if (!userNation?.id) {
+      setError('No nation selected. Please create a nation first.');
+      return;
+    }
     try {
-      const { error } = await supabase
-        .from('tiles')
-        .update({ building: 'mine' })
-        .eq('id', selectedTile.id);
-
+      console.log('Building mine:', {
+        tile_x: selectedTile.x,
+        tile_y: selectedTile.y,
+        user_nation_id: userNation.id,
+        timestamp: new Date().toISOString(),
+      });
+      const { error } = await supabase.rpc('build_mine', {
+        user_id: userNation.id,
+        tile_x: selectedTile.x,
+        tile_y: selectedTile.y,
+      });
       if (error) {
         setError('Failed to build mine: ' + error.message);
+        console.error('Mine build error:', error);
         return;
       }
-
+      console.log('Mine built successfully:', {
+        tile_x: selectedTile.x,
+        tile_y: selectedTile.y,
+        user_nation_id: userNation.id,
+        timestamp: new Date().toISOString(),
+      });
       await updateLastTickTime();
       await fetchTiles();
       updateSelectedTile();
     } catch (err) {
       setError('Error building mine: ' + err.message);
+      console.error('Error building mine:', err);
     }
   };
 
   const handleDeleteBuilding = async () => {
-    if (!selectedTile) return;
-
+    if (!selectedTile || typeof selectedTile.x !== 'number' || typeof selectedTile.y !== 'number') {
+      setError('Invalid tile selected. Please select a valid tile.');
+      console.error('Invalid selectedTile for delete:', selectedTile);
+      return;
+    }
+    if (!userNation?.id) {
+      setError('No nation selected. Please create a nation first.');
+      return;
+    }
     try {
-      const { error } = await supabase
-        .from('tiles')
-        .update({ building: null })
-        .eq('id', selectedTile.id);
-
+      console.log('Deleting building:', {
+        tile_x: selectedTile.x,
+        tile_y: selectedTile.y,
+        user_nation_id: userNation.id,
+        building: selectedTile.building,
+        timestamp: new Date().toISOString(),
+      });
+      const { error } = await supabase.rpc('delete_building', {
+        user_id: userNation.id,
+        tile_x: selectedTile.x,
+        tile_y: selectedTile.y,
+      });
       if (error) {
         setError('Failed to delete building: ' + error.message);
+        console.error('Delete building error:', error);
         return;
       }
-
+      console.log('Building deleted successfully:', {
+        tile_x: selectedTile.x,
+        tile_y: selectedTile.y,
+        user_nation_id: userNation.id,
+        building: selectedTile.building,
+        timestamp: new Date().toISOString(),
+      });
       await updateLastTickTime();
       await fetchTiles();
       updateSelectedTile();
     } catch (err) {
       setError('Error deleting building: ' + err.message);
+      console.error('Error deleting building:', err);
     }
   };
 
@@ -133,13 +226,15 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
             <tr>
               <td className="tile-info-label">Tile</td>
               <td className="tile-info-value">
-                {selectedTile ? `${selectedTile.x}, ${selectedTile.y}` : 'None'}
+                {selectedTile && typeof selectedTile.x === 'number' && typeof selectedTile.y === 'number'
+                  ? `${selectedTile.x}, ${selectedTile.y}`
+                  : 'None'}
               </td>
             </tr>
             <tr>
               <td className="tile-info-label">Owner</td>
               <td className="tile-info-value">
-                {selectedTile ? selectedTile.owner_nation_name : 'None'}
+                {selectedTile ? selectedTile.owner_nation_name || 'None' : 'None'}
               </td>
             </tr>
             <tr>
