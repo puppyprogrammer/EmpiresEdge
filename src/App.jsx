@@ -123,29 +123,62 @@ function App() {
     const capitalPixelX = capitalTile.x * TILE_SIZE;
     const capitalPixelY = capitalTile.y * TILE_SIZE;
 
-    console.log('Centering map on:', {
-      capitalTile,
-      capitalPixelX,
-      capitalPixelY,
-      clientWidth: container.clientWidth,
-      clientHeight: container.clientHeight,
-    });
+    let timeoutId = null;
 
-    container.scrollTo({
-      left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
-      top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
-      behavior: 'smooth',
-    });
-
-    const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
-    if (tileEl) {
-      tileEl.classList.add('capital-highlight');
-    } else {
-      console.log('Capital tile element not found in DOM:', {
-        x: capitalTile.x,
-        y: capitalTile.y,
+    const centerMap = () => {
+      console.log('Centering map on:', {
+        capitalTile,
+        capitalPixelX,
+        capitalPixelY,
+        clientWidth: container.clientWidth,
+        clientHeight: container.clientHeight,
       });
-    }
+
+      container.scrollTo({
+        left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
+        top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
+        behavior: 'smooth',
+      });
+
+      const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
+      if (tileEl) {
+        tileEl.classList.add('capital-highlight');
+      } else {
+        console.log('Capital tile element not found in DOM:', {
+          x: capitalTile.x,
+          y: capitalTile.y,
+        });
+      }
+    };
+
+    const resetTimer = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(centerMap, 10000); // 10 seconds delay
+    };
+
+    // Initial centering after 10 seconds
+    resetTimer();
+
+    // Reset timer on user interaction
+    const handleInteraction = () => {
+      console.log('User interaction detected, resetting centering timer');
+      resetTimer();
+    };
+
+    container.addEventListener('scroll', handleInteraction);
+    container.addEventListener('mousedown', handleInteraction);
+    container.addEventListener('touchstart', handleInteraction);
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      container.removeEventListener('scroll', handleInteraction);
+      container.removeEventListener('mousedown', handleInteraction);
+      container.removeEventListener('touchstart', handleInteraction);
+    };
   }, [gameState?.userNation, gameState?.tiles]);
 
   async function fetchGameState() {
@@ -368,20 +401,26 @@ function App() {
   }
 
   function getTileBorderClasses(tile) {
-    if (!tile.owner || !tile.nations || !tile.nations.color) return '';
+    if (!tile.owner || !tile.nations || !tile.nations.color) {
+      console.log(`No borders for tile (${tile.x}, ${tile.y}): no owner or color`);
+      return '';
+    }
 
     const borders = [];
     const adjacentTiles = [
-      { dx: -1, dy: 0, side: 'top' },
-      { dx: 1, dy: 0, side: 'bottom' },
-      { dx: 0, dy: 1, side: 'right' },
-      { dx: 0, dy: -1, side: 'left' },
+      { dx: -1, dy: 0, side: 'top' },    // Tile above -> border-top
+      { dx: 1, dy: 0, side: 'right' },   // Tile below -> border-right
+      { dx: 0, dy: 1, side: 'bottom' },  // Tile to right -> border-bottom
+      { dx: 0, dy: -1, side: 'left' },   // Tile to left -> border-left
     ];
 
+    console.log(`Checking borders for tile (${tile.x}, ${tile.y}), owner: ${tile.owner}`);
     adjacentTiles.forEach(({ dx, dy, side }) => {
       const adjKey = `${tile.x + dx}_${tile.y + dy}`;
       const adjacentTile = gameState?.tiles[adjKey];
-      if (!adjacentTile || adjacentTile.owner !== tile.owner) {
+      const isDifferentOwner = !adjacentTile || adjacentTile.owner !== tile.owner;
+      console.log(`  ${side} neighbor (${tile.x + dx}, ${tile.y + dy}): exists=${!!adjacentTile}, owner=${adjacentTile?.owner || 'none'}, addBorder=${isDifferentOwner}`);
+      if (isDifferentOwner) {
         borders.push(`border-${side}`);
       }
     });
