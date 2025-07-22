@@ -99,6 +99,15 @@ function App() {
   }, [session?.user?.id]);
 
   useEffect(() => {
+    if (!gameState?.userNation || !gameState?.tiles || !mapScrollRef.current) {
+      console.log('Map centering skipped: missing data', {
+        userNation: !!gameState?.userNation,
+        tiles: !!gameState?.tiles,
+        mapScrollRef: !!mapScrollRef.current,
+      });
+      return;
+    }
+
     const capitalTile = Object.values(gameState.tiles).find(
       (tile) => tile.x === gameState.userNation.capital_tile_x && tile.y === gameState.userNation.capital_tile_y && tile.is_capital
     );
