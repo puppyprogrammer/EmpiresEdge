@@ -807,6 +807,126 @@ function App() {
     return borders.join(' ');
   }
 
+  function getRoadShape(tile) {
+    if (!tile.building || tile.building !== 'road') return null;
+
+    const adjacentTiles = [
+      { dx: 0, dy: -1, dir: 'top' },
+      { dx: 0, dy: 1, dir: 'bottom' },
+      { dx: 1, dy: 0, dir: 'right' },
+      { dx: -1, dy: 0, dir: 'left' },
+    ];
+
+    const roadNeighbors = adjacentTiles.filter(({ dx, dy }) => {
+      const adjKey = `${tile.x + dx}_${tile.y + dy}`;
+      const adjTile = gameState.dynamicTiles[adjKey];
+      return adjTile && adjTile.building === 'road';
+    }).map(({ dir }) => dir);
+
+    const count = roadNeighbors.length;
+    console.log('getRoadShape:', { tileId: tile.id, roadNeighbors, count });
+
+    if (count === 0) {
+      // Isolated road: small circle
+      return (
+        <circle cx="16" cy="16" r="4" fill="#808080" />
+      );
+    } else if (count === 1) {
+      // Single neighbor: straight line
+      const dir = roadNeighbors[0];
+      if (dir === 'top') {
+        return <line x1="16" y1="0" x2="16" y2="16" stroke="#808080" strokeWidth="4" />;
+      } else if (dir === 'bottom') {
+        return <line x1="16" y1="16" x2="16" y2="32" stroke="#808080" strokeWidth="4" />;
+      } else if (dir === 'right') {
+        return <line x1="16" y1="16" x2="32" y2="16" stroke="#808080" strokeWidth="4" />;
+      } else {
+        return <line x1="0" y1="16" x2="16" y2="16" stroke="#808080" strokeWidth="4" />;
+      }
+    } else if (count === 2) {
+      // Two neighbors: straight line or curve
+      if (roadNeighbors.includes('top') && roadNeighbors.includes('bottom')) {
+        return <line x1="16" y1="0" x2="16" y2="32" stroke="#808080" strokeWidth="4" />;
+      } else if (roadNeighbors.includes('left') && roadNeighbors.includes('right')) {
+        return <line x1="0" y1="16" x2="32" y2="16" stroke="#808080" strokeWidth="4" />;
+      } else {
+        // Curve (e.g., top and right)
+        const [dir1, dir2] = roadNeighbors;
+        let startX, startY, endX, endY, controlX, controlY;
+        if (roadNeighbors.includes('top')) {
+          startX = 16; startY = 0;
+          controlY = 12;
+          if (dir1 === 'right' || dir2 === 'right') {
+            endX = 32; endY = 16; controlX = 20;
+          } else {
+            endX = 0; endY = 16; controlX = 12;
+          }
+        } else if (roadNeighbors.includes('bottom')) {
+          startX = 16; startY = 32;
+          controlY = 20;
+          if (dir1 === 'right' || dir2 === 'right') {
+            endX = 32; endY = 16; controlX = 20;
+          } else {
+            endX = 0; endY = 16; controlX = 12;
+          }
+        } else {
+          startX = 0; startY = 16;
+          controlX = 12;
+          endX = 32; endY = 16; controlY = 20;
+        }
+        return (
+          <path
+            d={`M${startX},${startY} Q${controlX},${controlY} ${endX},${endY}`}
+            stroke="#808080"
+            strokeWidth="4"
+            fill="none"
+            strokeLinecap="round"
+          />
+        );
+      }
+    } else if (count === 3) {
+      // T-shape
+      const missingDir = ['top', 'bottom', 'left', 'right'].find(dir => !roadNeighbors.includes(dir));
+      if (missingDir === 'top') {
+        return (
+          <>
+            <line x1="16" y1="16" x2="16" y2="32" stroke="#808080" strokeWidth="4" />
+            <line x1="0" y1="16" x2="32" y2="16" stroke="#808080" strokeWidth="4" />
+          </>
+        );
+      } else if (missingDir === 'bottom') {
+        return (
+          <>
+            <line x1="16" y1="0" x2="16" y2="16" stroke="#808080" strokeWidth="4" />
+            <line x1="0" y1="16" x2="32" y2="16" stroke="#808080" strokeWidth="4" />
+          </>
+        );
+      } else if (missingDir === 'right') {
+        return (
+          <>
+            <line x1="0" y1="16" x2="16" y2="16" stroke="#808080" strokeWidth="4" />
+            <line x1="16" y1="0" x2="16" y2="32" stroke="#808080" strokeWidth="4" />
+          </>
+        );
+      } else {
+        return (
+          <>
+            <line x1="16" y1="16" x2="32" y2="16" stroke="#808080" strokeWidth="4" />
+            <line x1="16" y1="0" x2="16" y2="32" stroke="#808080" strokeWidth="4" />
+          </>
+        );
+      }
+    } else {
+      // Crossroad (4 neighbors)
+      return (
+        <>
+          <line x1="16" y1="0" x2="16" y2="32" stroke="#808080" strokeWidth="4" />
+          <line x1="0" y1="16" x2="32" y2="16" stroke="#808080" strokeWidth="4" />
+        </>
+      );
+    }
+  }
+
   function tilesWithinDistance(centerTile, distance, tilesMap) {
     return Object.values(tilesMap).filter(
       (tile) => Math.abs(tile.x - centerTile.x) + Math.abs(tile.y - centerTile.y) <= distance
@@ -1060,6 +1180,26 @@ function App() {
                     alt="Capital Building"
                     className="capital-icon"
                   />
+                )}
+                {tile.building === 'road' && (
+                  <svg
+                    width={TILE_SIZE}
+                    height={TILE_SIZE}
+                    viewBox={`0 0 ${TILE_SIZE} ${TILE_SIZE}`}
+                    style={{ position: 'absolute', top: 0, left: 0 }}
+                  >
+                    {getRoadShape(tile)}
+                  </svg>
+                )}
+                {tile.building === 'factory' && (
+                  <span className="building-icon" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                    🏭
+                  </span>
+                )}
+                {tile.building === 'mine' && (
+                  <span className="building-icon" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                    ⛏️
+                  </span>
                 )}
               </div>
             ))}
