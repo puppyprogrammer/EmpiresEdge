@@ -8,14 +8,15 @@ import OnlinePlayersPage from './OnlinePlayersPage';
 import TileInformationPage from './TileInformationPage';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
+const supabaseKey =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 function App() {
-  const mapScrollRef = useRef(null);
+  const mapScrollRef = useRef(null); // Need to double check if this is stil being used since left click scrolling was removed
   const TILE_SIZE = 32;
 
-  const [gameState, setGameState] = useState(null); // Single source of truth
+  const [tiles, setTiles] = useState(null);
   const [error, setError] = useState(null);
   const [session, setSession] = useState(null);
   const [showRegister, setShowRegister] = useState(false);
@@ -24,75 +25,96 @@ function App() {
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerUsername, setRegisterUsername] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
-  const [showNationModal, setShowNationModal] = useState(false);
+  const [showNationModal, setShowNationModal] = useState(false); // I assume this shows the nation creation form
   const [nationName, setNationName] = useState('');
   const [nationColor, setNationColor] = useState('#2563eb');
+  const [userNation, setUserNation] = useState(null);
+  const [nations, setNations] = useState({});
+  const [resources, setResources] = useState({ // Not sure if we need this, since resources always come from DB, not sure we need to ever set to 0
+    lumber: 0,
+    oil: 0,
+    ore: 0
+  });
   const [showMainMenu, setShowMainMenu] = useState(false);
   const [showBottomMenu, setShowBottomMenu] = useState(false);
   const [selectedPage, setSelectedPage] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
 
-  // Initialize session and fetch initial game state
-  useEffect(() => {
+  useEffect(() => { 
+    // This function runs after the render. It fetches data, handles subs, updates DOM, monitors event listeners, 
+    // Cam be configred once on mount if its array is empty, when dependancies change, and when unmounted to run a cleanup
     let pollInterval = null;
 
-    // Fetch session
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }) => { // Session initilization
       setSession(data.session);
       if (data.session) {
-        checkUserNation(data.session.user.id);
+        checkUserNation(data.session.user.id); // Loads Nation data such as name and resources
       }
-      fetchGameState();
     });
 
-    // Handle auth state changes
+    fetchTiles();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
         checkUserNation(session.user.id);
-        fetchGameState();
+        fetchTiles();
       } else {
-        setGameState(null);
+        setUserNation(null);
+        setResources({ lumber: 0, oil: 0, ore: 0 });
         setShowNationModal(false);
+        fetchTiles();
         setShowMainMenu(false);
         setShowBottomMenu(false);
         setSelectedTile(null);
       }
     });
 
-    // Subscribe to real-time tile updates
+    // Subscribe to real-time updates on tiles table
     const tilesSubscription = supabase
-      .channel('game_state_changes')
+      .channel('tiles_changes')
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'tiles' },
-        (payload) => {
-          setGameState((prev) => {
-            if (!prev || !prev.tiles) return prev;
+        async (payload) => {
+          let owner_nation_name = 'None';
+          if (payload.new.owner) {
+            const { data, error } = await supabase
+              .from('nations')
+              .select('name')
+              .eq('id', payload.new.owner)
+              .single();
+            if (error) {
+            } else {
+              owner_nation_name = data?.name || 'None';
+            }
+          }
+          setTiles((prevTiles) => {
+            if (!prevTiles) return prevTiles;
             const updatedTile = {
               ...payload.new,
-              owner_nation_name: payload.new.owner
-                ? prev.nations[payload.new.owner]?.name || 'None'
-                : 'None',
-              nations: payload.new.owner ? prev.nations[payload.new.owner] : null,
+              owner_nation_name,
+              nations: payload.new.owner ? nations[payload.new.owner] : null,
               x: payload.new.x,
               y: payload.new.y,
-              building: payload.new.building ?? null,
+              building: payload.new.building ?? null
             };
-            const newTiles = { ...prev.tiles, [`${payload.new.x}_${payload.new.y}`]: updatedTile };
+            const newTiles = prevTiles.map((tile) =>
+              tile.id === payload.new.id ? updatedTile : tile
+            );
             if (selectedTile && selectedTile.id === payload.new.id) {
+              console.log('Updating selectedTile with building:', updatedTile.building);
               setSelectedTile(updatedTile);
             }
-            return { ...prev, tiles: newTiles };
+            return newTiles;
           });
         }
       )
       .subscribe();
 
-    // Poll for nation updates every 3 seconds if user is logged in
     if (session?.user?.id) {
-      pollInterval = setInterval(() => {
-        checkUserNation(session.user.id);
+      pollInterval = setInterval(async () => {
+        await checkUserNation(session.user.id);
       }, 3000);
     }
 
@@ -101,14 +123,17 @@ function App() {
       if (pollInterval) clearInterval(pollInterval);
       supabase.removeChannel(tilesSubscription);
     };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, nations]);
 
-  // Center map on user's capital
   useEffect(() => {
-    if (!gameState?.userNation || !gameState?.tiles || !mapScrollRef.current) return;
 
-    const capitalTile = Object.values(gameState.tiles).find(
-      (tile) => tile.x === gameState.userNation.capital_tile_x && tile.y === gameState.userNation.capital_tile_y && tile.is_capital
+  }, [showMainMenu, showBottomMenu, tiles]);
+
+  useEffect(() => {
+    if (!userNation || !tiles || !mapScrollRef.current) return;
+
+    const capitalTile = tiles.find(
+      (tile) => tile.x === userNation.capital_tile_x && tile.y === userNation.capital_tile_y && tile.is_capital
     );
     if (!capitalTile) return;
 
@@ -126,37 +151,75 @@ function App() {
     if (tileEl) {
       tileEl.classList.add('capital-highlight');
     }
-  }, [gameState?.userNation, gameState?.tiles]);
+  }, [userNation, tiles]);
 
-  async function fetchGameState() {
+  async function fetchTiles() { // 
     try {
-      const { data, error } = await supabase.rpc('fetch_game_state');
-      if (error) {
-        setError(`Failed to fetch game state: ${error.message}`);
-        setGameState(null);
+      const { data: nationsData, error: nationsError } = await supabase // This is the call for Nations data
+        .from('nations')
+        .select('id, color');
+
+      if (nationsError) {
+        setError('Failed to fetch nations: ' + nationsError.message);
+        setTiles([]);
         return;
       }
 
-      // Transform tiles array into an object for faster lookup
-      const tilesMap = {};
-      data.tiles.forEach((tile) => {
-        tilesMap[`${tile.x}_${tile.y}`] = tile;
+      const nationsMap = {};
+      nationsData.forEach(nation => {
+        nationsMap[nation.id] = { color: nation.color };
       });
+      setNations(nationsMap); // Creating an object of nations and their color
 
-      setGameState({
-        tiles: tilesMap,
-        nations: data.nations,
-        userNation: data.user_nation,
-        resources: data.user_nation ? {
-          lumber: data.user_nation.lumber || 0,
-          oil: data.user_nation.oil || 0,
-          ore: data.user_nation.ore || 0,
-        } : { lumber: 0, oil: 0, ore: 0 },
-        version: data.version,
-      });
+      let allTiles = [];
+      let from = 0;
+      const limit = 1000;
+
+      const { count, error: countError } = await supabase // Getting a quick count of all the roles in tiles table
+        .from('tiles')
+        .select('id', { count: 'exact', head: true })
+
+      if (countError) {
+        setError(`Failed to fetch tile count: ${countError.message} (code: ${countError.code}, details: ${countError.details})`);
+        setTiles([]);
+        return;
+      }
+
+      const totalRows = count || 10000;
+
+      while (from < totalRows) { // Looping through all 10k tiles in chunks of 1000
+        const { data, error } = await supabase
+          .rpc('get_tiles_with_username', { // Running a supabase rpc function that matches a nation's name with a tile. Thus this run 10 times in this while loop
+            start_row: from,
+            end_row: from + limit - 1
+          });
+
+        if (error) {
+          setError(`Failed to fetch tiles: ${error.message} (code: ${error.code}, details: ${error.details})`);
+          setTiles([]);
+          return;
+        }
+
+        const enrichedTiles = data.map(tile => {
+          const tileData = {
+            ...tile,
+            owner_nation_name: tile.owner_nation_name || 'None',
+            nations: tile.owner ? nationsMap[tile.owner] : null,
+            x: tile.x,
+            y: tile.y,
+            building: tile.building ?? null
+          };
+          return tileData;
+        });
+
+        allTiles = [...allTiles, ...enrichedTiles];
+        from += limit;
+      }
+
+      setTiles(allTiles);
     } catch (err) {
-      setError(`Error fetching game state: ${err.message}`);
-      setGameState(null);
+      setError(`Error fetching tiles: ${err.message}`);
+      setTiles([]);
     }
   }
 
@@ -172,32 +235,26 @@ function App() {
       }
 
       if (data) {
-        setGameState((prev) => ({
-          ...prev,
-          userNation: {
-            id: data.id,
-            name: data.name,
-            color: data.color,
-            capital_tile_x: data.capital_tile_x,
-            capital_tile_y: data.capital_tile_y,
-            owner_id: data.owner_id,
-            lumber: data.lumber,
-            oil: data.oil,
-            ore: data.ore,
-          },
-          resources: {
-            lumber: data.lumber || 0,
-            oil: data.oil || 0,
-            ore: data.ore || 0,
-          },
-        }));
+        setUserNation({
+          id: data.id,
+          name: data.name,
+          color: data.color,
+          capital_tile_x: data.capital_tile_x,
+          capital_tile_y: data.capital_tile_y,
+          owner_id: data.owner_id,
+          lumber: data.lumber,
+          oil: data.oil,
+          ore: data.ore
+        });
+        setResources({
+          lumber: data.lumber || 0,
+          oil: data.oil || 0,
+          ore: data.ore || 0
+        });
         setShowNationModal(false);
       } else {
-        setGameState((prev) => ({
-          ...prev,
-          userNation: null,
-          resources: { lumber: 0, oil: 0, ore: 0 },
-        }));
+        setUserNation(null);
+        setResources({ lumber: 0, oil: 0, ore: 0 });
         setShowNationModal(true);
       }
     } catch (err) {
@@ -205,34 +262,48 @@ function App() {
     }
   }
 
-  function tilesWithinDistance(centerTile, distance, tilesMap) {
-    return Object.values(tilesMap).filter(
+  function tilesWithinDistance(centerTile, distance, tilesArr) {
+    return tilesArr.filter(
       (tile) => Math.abs(tile.x - centerTile.x) + Math.abs(tile.y - centerTile.y) <= distance
     );
   }
 
   function findCapitalTile() {
-    if (!gameState?.tiles || Object.keys(gameState.tiles).length === 0) {
+    if (!tiles || tiles.length === 0) {
       return null;
     }
-    const capitalTiles = Object.values(gameState.tiles).filter(
-      (tile) => tile.is_capital === true
-    );
+    const capitalTiles = tiles.filter((tile) => {
+      if (typeof tile.is_capital !== 'boolean') {
+        return false;
+      }
+      return tile.is_capital;
+    });
 
     const minDistance = 3;
-    const candidates = Object.values(gameState.tiles).filter((tile) => {
-      if (tile.x === undefined || tile.y === undefined) return false;
+    const candidates = tiles.filter((tile) => {
+      if (tile.x === undefined || tile.y === undefined) {
+        return false;
+      }
       return capitalTiles.every(
         (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
       );
     });
 
-    if (candidates.length === 0) return null;
+    if (candidates.length === 0) {
+      return null;
+    }
+
     const idx = Math.floor(Math.random() * candidates.length);
     return candidates[idx];
   }
 
   async function handleStartGame() {
+    console.log('Starting game with:', {
+      userId: session?.user?.id,
+      nationName: nationName.trim(),
+      tilesLoaded: tiles && tiles.length > 0
+    });
+
     if (!session?.user?.id) {
       setError('No user session available. Please log in again.');
       return;
@@ -243,42 +314,57 @@ function App() {
       return;
     }
 
-    if (!gameState?.tiles || Object.keys(gameState.tiles).length === 0) {
+    if (!tiles || tiles.length === 0) {
       setError('Map data not loaded. Please try again.');
       return;
     }
 
+    const { data: existingNation, error: nameCheckError } = await supabase
+      .from('nations')
+      .select('id')
+      .eq('name', nationName.trim())
+      .single();
+
+    if (nameCheckError && nameCheckError.code !== 'PGRST116') {
+      setError('Failed to check nation name: ' + nameCheckError.message);
+      return;
+    }
+
+    if (existingNation) {
+      setError('Nation name "' + nationName.trim() + '" is already taken. Please choose another.');
+      return;
+    }
+
+    const capitalTile = findCapitalTile();
+    if (!capitalTile) {
+      setError('No available tile to place capital.');
+      return;
+    }
+
     try {
-      const { data: existingNation, error: nameCheckError } = await supabase
-        .from('nations')
-        .select('id')
-        .eq('name', nationName.trim())
-        .single();
-
-      if (nameCheckError && nameCheckError.code !== 'PGRST116') {
-        setError('Failed to check nation name: ' + nameCheckError.message);
-        return;
-      }
-
-      if (existingNation) {
-        setError('Nation name "' + nationName.trim() + '" is already taken. Please choose another.');
-        return;
-      }
-
-      const capitalTile = findCapitalTile();
-      if (!capitalTile) {
-        setError('No available tile to place capital.');
-        return;
-      }
+      console.log('Inserting nation with data:', {
+        name: nationName.trim(),
+        color: nationColor,
+        owner_id: session.user.id,
+        capital_tile_x: capitalTile.x,
+        capital_tile_y: capitalTile.y
+      });
 
       const { data: nationData, error: insertError } = await supabase
-        .rpc('create_nation', {
-          user_id: session.user.id,
-          nation_name: nationName.trim(),
-          nation_color: nationColor,
-          capital_x: capitalTile.x,
-          capital_y: capitalTile.y,
-        })
+        .from('nations')
+        .insert([
+          {
+            name: nationName.trim(),
+            color: nationColor,
+            owner_id: session.user.id,
+            capital_tile_x: capitalTile.x,
+            capital_tile_y: capitalTile.y,
+            lumber: 0,
+            oil: 0,
+            ore: 0
+          },
+        ])
+        .select()
         .single();
 
       if (insertError) {
@@ -286,7 +372,45 @@ function App() {
         return;
       }
 
-      await fetchGameState();
+      const { error: capTileErr } = await supabase
+        .from('tiles')
+        .update({ 
+          owner: nationData.id, 
+          is_capital: true 
+        })
+        .eq('x', capitalTile.x)
+        .eq('y', capitalTile.y);
+
+      if (capTileErr) {
+        setError('Failed to update capital tile: ' + capTileErr.message);
+        return;
+      }
+
+      const surroundingTiles = tilesWithinDistance(capitalTile, 1, tiles).filter(
+        (t) => !(t.x === capitalTile.x && t.y === capitalTile.y)
+      );
+
+      for (const tile of surroundingTiles) {
+        const { error: updateErr } = await supabase
+          .from('tiles')
+          .update({ owner: nationData.id })
+          .eq('x', tile.x)
+          .eq('y', tile.y);
+
+        if (updateErr) {
+          setError('Failed to update surrounding tile: ' + updateErr.message);
+          return;
+        }
+      }
+
+      await fetchTiles();
+      setUserNation(nationData);
+      setResources({
+        lumber: nationData.lumber || 0,
+        oil: nationData.oil || 0,
+        ore: nationData.ore || 0
+      });
+      setShowNationModal(false);
       setNationName('');
     } catch (err) {
       setError('Error creating nation: ' + err.message);
@@ -305,7 +429,7 @@ function App() {
     } else {
       setLoginEmail('');
       setLoginPassword('');
-      fetchGameState();
+      fetchTiles();
       setShowMainMenu(false);
       setShowBottomMenu(false);
       setSelectedTile(null);
@@ -318,7 +442,9 @@ function App() {
     const { error } = await supabase.auth.signUp({
       email: registerEmail,
       password: registerPassword,
-      options: { data: { username: registerUsername } },
+      options: {
+        data: { username: registerUsername },
+      },
     });
     if (error) {
       setError(error.message);
@@ -338,8 +464,10 @@ function App() {
     try {
       await supabase.auth.signOut();
       setSession(null);
-      setGameState(null);
+      setUserNation(null);
       setShowNationModal(false);
+      setTiles(null);
+      fetchTiles();
       setShowMainMenu(false);
       setShowBottomMenu(false);
       setSelectedTile(null);
@@ -349,9 +477,15 @@ function App() {
   }
 
   function getTileBorderClasses(tile) {
-    if (!tile.owner || !tile.nations || !tile.nations.color) return '';
+    if (!tile.owner || !tile.nations || !tile.nations.color) {
+      return '';
+    }
 
+    const ownerId = tile.owner;
     const borders = [];
+
+    const tileMap = new Map(tiles.map(t => [`${t.x},${t.y}`, t]));
+
     const adjacentTiles = [
       { dx: -1, dy: 0, side: 'top' },
       { dx: 1, dy: 0, side: 'bottom' },
@@ -360,9 +494,9 @@ function App() {
     ];
 
     adjacentTiles.forEach(({ dx, dy, side }) => {
-      const adjKey = `${tile.x + dx}_${tile.y + dy}`;
-      const adjacentTile = gameState?.tiles[adjKey];
-      if (!adjacentTile || adjacentTile.owner !== tile.owner) {
+      const adjKey = `${tile.x + dx},${tile.y + dy}`;
+      const adjacentTile = tileMap.get(adjKey);
+      if (!adjacentTile || adjacentTile.owner !== ownerId) {
         borders.push(`border-${side}`);
       }
     });
@@ -377,19 +511,19 @@ function App() {
       <header className="app-header">
         <div className="header-left">
           <img src="/icons/building.svg" alt="Empire's Edge" className="header-icon" />
-          {session?.user && gameState?.userNation && (
+          {session?.user && userNation && (
             <div className="resource-tickers">
               <div className="resource-ticker">
                 <span className="resource-icon">🌲</span>
-                <span className="resource-value">{formatNumber(gameState.resources.lumber)}</span>
+                <span className="resource-value">{formatNumber(resources.lumber)}</span>
               </div>
               <div className="resource-ticker">
                 <span className="resource-icon">🛢️</span>
-                <span className="resource-value">{formatNumber(gameState.resources.oil)}</span>
+                <span className="resource-value">{formatNumber(resources.oil)}</span>
               </div>
               <div className="resource-ticker">
                 <span className="resource-icon">⛏️</span>
-                <span className="resource-value">{formatNumber(gameState.resources.ore)}</span>
+                <span className="resource-value">{formatNumber(resources.ore)}</span>
               </div>
             </div>
           )}
@@ -413,7 +547,9 @@ function App() {
               onChange={(e) => setLoginPassword(e.target.value)}
               required
             />
-            <button type="submit" className="button">LOGIN</button>
+            <button type="submit" className="button">
+              LOGIN
+            </button>
             <button
               type="button"
               className="button"
@@ -454,7 +590,9 @@ function App() {
               onChange={(e) => setRegisterPassword(e.target.value)}
               required
             />
-            <button type="submit" className="button">REGISTER</button>
+            <button type="submit" className="button">
+              REGISTER
+            </button>
             <button
               type="button"
               className="button"
@@ -480,20 +618,7 @@ function App() {
       </header>
 
       {error && (
-        <div
-          className="error-box"
-          style={{
-            zIndex: 1004,
-            position: 'fixed',
-            top: '90px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: '#ff4d4d',
-            color: 'white',
-            padding: '10px',
-            borderRadius: '4px',
-          }}
-        >
+        <div className="error-box" style={{ zIndex: 1004, position: 'fixed', top: '90px', left: '50%', transform: 'translateX(-50%)', background: '#ff4d4d', color: 'white', padding: '10px', borderRadius: '4px' }}>
           {error}
         </div>
       )}
@@ -527,33 +652,25 @@ function App() {
       <div>
         <div className="map-scroll-container" ref={mapScrollRef}>
           <div className="map-grid">
-            {gameState?.tiles &&
-              Object.values(gameState.tiles).map((tile) => (
-                <div
-                  key={tile.id}
-                  className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${
-                    tile.is_capital && tile.owner === gameState?.userNation?.id ? 'capital-highlight' : ''
-                  } ${getTileBorderClasses(tile)} ${selectedTile?.id === tile.id ? 'selected-tile' : ''}`}
-                  data-x={tile.x}
-                  data-y={tile.y}
-                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
-                    tile.resource || 'None'
-                  }, Owner: ${tile.owner_nation_name}, Building: ${tile.building ?? 'None'}`}
-                  style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
-                  onClick={() => {
-                    setShowBottomMenu(true);
-                    setSelectedTile(tile);
-                  }}
-                >
-                  {tile.is_capital && (
-                    <img
-                      src="/icons/building.svg"
-                      alt="Capital Building"
-                      className="capital-icon"
-                    />
-                  )}
-                </div>
-              ))}
+            {tiles?.map((tile) => (
+              <div
+                key={tile.id}
+                className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${tile.is_capital && tile.owner === userNation?.id ? 'capital-highlight' : ''} ${getTileBorderClasses(tile)} ${selectedTile?.id === tile.id ? 'selected-tile' : ''}`}
+                data-x={tile.x}
+                data-y={tile.y}
+                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${tile.resource || 'None'}, Owner: ${tile.owner_nation_name}, Building: ${tile.building ?? 'None'}`}
+                style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
+                onClick={() => { setShowBottomMenu(true); setSelectedTile(tile); }}
+              >
+                {tile.is_capital && (
+                  <img
+                    src="/icons/building.svg"
+                    alt="Capital Building"
+                    className="capital-icon"
+                  />
+                )}
+              </div>
+            ))}
           </div>
         </div>
         {showMainMenu && (
@@ -562,7 +679,9 @@ function App() {
             {selectedPage === 'OnlinePlayers' && <OnlinePlayersPage />}
             <div
               className="close-menu"
-              onClick={() => setShowMainMenu(false)}
+              onClick={() => {
+                setShowMainMenu(false);
+              }}
               style={{
                 position: 'absolute',
                 top: '5px',
@@ -588,11 +707,11 @@ function App() {
           <div className="bottom-menu">
             <TileInformationPage
               selectedTile={selectedTile}
-              userNation={gameState?.userNation}
+              userNation={userNation}
               setError={setError}
-              fetchTiles={fetchGameState}
+              fetchTiles={fetchTiles}
               setSelectedTile={setSelectedTile}
-              tiles={gameState?.tiles}
+              tiles={tiles}
             />
             <div
               className="close-menu"
@@ -632,7 +751,7 @@ function App() {
         </div>
       </div>
 
-      {gameState === null && !error && <div className="loading-message">Loading map data...</div>}
+      {tiles === null && !error && <div className="loading-message">Loading map data...</div>}
       <Analytics />
     </div>
   );
