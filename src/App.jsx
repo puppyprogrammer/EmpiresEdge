@@ -29,6 +29,7 @@ function App() {
   const [error, setError] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false); // New state to track initialization
   const [showRegister, setShowRegister] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -86,6 +87,7 @@ function App() {
         console.error('Failed to fetch game state:', { ...gameStateRes.error });
         setError(`Failed to load map data: ${gameStateRes.error.message}. Please try refreshing or disabling ad blockers.`);
         setLoading(false);
+        setIsInitialized(true);
         return;
       }
 
@@ -96,6 +98,7 @@ function App() {
         });
         setError('Incomplete map data received. Please try refreshing.');
         setLoading(false);
+        setIsInitialized(true);
         return;
       }
 
@@ -103,6 +106,7 @@ function App() {
         console.error('Failed to update resources:', { ...resourcesRes.error });
         setError('Failed to update resources: ' + resourcesRes.error.message);
         setLoading(false);
+        setIsInitialized(true);
         return;
       }
 
@@ -143,10 +147,12 @@ function App() {
       lastResourcesRef.current = newState.resources;
       setShowNationModal(!resourcesRes.data);
       setLoading(false);
+      setIsInitialized(true); // Set after all state updates
     } catch (err) {
       console.error('Error in initializeGameState:', { ...err });
       setError(`Error loading game data: ${err.message}. Please try refreshing or disabling ad blockers.`);
       setLoading(false);
+      setIsInitialized(true);
     }
   };
 
@@ -161,11 +167,13 @@ function App() {
           await initializeGameState();
         } else {
           setLoading(false);
+          setIsInitialized(true);
         }
       } catch (err) {
         console.error('Error checking session:', { ...err });
         setError(`Error initializing app: ${err.message}. Please try refreshing.`);
         setLoading(false);
+        setIsInitialized(true);
       }
     }
 
@@ -421,7 +429,7 @@ function App() {
                     building: payload.new.building || null,
                     owner_nation_name,
                     nations: payload.new.owner && prevState.nations[payload.new.owner] ? prevState.nations[payload.new.owner] : null,
-                    is_capital: tileData.is_capital || false,
+                    is_capital: payload.new.is_capital || false,
                   },
                 },
               };
@@ -490,6 +498,7 @@ function App() {
         setShowBottomMenu(false);
         setSelectedTile(null);
         setLoading(false);
+        setIsInitialized(true);
       } else {
         initializeGameState();
       }
@@ -700,6 +709,7 @@ function App() {
       setShowBottomMenu(false);
       setSelectedTile(null);
       setLoading(false);
+      setIsInitialized(true);
     } catch (err) {
       console.error('Error logging out:', { ...err });
       setError('Failed to log out: ' + err.message);
@@ -923,7 +933,7 @@ function App() {
         </div>
       )}
 
-      {!loading && showNationModal && gameState.userNation === null && (
+      {!loading && isInitialized && showNationModal && gameState.userNation === null && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Create Your Nation</h2>
