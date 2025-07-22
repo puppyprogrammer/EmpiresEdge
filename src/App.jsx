@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import './index.css';
 import { User, LogOut } from 'lucide-react';
-import { Analytics } from "@vercel/analytics/react";
 import RankingsPage from './RankingsPage';
 import OnlinePlayersPage from './OnlinePlayersPage';
 import TileInformationPage from './TileInformationPage';
@@ -42,7 +41,29 @@ function App() {
   const [selectedPage, setSelectedPage] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
 
-  const nationsMemo = useMemo(() => gameState.nations, [gameState.nations]);
+  // Deep memoize nations to prevent unnecessary subscription triggers
+  const nationsMemo = useMemo(() => {
+    const nationsString = JSON.stringify(gameState.nations);
+    return JSON.parse(nationsString);
+  }, [gameState.nations]);
+
+  // Debounce setSelectedTile to reduce renders from rapid clicks
+  const debounce = (fn, delay) => {
+    let timeoutId;
+    return (...args) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => fn(...args), delay);
+    };
+  };
+
+  const debouncedSetSelectedTile = useCallback(
+    debounce((tile) => {
+      console.log('setSelectedTile called:', { ...tile });
+      setSelectedTile(tile);
+      setShowBottomMenu(true);
+    }, 100),
+    []
+  );
 
   useEffect(() => {
     console.log('App rendered, count:', (renderCount.current += 1));
@@ -221,7 +242,7 @@ function App() {
     }
   };
 
-  // Resource tick and database listeners
+  // Resource tick
   useEffect(() => {
     if (!session?.user?.id || loading) return;
 
@@ -298,6 +319,15 @@ function App() {
 
     updateResources();
     const interval = setInterval(updateResources, 3000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [session?.user?.id, loading]);
+
+  // Database subscription
+  useEffect(() => {
+    if (!session?.user?.id || loading) return;
 
     if (subscriptionRef.current) {
       console.log('Removing existing subscription');
@@ -398,10 +428,9 @@ function App() {
 
     return () => {
       console.log('Cleaning up subscription');
-      clearInterval(interval);
       supabase.removeChannel(ownership_building_tile_update);
     };
-  }, [session?.user?.id, loading, nationsMemo]);
+  }, [session?.user?.id, loading]);
 
   // Auth state change listener
   useEffect(() => {
@@ -886,11 +915,7 @@ function App() {
                   tile.resource || 'None'
                 }, Owner: ${tile.owner_nation_name || 'None'}, Building: ${tile.building || 'None'}`}
                 style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
-                onClick={() => {
-                  console.log('Selected tile:', { ...tile });
-                  setShowBottomMenu(true);
-                  setSelectedTile(tile);
-                }}
+                onClick={() => debouncedSetSelectedTile(tile)}
               >
                 {tile.is_capital && (
                   <img
@@ -979,8 +1004,6 @@ function App() {
           <div>Diplomacy</div>
         </div>
       </div>
-
-      <Analytics />
     </div>
   );
 }
