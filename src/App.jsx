@@ -141,37 +141,55 @@ function App() {
   // Update single tile
   const updateSingleTile = async (x, y) => {
     try {
-      const { data, error } = await supabase
+      // Fetch tile data without join
+      const { data: tileData, error: tileError } = await supabase
         .from('tiles')
-        .select('x, y, owner, building, is_capital, owner_nation_name:nations!owner(name)')
+        .select('x, y, owner, building, is_capital')
         .eq('x', x)
         .eq('y', y)
         .single();
-      if (error) {
-        console.error('Failed to update single tile:', { ...error });
-        setError('Failed to update tile: ' + error.message);
+      if (tileError) {
+        console.error('Failed to fetch tile:', { ...tileError });
+        setError('Failed to update tile: ' + tileError.message);
         return;
       }
-      const key = `${data.x}_${data.y}`;
-      setGameState((prev) => ({
-        ...prev,
+
+      // Fetch nation name if owner exists
+      let owner_nation_name = 'None';
+      if (tileData.owner) {
+        const { data: nationData, error: nationError } = await supabase
+          .from('nations')
+          .select('name')
+          .eq('id', tileData.owner)
+          .single();
+        if (nationError) {
+          console.error('Failed to fetch nation name:', { ...nationError });
+        } else {
+          owner_nation_name = nationData.name || 'None';
+        }
+      }
+
+      const key = `${tileData.x}_${tileData.y}`;
+      setGameState((prevState) => ({
+        ...prevState,
         dynamicTiles: {
-          ...prev.dynamicTiles,
+          ...prevState.dynamicTiles,
           [key]: {
-            owner: data.owner || null,
-            building: data.building || null,
-            owner_nation_name: data.owner_nation_name?.name || 'None',
-            nations: data.owner && prev.nations[data.owner] ? prev.nations[data.owner] : null,
-            is_capital: data.is_capital || false,
+            owner: tileData.owner || null,
+            building: tileData.building || null,
+            owner_nation_name,
+            nations: tileData.owner && prevState.nations[tileData.owner] ? prevState.nations[tileData.owner] : null,
+            is_capital: tileData.is_capital || false,
           },
         },
       }));
+
       if (selectedTile?.x === x && selectedTile?.y === y) {
         setSelectedTile({
           ...staticTilesRef.current[key],
-          ...data,
+          ...tileData,
           id: key,
-          owner_nation_name: data.owner_nation_name?.name || 'None',
+          owner_nation_name,
         });
       }
     } catch (err) {
@@ -197,8 +215,8 @@ function App() {
         }
 
         if (data) {
-          setGameState((prev) => ({
-            ...prev,
+          setGameState((prevState) => ({
+            ...prevState,
             userNation: {
               id: data.id,
               name: data.name,
@@ -218,8 +236,8 @@ function App() {
           }));
           setShowNationModal(false);
         } else {
-          setGameState((prev) => ({
-            ...prev,
+          setGameState((prevState) => ({
+            ...prevState,
             userNation: null,
             resources: { lumber: 0, oil: 0, ore: 0 },
           }));
@@ -239,31 +257,53 @@ function App() {
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'tiles' },
-        (payload) => {
-          const key = `${payload.new.x}_${payload.new.y}`;
-          setGameState((prev) => ({
-            ...prev,
-            dynamicTiles: {
-              ...prev.dynamicTiles,
-              [key]: {
+        async (payload) => {
+          try {
+            console.log('Tile update received:', { ...payload.new });
+            const key = `${payload.new.x}_${payload.new.y}`;
+            let owner_nation_name = 'None';
+            if (payload.new.owner) {
+              const { data: nationData, error: nationError } = await supabase
+                .from('nations')
+                .select('name')
+                .eq('id', payload.new.owner)
+                .single();
+              if (nationError) {
+                console.error('Failed to fetch nation name in subscription:', { ...nationError });
+              } else {
+                owner_nation_name = nationData.name || 'None';
+              }
+            }
+            setGameState((prevState) => {
+              if (!prevState) return prevState; // Safeguard against undefined prevState
+              return {
+                ...prevState,
+                dynamicTiles: {
+                  ...prevState.dynamicTiles,
+                  [key]: {
+                    owner: payload.new.owner || null,
+                    building: payload.new.building || null,
+                    owner_nation_name,
+                    nations: payload.new.owner && prevState.nations[payload.new.owner] ? prevState.nations[payload.new.owner] : null,
+                    is_capital: payload.new.is_capital || false,
+                  },
+                },
+              };
+            });
+            if (selectedTile?.x === payload.new.x && selectedTile?.y === payload.new.y) {
+              setSelectedTile({
+                ...staticTilesRef.current[key],
                 owner: payload.new.owner || null,
                 building: payload.new.building || null,
-                owner_nation_name: payload.new.owner && prev.nations[payload.new.owner] ? prev.nations[payload.new.owner].name || 'None' : 'None',
-                nations: payload.new.owner && prev.nations[payload.new.owner] ? prev.nations[payload.new.owner] : null,
+                owner_nation_name,
+                nations: payload.new.owner && gameState.nations[payload.new.owner] ? gameState.nations[payload.new.owner] : null,
                 is_capital: payload.new.is_capital || false,
-              },
-            },
-          }));
-          if (selectedTile?.x === payload.new.x && selectedTile?.y === payload.new.y) {
-            setSelectedTile({
-              ...staticTilesRef.current[key],
-              owner: payload.new.owner || null,
-              building: payload.new.building || null,
-              owner_nation_name: payload.new.owner && prev.nations[payload.new.owner] ? prev.nations[payload.new.owner].name || 'None' : 'None',
-              nations: payload.new.owner && prev.nations[payload.new.owner] ? prev.nations[payload.new.owner] : null,
-              is_capital: payload.new.is_capital || false,
-              id: key,
-            });
+                id: key,
+              });
+            }
+          } catch (err) {
+            console.error('Error in tile subscription:', { ...err });
+            setError('Error processing tile update: ' + err.message);
           }
         }
       )
@@ -273,7 +313,7 @@ function App() {
       clearInterval(interval);
       supabase.removeChannel(ownership_building_tile_update);
     };
-  }, [session?.user?.id, loading, selectedTile]);
+  }, [session?.user?.id, loading, selectedTile, gameState.nations]);
 
   // Auth state change listener
   useEffect(() => {
@@ -809,7 +849,6 @@ function App() {
               selectedTile={selectedTile}
               userNation={gameState?.userNation}
               setError={setError}
-              fetchTiles={initializeGameState}
               setSelectedTile={setSelectedTile}
               tiles={gameState?.dynamicTiles}
               updateSingleTile={updateSingleTile}
