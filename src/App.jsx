@@ -25,6 +25,7 @@ function App() {
   });
   const [error, setError] = useState(null);
   const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [showRegister, setShowRegister] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -39,32 +40,54 @@ function App() {
   const [selectedPage, setSelectedPage] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
 
-  // Fetch static tiles and initial game state
-  async function build_static_tiles() {
+  async function initializeGameState() {
     try {
-      const { data, error } = await supabase.rpc('fetch_game_state');
-      if (error) {
-        setError(`Failed to fetch game state: ${error.message}`);
+      setLoading(true);
+      const [gameStateRes, resourcesRes] = await Promise.all([
+        supabase.rpc('fetch_game_state'),
+        session?.user?.id
+          ? supabase.rpc('update_resources', { user_id: session.user.id }).single()
+          : Promise.resolve({ data: null, error: null }),
+      ]);
+
+      if (gameStateRes.error) {
+        console.error('Failed to fetch game state:', gameStateRes.error);
+        setError(`Failed to load map data: ${gameStateRes.error.message}. Please try refreshing or disabling ad blockers.`);
+        setLoading(false);
+        return;
+      }
+
+      if (!gameStateRes.data?.tiles || !gameStateRes.data?.nations) {
+        console.warn('Incomplete game state data:', {
+          tiles: !!gameStateRes.data?.tiles,
+          nations: !!gameStateRes.data?.nations,
+        });
+        setError('Incomplete map data received. Please try refreshing.');
+        setLoading(false);
+        return;
+      }
+
+      if (resourcesRes.error && resourcesRes.error.code !== 'PGRST116') {
+        console.error('Failed to update resources:', resourcesRes.error);
+        setError('Failed to update resources: ' + resourcesRes.error.message);
+        setLoading(false);
         return;
       }
 
       const staticTiles = {};
-      data.tiles.forEach((tile) => {
+      const dynamicTiles = {};
+      gameStateRes.data.tiles.forEach((tile) => {
         staticTiles[`${tile.x}_${tile.y}`] = {
           x: tile.x,
           y: tile.y,
           type: tile.type,
           resource: tile.resource || null,
         };
-      });
-
-      const dynamicTiles = {};
-      data.tiles.forEach((tile) => {
         dynamicTiles[`${tile.x}_${tile.y}`] = {
           owner: tile.owner || null,
           building: tile.building || null,
-          owner_nation_name: tile.owner ? data.nations[tile.owner]?.name || 'None' : 'None',
-          nations: tile.owner ? data.nations[tile.owner] : null,
+          owner_nation_name: tile.owner && gameStateRes.data.nations[tile.owner] ? gameStateRes.data.nations[tile.owner].name || 'None' : 'None',
+          nations: tile.owner && gameStateRes.data.nations[tile.owner] ? gameStateRes.data.nations[tile.owner] : null,
           is_capital: tile.is_capital || false,
         };
       });
@@ -73,19 +96,22 @@ function App() {
       setGameState((prev) => ({
         ...prev,
         dynamicTiles,
-        nations: data.nations,
-        userNation: data.user_nation,
-        resources: data.user_nation
-          ? { lumber: data.user_nation.lumber || 0, oil: data.user_nation.oil || 0, ore: data.user_nation.ore || 0 }
+        nations: gameStateRes.data.nations,
+        userNation: resourcesRes.data || gameStateRes.data.user_nation,
+        resources: resourcesRes.data
+          ? { lumber: resourcesRes.data.lumber || 0, oil: resourcesRes.data.oil || 0, ore: resourcesRes.data.ore || 0 }
           : { lumber: 0, oil: 0, ore: 0 },
-        version: data.version,
+        version: gameStateRes.data.version,
       }));
+      setShowNationModal(!resourcesRes.data);
+      setLoading(false);
     } catch (err) {
-      setError(`Error fetching game state: ${err.message}`);
+      console.error('Error in initializeGameState:', err);
+      setError(`Error loading game data: ${err.message}. Please try refreshing or disabling ad blockers.`);
+      setLoading(false);
     }
   }
 
-  // Resource tick function
   useEffect(() => {
     if (!session?.user?.id) return;
 
@@ -96,6 +122,7 @@ function App() {
           .single();
 
         if (error && error.code !== 'PGRST116') {
+          console.error('Failed to update resources:', error);
           setError('Failed to update resources: ' + error.message);
           return;
         }
@@ -130,29 +157,27 @@ function App() {
           setShowNationModal(true);
         }
       } catch (err) {
-        setError('Failed to check nation: ' + err.message);
+        console.error('Error in updateResources:', err);
+        setError('Failed to update resources: ' + err.message);
       }
     };
 
-    updateResources(); // Initial call
     const interval = setInterval(updateResources, 3000);
-
     return () => clearInterval(interval);
   }, [session?.user?.id]);
 
-  // Auth and tile subscription
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session) {
-        build_static_tiles();
+        initializeGameState();
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
-        build_static_tiles();
+        initializeGameState();
       } else {
         setGameState({
           dynamicTiles: {},
@@ -166,6 +191,7 @@ function App() {
         setShowMainMenu(false);
         setShowBottomMenu(false);
         setSelectedTile(null);
+        setLoading(false);
       }
     });
 
@@ -187,7 +213,6 @@ function App() {
             const key = `${payload.new.x}_${payload.new.y}`;
             const newDynamicTiles = { ...prev.dynamicTiles, [key]: updatedTile };
 
-            // Update borders for adjacent tiles
             const adjacentKeys = [
               `${payload.new.x - 1}_${payload.new.y}`,
               `${payload.new.x + 1}_${payload.new.y}`,
@@ -196,7 +221,7 @@ function App() {
             ];
             adjacentKeys.forEach((adjKey) => {
               if (newDynamicTiles[adjKey]) {
-                newDynamicTiles[adjKey] = { ...newDynamicTiles[adjKey] }; // Trigger border recalc
+                newDynamicTiles[adjKey] = { ...newDynamicTiles[adjKey] };
               }
             });
 
@@ -220,14 +245,8 @@ function App() {
     };
   }, []);
 
-  // Map centering with 10-second delay
   useEffect(() => {
     if (!gameState?.userNation || !Object.keys(gameState.dynamicTiles).length || !mapScrollRef.current) {
-      console.log('Map centering skipped: missing data', {
-        userNation: !!gameState?.userNation,
-        dynamicTiles: !!Object.keys(gameState.dynamicTiles).length,
-        mapScrollRef: !!mapScrollRef.current,
-      });
       return;
     }
 
@@ -239,10 +258,6 @@ function App() {
         gameState.userNation.capital_tile_y === staticTilesRef.current[`${gameState.userNation.capital_tile_x}_${gameState.userNation.capital_tile_y}`].y
     );
     if (!capitalTile) {
-      console.log('Capital tile not found:', {
-        capital_tile_x: gameState.userNation.capital_tile_x,
-        capital_tile_y: gameState.userNation.capital_tile_y,
-      });
       return;
     }
 
@@ -253,14 +268,6 @@ function App() {
     let timeoutId = null;
 
     const centerMap = () => {
-      console.log('Centering map on:', {
-        capitalTile,
-        capitalPixelX,
-        capitalPixelY,
-        clientWidth: container.clientWidth,
-        clientHeight: container.clientHeight,
-      });
-
       container.scrollTo({
         left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
         top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
@@ -270,11 +277,6 @@ function App() {
       const tileEl = document.querySelector(`.tile[data-x="${gameState.userNation.capital_tile_x}"][data-y="${gameState.userNation.capital_tile_y}"]`);
       if (tileEl) {
         tileEl.classList.add('capital-highlight');
-      } else {
-        console.log('Capital tile element not found in DOM:', {
-          x: gameState.userNation.capital_tile_x,
-          y: gameState.userNation.capital_tile_y,
-        });
       }
     };
 
@@ -282,7 +284,7 @@ function App() {
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
-      timeoutId = setTimeout(centerMap, 4000); // 4 seconds delay
+      timeoutId = setTimeout(centerMap, 4000);
     };
 
     resetTimer();
@@ -359,7 +361,7 @@ function App() {
         return;
       }
 
-      await build_static_tiles();
+      await initializeGameState();
       setNationName('');
     } catch (err) {
       setError('Error creating nation: ' + err.message);
@@ -369,41 +371,49 @@ function App() {
   async function handleLogin(e) {
     e.preventDefault();
     setError(null);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
-    });
-    if (error) {
-      setError(error.message);
-    } else {
-      setLoginEmail('');
-      setLoginPassword('');
-      build_static_tiles();
-      setShowMainMenu(false);
-      setShowBottomMenu(false);
-      setSelectedTile(null);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      });
+      if (error) {
+        setError(error.message);
+      } else {
+        setLoginEmail('');
+        setLoginPassword('');
+        initializeGameState();
+        setShowMainMenu(false);
+        setShowBottomMenu(false);
+        setSelectedTile(null);
+      }
+    } catch (err) {
+      setError('Failed to log in: ' + err.message);
     }
   }
 
   async function handleRegister(e) {
     e.preventDefault();
     setError(null);
-    const { error } = await supabase.auth.signUp({
-      email: registerEmail,
-      password: registerPassword,
-      options: { data: { username: registerUsername } },
-    });
-    if (error) {
-      setError(error.message);
-    } else {
-      alert('Registration successful! Please check your email to confirm.');
-      setRegisterEmail('');
-      setRegisterPassword('');
-      setRegisterUsername('');
-      setShowRegister(false);
-      setShowMainMenu(false);
-      setShowBottomMenu(false);
-      setSelectedTile(null);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: registerEmail,
+        password: registerPassword,
+        options: { data: { username: registerUsername } },
+      });
+      if (error) {
+        setError(error.message);
+      } else {
+        alert('Registration successful! Please check your email to confirm.');
+        setRegisterEmail('');
+        setRegisterPassword('');
+        setRegisterUsername('');
+        setShowRegister(false);
+        setShowMainMenu(false);
+        setShowBottomMenu(false);
+        setSelectedTile(null);
+      }
+    } catch (err) {
+      setError('Failed to register: ' + err.message);
     }
   }
 
@@ -423,6 +433,7 @@ function App() {
       setShowMainMenu(false);
       setShowBottomMenu(false);
       setSelectedTile(null);
+      setLoading(false);
     } catch (err) {
       setError('Failed to log out: ' + err.message);
     }
@@ -435,10 +446,10 @@ function App() {
 
     const borders = [];
     const adjacentTiles = [
-      { dx: 0, dy: -1, side: 'top' },    // Tile above (x - 1, y)
-      { dx: 0, dy: 1, side: 'bottom' },  // Tile below (x + 1, y)
-      { dx: 1, dy: 0, side: 'right' },   // Tile to right (x, y + 1)
-      { dx: -1, dy: 0, side: 'left' },   // Tile to left (x, y - 1)
+      { dx: 0, dy: -1, side: 'top' },
+      { dx: 0, dy: 1, side: 'bottom' },
+      { dx: 1, dy: 0, side: 'right' },
+      { dx: -1, dy: 0, side: 'left' },
     ];
 
     adjacentTiles.forEach(({ dx, dy, side }) => {
@@ -484,7 +495,6 @@ function App() {
 
   const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-  // Memoized tile rendering
   const renderedTiles = useMemo(() => {
     return Object.keys(staticTilesRef.current)
       .map((key) => {
@@ -504,7 +514,7 @@ function App() {
       <header className="app-header">
         <div className="header-left">
           <img src="/icons/building.svg" alt="Empire's Edge" className="header-icon" />
-          {session?.user && gameState?.userNation && (
+          {session?.user && gameState?.userNation && !loading && (
             <div className="resource-tickers">
               <div className="resource-ticker">
                 <span className="resource-icon">🌲</span>
@@ -716,7 +726,7 @@ function App() {
               selectedTile={selectedTile}
               userNation={gameState?.userNation}
               setError={setError}
-              fetchTiles={build_static_tiles}
+              fetchTiles={initializeGameState}
               setSelectedTile={setSelectedTile}
               tiles={gameState?.dynamicTiles}
             />
@@ -758,7 +768,7 @@ function App() {
         </div>
       </div>
 
-      {Object.keys(staticTilesRef.current).length === 0 && !error && (
+      {(loading || Object.keys(staticTilesRef.current).length === 0) && !error && (
         <div className="loading-message">Loading map data...</div>
       )}
       <Analytics />
