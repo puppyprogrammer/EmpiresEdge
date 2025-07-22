@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, setSelectedTile, tiles }) {
+function TileInformationPage({ selectedTile, userNation, setError, setSelectedTile, tiles, updateSingleTile }) {
   const isOwnTile = selectedTile && userNation && selectedTile.owner === userNation.id && !selectedTile.is_capital;
+  const isProcessing = useRef(false);
 
   console.log('TileInformationPage render - selectedTile:', {
     id: selectedTile?.id,
@@ -15,14 +16,6 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
     building: selectedTile?.building,
     isOwnTile,
   });
-
-  const updateSelectedTile = () => {
-    if (!selectedTile || !tiles) return;
-    const updatedTile = tiles[`${selectedTile.x}_${selectedTile.y}`];
-    if (updatedTile) {
-      setSelectedTile({ ...selectedTile, ...updatedTile });
-    }
-  };
 
   const updateLastTickTime = async () => {
     try {
@@ -48,10 +41,20 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
     }
   };
 
-  const handleBuildRoad = async () => {
+  const debounceAction = (fn) => {
+    return useCallback(() => {
+      if (isProcessing.current) return;
+      isProcessing.current = true;
+      fn().finally(() => {
+        isProcessing.current = false;
+      });
+    }, [fn]);
+  };
+
+  const handleBuildRoad = debounceAction(async () => {
     if (!selectedTile || typeof selectedTile.x !== 'number' || typeof selectedTile.y !== 'number') {
       setError('Invalid tile selected. Please select a valid tile.');
-      console.error('Invalid selectedTile for road:', selectedTile);
+      console.error('Invalid selectedTile for road:', { ...selectedTile });
       return;
     }
     if (!userNation?.id) {
@@ -72,7 +75,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         .is('building', null);
       if (error) {
         setError('Failed to build road: ' + error.message);
-        console.error('Road build error:', error);
+        console.error('Road build error:', { ...error });
         return;
       }
       console.log('Road built successfully:', {
@@ -82,18 +85,17 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         timestamp: new Date().toISOString(),
       });
       await updateLastTickTime();
-      await fetchTiles();
-      updateSelectedTile();
+      await updateSingleTile(selectedTile.x, selectedTile.y);
     } catch (err) {
       setError('Error building road: ' + err.message);
-      console.error('Error building road:', err);
+      console.error('Error building road:', { ...err });
     }
-  };
+  });
 
-  const handleBuildFactory = async () => {
+  const handleBuildFactory = debounceAction(async () => {
     if (!selectedTile || typeof selectedTile.x !== 'number' || typeof selectedTile.y !== 'number') {
       setError('Invalid tile selected. Please select a valid tile.');
-      console.error('Invalid selectedTile for factory:', selectedTile);
+      console.error('Invalid selectedTile for factory:', { ...selectedTile });
       return;
     }
     if (!userNation?.id) {
@@ -114,7 +116,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         .is('building', null);
       if (error) {
         setError('Failed to build factory: ' + error.message);
-        console.error('Factory build error:', error);
+        console.error('Factory build error:', { ...error });
         return;
       }
       console.log('Factory built successfully:', {
@@ -124,18 +126,17 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         timestamp: new Date().toISOString(),
       });
       await updateLastTickTime();
-      await fetchTiles();
-      updateSelectedTile();
+      await updateSingleTile(selectedTile.x, selectedTile.y);
     } catch (err) {
       setError('Error building factory: ' + err.message);
-      console.error('Error building factory:', err);
+      console.error('Error building factory:', { ...err });
     }
-  };
+  });
 
-  const handleBuildMine = async () => {
+  const handleBuildMine = debounceAction(async () => {
     if (!selectedTile || typeof selectedTile.x !== 'number' || typeof selectedTile.y !== 'number') {
       setError('Invalid tile selected. Please select a valid tile.');
-      console.error('Invalid selectedTile for mine:', selectedTile);
+      console.error('Invalid selectedTile for mine:', { ...selectedTile });
       return;
     }
     if (!userNation?.id) {
@@ -144,7 +145,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
     }
     try {
       console.log('Building mine:', {
-        tile_x: selectedTile.x,
+        tile_x: shippedTile.x,
         tile_y: selectedTile.y,
         user_nation_id: userNation.id,
         timestamp: new Date().toISOString(),
@@ -156,7 +157,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         .is('building', null);
       if (error) {
         setError('Failed to build mine: ' + error.message);
-        console.error('Mine build error:', error);
+        console.error('Mine build error:', { ...error });
         return;
       }
       console.log('Mine built successfully:', {
@@ -166,18 +167,17 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         timestamp: new Date().toISOString(),
       });
       await updateLastTickTime();
-      await fetchTiles();
-      updateSelectedTile();
+      await updateSingleTile(selectedTile.x, selectedTile.y);
     } catch (err) {
       setError('Error building mine: ' + err.message);
-      console.error('Error building mine:', err);
+      console.error('Error building mine:', { ...err });
     }
-  };
+  });
 
-  const handleDeleteBuilding = async () => {
+  const handleDeleteBuilding = debounceAction(async () => {
     if (!selectedTile || typeof selectedTile.x !== 'number' || typeof selectedTile.y !== 'number') {
       setError('Invalid tile selected. Please select a valid tile.');
-      console.error('Invalid selectedTile for delete:', selectedTile);
+      console.error('Invalid selectedTile for delete:', { ...selectedTile });
       return;
     }
     if (!userNation?.id) {
@@ -198,7 +198,7 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         .match({ x: selectedTile.x, y: selectedTile.y, owner: userNation.id, is_capital: false });
       if (error) {
         setError('Failed to delete building: ' + error.message);
-        console.error('Delete building error:', error);
+        console.error('Delete building error:', { ...error });
         return;
       }
       console.log('Building deleted successfully:', {
@@ -209,13 +209,12 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         timestamp: new Date().toISOString(),
       });
       await updateLastTickTime();
-      await fetchTiles();
-      updateSelectedTile();
+      await updateSingleTile(selectedTile.x, selectedTile.y);
     } catch (err) {
       setError('Error deleting building: ' + err.message);
-      console.error('Error deleting building:', err);
+      console.error('Error deleting building:', { ...err });
     }
-  };
+  });
 
   return (
     <div className="tile-info-container">

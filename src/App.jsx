@@ -52,7 +52,7 @@ function App() {
       ]);
 
       if (gameStateRes.error) {
-        console.error('Failed to fetch game state:', gameStateRes.error);
+        console.error('Failed to fetch game state:', { ...gameStateRes.error });
         setError(`Failed to load map data: ${gameStateRes.error.message}. Please try refreshing or disabling ad blockers.`);
         setLoading(false);
         return;
@@ -69,7 +69,7 @@ function App() {
       }
 
       if (resourcesRes.error && resourcesRes.error.code !== 'PGRST116') {
-        console.error('Failed to update resources:', resourcesRes.error);
+        console.error('Failed to update resources:', { ...resourcesRes.error });
         setError('Failed to update resources: ' + resourcesRes.error.message);
         setLoading(false);
         return;
@@ -79,7 +79,7 @@ function App() {
       const dynamicTiles = {};
       gameStateRes.data.tiles.forEach((tile) => {
         if (typeof tile.x !== 'number' || typeof tile.y !== 'number') {
-          console.warn('Invalid tile data:', tile);
+          console.warn('Invalid tile data:', { ...tile });
           return;
         }
         staticTiles[`${tile.x}_${tile.y}`] = {
@@ -110,7 +110,7 @@ function App() {
       setShowNationModal(!resourcesRes.data);
       setLoading(false);
     } catch (err) {
-      console.error('Error in initializeGameState:', err);
+      console.error('Error in initializeGameState:', { ...err });
       setError(`Error loading game data: ${err.message}. Please try refreshing or disabling ad blockers.`);
       setLoading(false);
     }
@@ -129,7 +129,7 @@ function App() {
           setLoading(false);
         }
       } catch (err) {
-        console.error('Error checking session:', err);
+        console.error('Error checking session:', { ...err });
         setError(`Error initializing app: ${err.message}. Please try refreshing.`);
         setLoading(false);
       }
@@ -137,6 +137,48 @@ function App() {
 
     checkSessionAndInitialize();
   }, []);
+
+  // Update single tile
+  const updateSingleTile = async (x, y) => {
+    try {
+      const { data, error } = await supabase
+        .from('tiles')
+        .select('x, y, owner, building, is_capital, owner_nation_name:nations!owner(name)')
+        .eq('x', x)
+        .eq('y', y)
+        .single();
+      if (error) {
+        console.error('Failed to update single tile:', { ...error });
+        setError('Failed to update tile: ' + error.message);
+        return;
+      }
+      const key = `${data.x}_${data.y}`;
+      setGameState((prev) => ({
+        ...prev,
+        dynamicTiles: {
+          ...prev.dynamicTiles,
+          [key]: {
+            owner: data.owner || null,
+            building: data.building || null,
+            owner_nation_name: data.owner_nation_name?.name || 'None',
+            nations: data.owner && prev.nations[data.owner] ? prev.nations[data.owner] : null,
+            is_capital: data.is_capital || false,
+          },
+        },
+      }));
+      if (selectedTile?.x === x && selectedTile?.y === y) {
+        setSelectedTile({
+          ...staticTilesRef.current[key],
+          ...data,
+          id: key,
+          owner_nation_name: data.owner_nation_name?.name || 'None',
+        });
+      }
+    } catch (err) {
+      console.error('Error updating single tile:', { ...err });
+      setError('Error updating tile: ' + err.message);
+    }
+  };
 
   // Resource tick and database listeners
   useEffect(() => {
@@ -149,7 +191,7 @@ function App() {
           .single();
 
         if (error && error.code !== 'PGRST116') {
-          console.error('Failed to update resources:', error);
+          console.error('Failed to update resources:', { ...error });
           setError('Failed to update resources: ' + error.message);
           return;
         }
@@ -184,7 +226,7 @@ function App() {
           setShowNationModal(true);
         }
       } catch (err) {
-        console.error('Error in updateResources:', err);
+        console.error('Error in updateResources:', { ...err });
         setError('Failed to update resources: ' + err.message);
       }
     };
@@ -198,40 +240,31 @@ function App() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'tiles' },
         (payload) => {
-          setGameState((prev) => {
-            if (!prev.nations) return prev;
-            const updatedTile = {
+          const key = `${payload.new.x}_${payload.new.y}`;
+          setGameState((prev) => ({
+            ...prev,
+            dynamicTiles: {
+              ...prev.dynamicTiles,
+              [key]: {
+                owner: payload.new.owner || null,
+                building: payload.new.building || null,
+                owner_nation_name: payload.new.owner && prev.nations[payload.new.owner] ? prev.nations[payload.new.owner].name || 'None' : 'None',
+                nations: payload.new.owner && prev.nations[payload.new.owner] ? prev.nations[payload.new.owner] : null,
+                is_capital: payload.new.is_capital || false,
+              },
+            },
+          }));
+          if (selectedTile?.x === payload.new.x && selectedTile?.y === payload.new.y) {
+            setSelectedTile({
+              ...staticTilesRef.current[key],
               owner: payload.new.owner || null,
               building: payload.new.building || null,
-              owner_nation_name: payload.new.owner ? prev.nations[payload.new.owner]?.name || 'None' : 'None',
-              nations: payload.new.owner ? prev.nations[payload.new.owner] : null,
+              owner_nation_name: payload.new.owner && prev.nations[payload.new.owner] ? prev.nations[payload.new.owner].name || 'None' : 'None',
+              nations: payload.new.owner && prev.nations[payload.new.owner] ? prev.nations[payload.new.owner] : null,
               is_capital: payload.new.is_capital || false,
-            };
-            const key = `${payload.new.x}_${payload.new.y}`;
-            const newDynamicTiles = { ...prev.dynamicTiles, [key]: updatedTile };
-
-            const adjacentKeys = [
-              `${payload.new.x - 1}_${payload.new.y}`,
-              `${payload.new.x + 1}_${payload.new.y}`,
-              `${payload.new.x}_${payload.new.y + 1}`,
-              `${payload.new.x}_${payload.new.y - 1}`,
-            ];
-            adjacentKeys.forEach((adjKey) => {
-              if (newDynamicTiles[adjKey]) {
-                newDynamicTiles[adjKey] = { ...newDynamicTiles[adjKey] };
-              }
+              id: key,
             });
-
-            if (selectedTile && selectedTile.id === payload.new.id) {
-              setSelectedTile({
-                ...staticTilesRef.current[key],
-                ...updatedTile,
-                id: payload.new.id,
-              });
-            }
-
-            return { ...prev, dynamicTiles: newDynamicTiles };
-          });
+          }
         }
       )
       .subscribe();
@@ -240,7 +273,7 @@ function App() {
       clearInterval(interval);
       supabase.removeChannel(ownership_building_tile_update);
     };
-  }, [session?.user?.id, loading]);
+  }, [session?.user?.id, loading, selectedTile]);
 
   // Auth state change listener
   useEffect(() => {
@@ -389,6 +422,7 @@ function App() {
       await initializeGameState();
       setNationName('');
     } catch (err) {
+      console.error('Error creating nation:', { ...err });
       setError('Error creating nation: ' + err.message);
     }
   }
@@ -411,6 +445,7 @@ function App() {
         setSelectedTile(null);
       }
     } catch (err) {
+      console.error('Error logging in:', { ...err });
       setError('Failed to log in: ' + err.message);
     }
   }
@@ -437,6 +472,7 @@ function App() {
         setSelectedTile(null);
       }
     } catch (err) {
+      console.error('Error registering:', { ...err });
       setError('Failed to register: ' + err.message);
     }
   }
@@ -459,6 +495,7 @@ function App() {
       setSelectedTile(null);
       setLoading(false);
     } catch (err) {
+      console.error('Error logging out:', { ...err });
       setError('Failed to log out: ' + err.message);
     }
   }
@@ -531,7 +568,7 @@ function App() {
           id: key,
         };
         if (typeof tile.x !== 'number' || typeof tile.y !== 'number') {
-          console.warn('Invalid tile in renderedTiles:', tile);
+          console.warn('Invalid tile in renderedTiles:', { ...tile });
         }
         return tile;
       })
@@ -722,7 +759,7 @@ function App() {
                 }, Owner: ${tile.owner_nation_name || 'None'}, Building: ${tile.building || 'None'}`}
                 style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
                 onClick={() => {
-                  console.log('Selected tile:', tile);
+                  console.log('Selected tile:', { ...tile });
                   setShowBottomMenu(true);
                   setSelectedTile(tile);
                 }}
@@ -775,6 +812,7 @@ function App() {
               fetchTiles={initializeGameState}
               setSelectedTile={setSelectedTile}
               tiles={gameState?.dynamicTiles}
+              updateSingleTile={updateSingleTile}
             />
             <div
               className="close-menu"
