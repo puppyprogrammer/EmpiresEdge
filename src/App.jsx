@@ -14,6 +14,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 function App() {
   const mapScrollRef = useRef(null);
   const staticTilesRef = useRef({});
+  const subscriptionRef = useRef(null);
   const TILE_SIZE = 32;
   const renderCount = useRef(0);
 
@@ -41,11 +42,13 @@ function App() {
   const [selectedPage, setSelectedPage] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
 
+  const nationsMemo = useMemo(() => gameState.nations, [gameState.nations]);
+
   useEffect(() => {
     console.log('App rendered, count:', (renderCount.current += 1));
   });
 
-  // Initialize game state (unchanged)
+  // Initialize game state
   const initializeGameState = async () => {
     try {
       setLoading(true);
@@ -121,7 +124,7 @@ function App() {
     }
   };
 
-  // Session check and initial load (unchanged)
+  // Session check and initial load
   useEffect(() => {
     async function checkSessionAndInitialize() {
       try {
@@ -143,7 +146,7 @@ function App() {
     checkSessionAndInitialize();
   }, []);
 
-  // Update single tile (unchanged)
+  // Update single tile
   const updateSingleTile = async (x, y) => {
     try {
       const { data: tileData, error: tileError } = await supabase
@@ -235,32 +238,56 @@ function App() {
         }
 
         if (data) {
-          setGameState((prevState) => ({
-            ...prevState,
-            userNation: {
-              id: data.id,
-              name: data.name,
-              color: data.color,
-              capital_tile_x: data.capital_tile_x,
-              capital_tile_y: data.capital_tile_y,
-              owner_id: data.owner_id,
-              lumber: data.lumber,
-              oil: data.oil,
-              ore: data.ore,
-            },
-            resources: {
-              lumber: data.lumber || 0,
-              oil: data.oil || 0,
-              ore: data.ore || 0,
-            },
-          }));
+          setGameState((prevState) => {
+            if (
+              prevState.userNation?.lumber === data.lumber &&
+              prevState.userNation?.oil === data.oil &&
+              prevState.userNation?.ore === data.ore
+            ) {
+              console.log('updateResources: No resource changes, skipping setGameState');
+              return prevState;
+            }
+            const newState = {
+              ...prevState,
+              userNation: {
+                id: data.id,
+                name: data.name,
+                color: data.color,
+                capital_tile_x: data.capital_tile_x,
+                capital_tile_y: data.capital_tile_y,
+                owner_id: data.owner_id,
+                lumber: data.lumber,
+                oil: data.oil,
+                ore: data.ore,
+              },
+              resources: {
+                lumber: data.lumber || 0,
+                oil: data.oil || 0,
+                ore: data.ore || 0,
+              },
+            };
+            console.log('setGameState called (resources):', {
+              changed: Object.keys(newState).filter(k => newState[k] !== prevState[k]),
+            });
+            return newState;
+          });
           setShowNationModal(false);
         } else {
-          setGameState((prevState) => ({
-            ...prevState,
-            userNation: null,
-            resources: { lumber: 0, oil: 0, ore: 0 },
-          }));
+          setGameState((prevState) => {
+            if (!prevState.userNation && prevState.resources.lumber === 0 && prevState.resources.oil === 0 && prevState.resources.ore === 0) {
+              console.log('updateResources: No nation and no resources, skipping setGameState');
+              return prevState;
+            }
+            const newState = {
+              ...prevState,
+              userNation: null,
+              resources: { lumber: 0, oil: 0, ore: 0 },
+            };
+            console.log('setGameState called (no data):', {
+              changed: Object.keys(newState).filter(k => newState[k] !== prevState[k]),
+            });
+            return newState;
+          });
           setShowNationModal(true);
         }
       } catch (err) {
@@ -271,6 +298,11 @@ function App() {
 
     updateResources();
     const interval = setInterval(updateResources, 3000);
+
+    if (subscriptionRef.current) {
+      console.log('Removing existing subscription');
+      supabase.removeChannel(subscriptionRef.current);
+    }
 
     const ownership_building_tile_update = supabase
       .channel('game_state_changes')
@@ -331,6 +363,9 @@ function App() {
                   },
                 },
               };
+              console.log('setGameState called (subscription):', {
+                changed: Object.keys(newState).filter(k => newState[k] !== prevState[k]),
+              });
               return newState;
             });
             if (selectedTile?.x === payload.new.x && selectedTile?.y === payload.new.y) {
@@ -341,7 +376,7 @@ function App() {
                   owner: payload.new.owner || null,
                   building: payload.new.building || null,
                   owner_nation_name,
-                  nations: payload.new.owner && gameState.nations[payload.new.owner] ? gameState.nations[payload.new.owner] : null,
+                  nations: payload.new.owner && prevState.nations[payload.new.owner] ? prevState.nations[payload.new.owner] : null,
                   is_capital: payload.new.is_capital || false,
                   id: key,
                 };
@@ -359,13 +394,16 @@ function App() {
         console.log('Subscription status:', status);
       });
 
+    subscriptionRef.current = ownership_building_tile_update;
+
     return () => {
+      console.log('Cleaning up subscription');
       clearInterval(interval);
       supabase.removeChannel(ownership_building_tile_update);
     };
-  }, [session?.user?.id, loading, selectedTile, gameState.nations]);
+  }, [session?.user?.id, loading, nationsMemo]);
 
-  // Auth state change listener (unchanged)
+  // Auth state change listener
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -391,7 +429,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Map centering (unchanged)
+  // Map centering
   useEffect(() => {
     if (!gameState?.userNation || !Object.keys(gameState.dynamicTiles).length || !mapScrollRef.current || loading) {
       return;
