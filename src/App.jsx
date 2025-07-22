@@ -442,28 +442,15 @@ function App() {
       { dx: -1, dy: 0, side: 'left' },   // Tile to left (x, y - 1)
     ];
 
-    // Alternative mapping for testing (uncomment to try):
-    /*
-    const adjacentTiles = [
-      { dx: -1, dy: 0, side: 'top' },    // Tile above -> border-top
-      { dx: 1, dy: 0, side: 'left' },    // Tile below -> border-left
-      { dx: 0, dy: 1, side: 'bottom' },  // Tile to right -> border-bottom
-      { dx: 0, dy: -1, side: 'right' },  // Tile to left -> border-right
-    ];
-    */
-
     console.log(`Checking borders for tile (${tile.x}, ${tile.y}), owner: ${tile.owner}, nation: ${tile.owner_nation_name}`);
     adjacentTiles.forEach(({ dx, dy, side }) => {
       const adjKey = `${tile.x + dx}_${tile.y + dy}`;
       const adjacentTile = gameState.dynamicTiles[adjKey];
       const isDifferentOwner = !adjacentTile || adjacentTile.owner !== tile.owner;
-      console.log(`  ${side} neighbor (${tile.x + dx}, ${tile.y + dy}): exists=${!!adjacentTile}, owner=${adjacentTile?.owner || 'none'}, nation=${adjacentTile?.owner_nation_name || 'none'}, addBorder=${isDifferentOwner}`);
       if (isDifferentOwner) {
         borders.push(`border-${side}`);
       }
     });
-
-    console.log(`Tile (${tile.x}, ${tile.y}) borders: ${borders.join(' ')}`);
     return borders.join(' ');
   }
 
