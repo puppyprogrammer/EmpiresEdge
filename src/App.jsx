@@ -15,7 +15,7 @@ function App() {
   const mapScrollRef = useRef(null);
   const staticTilesRef = useRef({});
   const TILE_SIZE = 32;
-  const renderCount = useRef(0); // Track renders
+  const renderCount = useRef(0);
 
   const [gameState, setGameState] = useState({
     dynamicTiles: {},
@@ -41,12 +41,11 @@ function App() {
   const [selectedPage, setSelectedPage] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
 
-  // Log renders for debugging
   useEffect(() => {
     console.log('App rendered, count:', (renderCount.current += 1));
   });
 
-  // Initialize game state
+  // Initialize game state (unchanged)
   const initializeGameState = async () => {
     try {
       setLoading(true);
@@ -122,7 +121,7 @@ function App() {
     }
   };
 
-  // Session check and initial load
+  // Session check and initial load (unchanged)
   useEffect(() => {
     async function checkSessionAndInitialize() {
       try {
@@ -144,7 +143,7 @@ function App() {
     checkSessionAndInitialize();
   }, []);
 
-  // Update single tile
+  // Update single tile (unchanged)
   const updateSingleTile = async (x, y) => {
     try {
       const { data: tileData, error: tileError } = await supabase
@@ -183,7 +182,7 @@ function App() {
           currentTile.owner_nation_name === owner_nation_name
         ) {
           console.log('updateSingleTile: No changes needed for tile:', { x, y, building: tileData.building });
-          return prevState; // Skip update if no changes
+          return prevState;
         }
         console.log('updateSingleTile: Updating gameState for tile:', { x, y, building: tileData.building });
         return {
@@ -296,6 +295,10 @@ function App() {
               }
             }
             setGameState((prevState) => {
+              if (!prevState) {
+                console.warn('prevState is undefined in subscription');
+                return prevState;
+              }
               const currentTile = prevState.dynamicTiles[key] || {};
               if (
                 currentTile.owner === payload.new.owner &&
@@ -303,11 +306,19 @@ function App() {
                 currentTile.is_capital === payload.new.is_capital &&
                 currentTile.owner_nation_name === owner_nation_name
               ) {
-                console.log('Subscription: No changes needed for tile:', { x: payload.new.x, y: payload.new.y, building: payload.new.building });
-                return prevState; // Skip update if no changes
+                console.log('Subscription: No changes needed for tile:', {
+                  x: payload.new.x,
+                  y: payload.new.y,
+                  building: payload.new.building,
+                });
+                return prevState;
               }
-              console.log('Subscription: Updating gameState for tile:', { x: payload.new.x, y: payload.new.y, building: payload.new.building });
-              return {
+              console.log('Subscription: Updating gameState for tile:', {
+                x: payload.new.x,
+                y: payload.new.y,
+                building: payload.new.building,
+              });
+              const newState = {
                 ...prevState,
                 dynamicTiles: {
                   ...prevState.dynamicTiles,
@@ -320,15 +331,17 @@ function App() {
                   },
                 },
               };
+              return newState;
             });
             if (selectedTile?.x === payload.new.x && selectedTile?.y === payload.new.y) {
               setSelectedTile((prev) => {
+                if (!prev) return prev;
                 const newTile = {
                   ...staticTilesRef.current[key],
                   owner: payload.new.owner || null,
                   building: payload.new.building || null,
                   owner_nation_name,
-                  nations: payload.new.owner && prevState.nations[payload.new.owner] ? prevState.nations[payload.new.owner] : null,
+                  nations: payload.new.owner && gameState.nations[payload.new.owner] ? gameState.nations[payload.new.owner] : null,
                   is_capital: payload.new.is_capital || false,
                   id: key,
                 };
@@ -342,7 +355,9 @@ function App() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
 
     return () => {
       clearInterval(interval);
@@ -350,7 +365,7 @@ function App() {
     };
   }, [session?.user?.id, loading, selectedTile, gameState.nations]);
 
-  // Auth state change listener
+  // Auth state change listener (unchanged)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -376,7 +391,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Map centering
+  // Map centering (unchanged)
   useEffect(() => {
     if (!gameState?.userNation || !Object.keys(gameState.dynamicTiles).length || !mapScrollRef.current || loading) {
       return;
@@ -887,7 +902,7 @@ function App() {
               setSelectedTile={setSelectedTile}
               tiles={gameState?.dynamicTiles}
               updateSingleTile={updateSingleTile}
-              supabase={supabase} // Pass supabase client
+              supabase={supabase}
             />
             <div
               className="close-menu"

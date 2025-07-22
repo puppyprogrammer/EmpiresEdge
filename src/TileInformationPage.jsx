@@ -1,10 +1,13 @@
-import React, { useCallback, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 
 function TileInformationPage({ selectedTile, userNation, setError, setSelectedTile, tiles, updateSingleTile, supabase }) {
-  const isOwnTile = selectedTile && userNation && selectedTile.owner === userNation.id && !selectedTile.is_capital;
+  const isOwnTile = useMemo(() => 
+    selectedTile && userNation && selectedTile.owner === userNation.id && !selectedTile.is_capital,
+    [selectedTile, userNation]
+  );
   const isProcessing = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
-  const renderCount = useRef(0); // Track renders
+  const renderCount = useRef(0);
 
   useEffect(() => {
     console.log('TileInformationPage rendered, count:', (renderCount.current += 1), 'selectedTile:', {
@@ -14,15 +17,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       building: selectedTile?.building,
       isOwnTile,
     });
-  });
-
-  console.log('TileInformationPage render - selectedTile:', {
-    id: selectedTile?.id,
-    x: selectedTile?.x,
-    y: selectedTile?.y,
-    building: selectedTile?.building,
-    isOwnTile,
-  });
+  }, [selectedTile, isOwnTile]);
 
   const updateLastTickTime = async () => {
     try {
