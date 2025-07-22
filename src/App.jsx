@@ -29,6 +29,7 @@ function App() {
   const [error, setError] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isGameStateLoaded, setIsGameStateLoaded] = useState(false); // New state to gate modal
   const [showRegister, setShowRegister] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -86,6 +87,7 @@ function App() {
         console.error('Failed to fetch game state:', { ...gameStateRes.error });
         setError(`Failed to load map data: ${gameStateRes.error.message}. Please try refreshing or disabling ad blockers.`);
         setLoading(false);
+        setIsGameStateLoaded(true);
         return;
       }
 
@@ -96,6 +98,7 @@ function App() {
         });
         setError('Incomplete map data received. Please try refreshing.');
         setLoading(false);
+        setIsGameStateLoaded(true);
         return;
       }
 
@@ -103,6 +106,7 @@ function App() {
         console.error('Failed to update resources:', { ...resourcesRes.error });
         setError('Failed to update resources: ' + resourcesRes.error.message);
         setLoading(false);
+        setIsGameStateLoaded(true);
         return;
       }
 
@@ -138,17 +142,25 @@ function App() {
           : { lumber: 0, oil: 0, ore: 0 },
         version: gameStateRes.data.version,
       };
-      console.log('initializeGameState: Setting gameState', { userNation: newState.userNation });
+      console.log('initializeGameState: Before setting states', {
+        userNation: newState.userNation,
+        hasNation: !!resourcesRes.data,
+      });
       setGameState(newState);
       lastNationRef.current = newState.userNation;
       lastResourcesRef.current = newState.resources;
-      console.log('initializeGameState: Setting showNationModal', { showNationModal: !resourcesRes.data });
       setShowNationModal(!resourcesRes.data);
+      console.log('initializeGameState: After setting states', {
+        userNation: newState.userNation,
+        showNationModal: !resourcesRes.data,
+      });
       setLoading(false);
+      setIsGameStateLoaded(true);
     } catch (err) {
       console.error('Error in initializeGameState:', { ...err });
       setError(`Error loading game data: ${err.message}. Please try refreshing or disabling ad blockers.`);
       setLoading(false);
+      setIsGameStateLoaded(true);
     }
   };
 
@@ -163,11 +175,13 @@ function App() {
           await initializeGameState();
         } else {
           setLoading(false);
+          setIsGameStateLoaded(true);
         }
       } catch (err) {
         console.error('Error checking session:', { ...err });
         setError(`Error initializing app: ${err.message}. Please try refreshing.`);
         setLoading(false);
+        setIsGameStateLoaded(true);
       }
     }
 
@@ -356,7 +370,7 @@ function App() {
               const newTile = {
                 ...staticTilesRef.current[key],
                 owner: payload.new.owner || null,
-                building: data.building || null,
+                building: payload.new.building || null,
                 owner_nation_name,
                 nations: payload.new.owner && gameState.nations[payload.new.owner] ? gameState.nations[payload.new.owner] : null,
                 is_capital: payload.new.is_capital || false,
@@ -412,6 +426,7 @@ function App() {
         setShowBottomMenu(false);
         setSelectedTile(null);
         setLoading(false);
+        setIsGameStateLoaded(true);
       } else {
         initializeGameState();
       }
@@ -623,6 +638,7 @@ function App() {
       setShowBottomMenu(false);
       setSelectedTile(null);
       setLoading(false);
+      setIsGameStateLoaded(true);
     } catch (err) {
       console.error('Error logging out:', { ...err });
       setError('Failed to log out: ' + err.message);
@@ -705,10 +721,10 @@ function App() {
   }, [gameState.dynamicTiles, loading]);
 
   useEffect(() => {
-    if (!loading && showNationModal) {
+    if (!loading && isGameStateLoaded && showNationModal) {
       console.log('Nation modal rendering:', { showNationModal, userNation: gameState.userNation });
     }
-  }, [loading, showNationModal, gameState.userNation]);
+  }, [loading, isGameStateLoaded, showNationModal, gameState.userNation]);
 
   if (loading) {
     return (
@@ -852,7 +868,7 @@ function App() {
         </div>
       )}
 
-      {!loading && showNationModal && (
+      {!loading && isGameStateLoaded && showNationModal && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Create Your Nation</h2>
