@@ -123,29 +123,62 @@ function App() {
     const capitalPixelX = capitalTile.x * TILE_SIZE;
     const capitalPixelY = capitalTile.y * TILE_SIZE;
 
-    console.log('Centering map on:', {
-      capitalTile,
-      capitalPixelX,
-      capitalPixelY,
-      clientWidth: container.clientWidth,
-      clientHeight: container.clientHeight,
-    });
+    let timeoutId = null;
 
-    container.scrollTo({
-      left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
-      top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
-      behavior: 'smooth',
-    });
-
-    const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
-    if (tileEl) {
-      tileEl.classList.add('capital-highlight');
-    } else {
-      console.log('Capital tile element not found in DOM:', {
-        x: capitalTile.x,
-        y: capitalTile.y,
+    const centerMap = () => {
+      console.log('Centering map on:', {
+        capitalTile,
+        capitalPixelX,
+        capitalPixelY,
+        clientWidth: container.clientWidth,
+        clientHeight: container.clientHeight,
       });
-    }
+
+      container.scrollTo({
+        left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
+        top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
+        behavior: 'smooth',
+      });
+
+      const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
+      if (tileEl) {
+        tileEl.classList.add('capital-highlight');
+      } else {
+        console.log('Capital tile element not found in DOM:', {
+          x: capitalTile.x,
+          y: capitalTile.y,
+        });
+      }
+    };
+
+    const resetTimer = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(centerMap, 10000); // 10 seconds delay
+    };
+
+    // Initial centering after 10 seconds
+    resetTimer();
+
+    // Reset timer on user interaction
+    const handleInteraction = () => {
+      console.log('User interaction detected, resetting centering timer');
+      resetTimer();
+    };
+
+    container.addEventListener('scroll', handleInteraction);
+    container.addEventListener('mousedown', handleInteraction);
+    container.addEventListener('touchstart', handleInteraction);
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      container.removeEventListener('scroll', handleInteraction);
+      container.removeEventListener('mousedown', handleInteraction);
+      container.removeEventListener('touchstart', handleInteraction);
+    };
   }, [gameState?.userNation, gameState?.tiles]);
 
   async function fetchGameState() {
