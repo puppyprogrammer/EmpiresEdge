@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import './index.css';
 import { User, LogOut } from 'lucide-react';
@@ -13,9 +13,16 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 function App() {
   const mapScrollRef = useRef(null);
+  const staticTilesRef = useRef({});
   const TILE_SIZE = 32;
 
-  const [gameState, setGameState] = useState(null);
+  const [gameState, setGameState] = useState({
+    dynamicTiles: {},
+    nations: {},
+    userNation: null,
+    resources: { lumber: 0, oil: 0, ore: 0 },
+    version: null,
+  });
   const [error, setError] = useState(null);
   const [session, setSession] = useState(null);
   const [showRegister, setShowRegister] = useState(false);
@@ -32,24 +39,129 @@ function App() {
   const [selectedPage, setSelectedPage] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
 
-  useEffect(() => {
-    let pollInterval = null;
+  // Fetch static tiles and initial game state
+  async function build_static_tiles() {
+    try {
+      const { data, error } = await supabase.rpc('fetch_game_state');
+      if (error) {
+        setError(`Failed to fetch game state: ${error.message}`);
+        return;
+      }
 
+      const staticTiles = {};
+      data.tiles.forEach((tile) => {
+        staticTiles[`${tile.x}_${tile.y}`] = {
+          x: tile.x,
+          y: tile.y,
+          type: tile.type,
+          resource: tile.resource || null,
+        };
+      });
+
+      const dynamicTiles = {};
+      data.tiles.forEach((tile) => {
+        dynamicTiles[`${tile.x}_${tile.y}`] = {
+          owner: tile.owner || null,
+          building: tile.building || null,
+          owner_nation_name: tile.owner ? data.nations[tile.owner]?.name || 'None' : 'None',
+          nations: tile.owner ? data.nations[tile.owner] : null,
+          is_capital: tile.is_capital || false,
+        };
+      });
+
+      staticTilesRef.current = staticTiles;
+      setGameState((prev) => ({
+        ...prev,
+        dynamicTiles,
+        nations: data.nations,
+        userNation: data.user_nation,
+        resources: data.user_nation
+          ? { lumber: data.user_nation.lumber || 0, oil: data.user_nation.oil || 0, ore: data.user_nation.ore || 0 }
+          : { lumber: 0, oil: 0, ore: 0 },
+        version: data.version,
+      }));
+    } catch (err) {
+      setError(`Error fetching game state: ${err.message}`);
+    }
+  }
+
+  // Resource tick function
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const updateResources = async () => {
+      try {
+        const { data, error } = await supabase
+          .rpc('update_resources', { user_id: session.user.id })
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          setError('Failed to update resources: ' + error.message);
+          return;
+        }
+
+        if (data) {
+          setGameState((prev) => ({
+            ...prev,
+            userNation: {
+              id: data.id,
+              name: data.name,
+              color: data.color,
+              capital_tile_x: data.capital_tile_x,
+              capital_tile_y: data.capital_tile_y,
+              owner_id: data.owner_id,
+              lumber: data.lumber,
+              oil: data.oil,
+              ore: data.ore,
+            },
+            resources: {
+              lumber: data.lumber || 0,
+              oil: data.oil || 0,
+              ore: data.ore || 0,
+            },
+          }));
+          setShowNationModal(false);
+        } else {
+          setGameState((prev) => ({
+            ...prev,
+            userNation: null,
+            resources: { lumber: 0, oil: 0, ore: 0 },
+          }));
+          setShowNationModal(true);
+        }
+      } catch (err) {
+        setError('Failed to check nation: ' + err.message);
+      }
+    };
+
+    updateResources(); // Initial call
+    const interval = setInterval(updateResources, 3000);
+
+    return () => clearInterval(interval);
+  }, [session?.user?.id]);
+
+  // Auth and tile subscription
+  useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session) {
-        checkUserNation(data.session.user.id);
+        build_static_tiles();
       }
-      fetchGameState();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
-        checkUserNation(session.user.id);
-        fetchGameState();
+        build_static_tiles();
       } else {
-        setGameState(null);
+        setGameState({
+          dynamicTiles: {},
+          nations: {},
+          userNation: null,
+          resources: { lumber: 0, oil: 0, ore: 0 },
+          version: null,
+        });
+        staticTilesRef.current = {};
         setShowNationModal(false);
         setShowMainMenu(false);
         setShowBottomMenu(false);
@@ -57,59 +169,74 @@ function App() {
       }
     });
 
-    const tilesSubscription = supabase
+    const ownership_building_tile_update = supabase
       .channel('game_state_changes')
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'tiles' },
         (payload) => {
           setGameState((prev) => {
-            if (!prev || !prev.tiles) return prev;
+            if (!prev.nations) return prev;
             const updatedTile = {
-              ...payload.new,
-              owner_nation_name: payload.new.owner
-                ? prev.nations[payload.new.owner]?.name || 'None'
-                : 'None',
+              owner: payload.new.owner || null,
+              building: payload.new.building || null,
+              owner_nation_name: payload.new.owner ? prev.nations[payload.new.owner]?.name || 'None' : 'None',
               nations: payload.new.owner ? prev.nations[payload.new.owner] : null,
-              x: payload.new.x,
-              y: payload.new.y,
-              building: payload.new.building ?? null,
+              is_capital: payload.new.is_capital || false,
             };
-            const newTiles = { ...prev.tiles, [`${payload.new.x}_${payload.new.y}`]: updatedTile };
+            const key = `${payload.new.x}_${payload.new.y}`;
+            const newDynamicTiles = { ...prev.dynamicTiles, [key]: updatedTile };
+
+            // Update borders for adjacent tiles
+            const adjacentKeys = [
+              `${payload.new.x - 1}_${payload.new.y}`,
+              `${payload.new.x + 1}_${payload.new.y}`,
+              `${payload.new.x}_${payload.new.y + 1}`,
+              `${payload.new.x}_${payload.new.y - 1}`,
+            ];
+            adjacentKeys.forEach((adjKey) => {
+              if (newDynamicTiles[adjKey]) {
+                newDynamicTiles[adjKey] = { ...newDynamicTiles[adjKey] }; // Trigger border recalc
+              }
+            });
+
             if (selectedTile && selectedTile.id === payload.new.id) {
-              setSelectedTile(updatedTile);
+              setSelectedTile({
+                ...staticTilesRef.current[key],
+                ...updatedTile,
+                id: payload.new.id,
+              });
             }
-            return { ...prev, tiles: newTiles };
+
+            return { ...prev, dynamicTiles: newDynamicTiles };
           });
         }
       )
       .subscribe();
 
-    if (session?.user?.id) {
-      pollInterval = setInterval(() => {
-        checkUserNation(session.user.id);
-      }, 3000);
-    }
-
     return () => {
       if (subscription) subscription.unsubscribe();
-      if (pollInterval) clearInterval(pollInterval);
-      supabase.removeChannel(tilesSubscription);
+      supabase.removeChannel(ownership_building_tile_update);
     };
-  }, [session?.user?.id]);
+  }, []);
 
+  // Map centering with 10-second delay
   useEffect(() => {
-    if (!gameState?.userNation || !gameState?.tiles || !mapScrollRef.current) {
+    if (!gameState?.userNation || !Object.keys(gameState.dynamicTiles).length || !mapScrollRef.current) {
       console.log('Map centering skipped: missing data', {
         userNation: !!gameState?.userNation,
-        tiles: !!gameState?.tiles,
+        dynamicTiles: !!Object.keys(gameState.dynamicTiles).length,
         mapScrollRef: !!mapScrollRef.current,
       });
       return;
     }
 
-    const capitalTile = Object.values(gameState.tiles).find(
-      (tile) => tile.x === gameState.userNation.capital_tile_x && tile.y === gameState.userNation.capital_tile_y && tile.is_capital
+    const capitalTile = Object.values(gameState.dynamicTiles).find(
+      (tile) =>
+        staticTilesRef.current[`${gameState.userNation.capital_tile_x}_${gameState.userNation.capital_tile_y}`] &&
+        tile.is_capital &&
+        gameState.userNation.capital_tile_x === staticTilesRef.current[`${gameState.userNation.capital_tile_x}_${gameState.userNation.capital_tile_y}`].x &&
+        gameState.userNation.capital_tile_y === staticTilesRef.current[`${gameState.userNation.capital_tile_x}_${gameState.userNation.capital_tile_y}`].y
     );
     if (!capitalTile) {
       console.log('Capital tile not found:', {
@@ -120,8 +247,8 @@ function App() {
     }
 
     const container = mapScrollRef.current;
-    const capitalPixelX = capitalTile.x * TILE_SIZE;
-    const capitalPixelY = capitalTile.y * TILE_SIZE;
+    const capitalPixelX = gameState.userNation.capital_tile_x * TILE_SIZE;
+    const capitalPixelY = gameState.userNation.capital_tile_y * TILE_SIZE;
 
     let timeoutId = null;
 
@@ -140,13 +267,13 @@ function App() {
         behavior: 'smooth',
       });
 
-      const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
+      const tileEl = document.querySelector(`.tile[data-x="${gameState.userNation.capital_tile_x}"][data-y="${gameState.userNation.capital_tile_y}"]`);
       if (tileEl) {
         tileEl.classList.add('capital-highlight');
       } else {
         console.log('Capital tile element not found in DOM:', {
-          x: capitalTile.x,
-          y: capitalTile.y,
+          x: gameState.userNation.capital_tile_x,
+          y: gameState.userNation.capital_tile_y,
         });
       }
     };
@@ -158,10 +285,8 @@ function App() {
       timeoutId = setTimeout(centerMap, 10000); // 10 seconds delay
     };
 
-    // Initial centering after 10 seconds
     resetTimer();
 
-    // Reset timer on user interaction
     const handleInteraction = () => {
       console.log('User interaction detected, resetting centering timer');
       resetTimer();
@@ -179,110 +304,7 @@ function App() {
       container.removeEventListener('mousedown', handleInteraction);
       container.removeEventListener('touchstart', handleInteraction);
     };
-  }, [gameState?.userNation, gameState?.tiles]);
-
-  async function fetchGameState() {
-    try {
-      const { data, error } = await supabase.rpc('fetch_game_state');
-      if (error) {
-        setError(`Failed to fetch game state: ${error.message}`);
-        setGameState(null);
-        return;
-      }
-
-      const tilesMap = {};
-      data.tiles.forEach((tile) => {
-        tilesMap[`${tile.x}_${tile.y}`] = tile;
-      });
-
-      setGameState({
-        tiles: tilesMap,
-        nations: data.nations,
-        userNation: data.user_nation,
-        resources: data.user_nation ? {
-          lumber: data.user_nation.lumber || 0,
-          oil: data.user_nation.oil || 0,
-          ore: data.user_nation.ore || 0,
-        } : { lumber: 0, oil: 0, ore: 0 },
-        version: data.version,
-      });
-    } catch (err) {
-      setError(`Error fetching game state: ${err.message}`);
-      setGameState(null);
-    }
-  }
-
-  async function checkUserNation(userId) {
-    try {
-      const { data, error } = await supabase
-        .rpc('update_resources', { user_id: userId })
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        setError('Failed to update resources: ' + error.message);
-        return;
-      }
-
-      if (data) {
-        setGameState((prev) => ({
-          ...prev,
-          userNation: {
-            id: data.id,
-            name: data.name,
-            color: data.color,
-            capital_tile_x: data.capital_tile_x,
-            capital_tile_y: data.capital_tile_y,
-            owner_id: data.owner_id,
-            lumber: data.lumber,
-            oil: data.oil,
-            ore: data.ore,
-          },
-          resources: {
-            lumber: data.lumber || 0,
-            oil: data.oil || 0,
-            ore: data.ore || 0,
-          },
-        }));
-        setShowNationModal(false);
-      } else {
-        setGameState((prev) => ({
-          ...prev,
-          userNation: null,
-          resources: { lumber: 0, oil: 0, ore: 0 },
-        }));
-        setShowNationModal(true);
-      }
-    } catch (err) {
-      setError('Failed to check nation: ' + err.message);
-    }
-  }
-
-  function tilesWithinDistance(centerTile, distance, tilesMap) {
-    return Object.values(tilesMap).filter(
-      (tile) => Math.abs(tile.x - centerTile.x) + Math.abs(tile.y - centerTile.y) <= distance
-    );
-  }
-
-  function findCapitalTile() {
-    if (!gameState?.tiles || Object.keys(gameState.tiles).length === 0) {
-      return null;
-    }
-    const capitalTiles = Object.values(gameState.tiles).filter(
-      (tile) => tile.is_capital === true
-    );
-
-    const minDistance = 3;
-    const candidates = Object.values(gameState.tiles).filter((tile) => {
-      if (tile.x === undefined || tile.y === undefined) return false;
-      return capitalTiles.every(
-        (cap) => Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y) >= minDistance
-      );
-    });
-
-    if (candidates.length === 0) return null;
-    const idx = Math.floor(Math.random() * candidates.length);
-    return candidates[idx];
-  }
+  }, [gameState?.userNation, gameState?.dynamicTiles]);
 
   async function handleStartGame() {
     if (!session?.user?.id) {
@@ -295,7 +317,7 @@ function App() {
       return;
     }
 
-    if (!gameState?.tiles || Object.keys(gameState.tiles).length === 0) {
+    if (!Object.keys(staticTilesRef.current).length) {
       setError('Map data not loaded. Please try again.');
       return;
     }
@@ -338,7 +360,7 @@ function App() {
         return;
       }
 
-      await fetchGameState();
+      await build_static_tiles();
       setNationName('');
     } catch (err) {
       setError('Error creating nation: ' + err.message);
@@ -357,7 +379,7 @@ function App() {
     } else {
       setLoginEmail('');
       setLoginPassword('');
-      fetchGameState();
+      build_static_tiles();
       setShowMainMenu(false);
       setShowBottomMenu(false);
       setSelectedTile(null);
@@ -390,7 +412,14 @@ function App() {
     try {
       await supabase.auth.signOut();
       setSession(null);
-      setGameState(null);
+      setGameState({
+        dynamicTiles: {},
+        nations: {},
+        userNation: null,
+        resources: { lumber: 0, oil: 0, ore: 0 },
+        version: null,
+      });
+      staticTilesRef.current = {};
       setShowNationModal(false);
       setShowMainMenu(false);
       setShowBottomMenu(false);
@@ -427,7 +456,7 @@ function App() {
     console.log(`Checking borders for tile (${tile.x}, ${tile.y}), owner: ${tile.owner}, nation: ${tile.owner_nation_name}`);
     adjacentTiles.forEach(({ dx, dy, side }) => {
       const adjKey = `${tile.x + dx}_${tile.y + dy}`;
-      const adjacentTile = gameState?.tiles[adjKey];
+      const adjacentTile = gameState.dynamicTiles[adjKey];
       const isDifferentOwner = !adjacentTile || adjacentTile.owner !== tile.owner;
       console.log(`  ${side} neighbor (${tile.x + dx}, ${tile.y + dy}): exists=${!!adjacentTile}, owner=${adjacentTile?.owner || 'none'}, nation=${adjacentTile?.owner_nation_name || 'none'}, addBorder=${isDifferentOwner}`);
       if (isDifferentOwner) {
@@ -439,7 +468,52 @@ function App() {
     return borders.join(' ');
   }
 
+  function tilesWithinDistance(centerTile, distance, tilesMap) {
+    return Object.values(tilesMap).filter(
+      (tile) => Math.abs(tile.x - centerTile.x) + Math.abs(tile.y - centerTile.y) <= distance
+    );
+  }
+
+  function findCapitalTile() {
+    if (!Object.keys(staticTilesRef.current).length) {
+      return null;
+    }
+    const capitalTiles = Object.values(gameState.dynamicTiles).filter(
+      (tile) => tile.is_capital === true
+    );
+
+    const minDistance = 3;
+    const candidates = Object.values(staticTilesRef.current).filter((tile) => {
+      if (tile.x === undefined || tile.y === undefined) return false;
+      return capitalTiles.every(
+        (cap) => {
+          const staticTile = staticTilesRef.current[`${cap.x}_${cap.y}`];
+          return staticTile && Math.abs(tile.x - staticTile.x) + Math.abs(tile.y - staticTile.y) >= minDistance;
+        }
+      );
+    });
+
+    if (candidates.length === 0) return null;
+    const idx = Math.floor(Math.random() * candidates.length);
+    return candidates[idx];
+  }
+
   const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  // Memoized tile rendering
+  const renderedTiles = useMemo(() => {
+    return Object.keys(staticTilesRef.current)
+      .map((key) => {
+        const staticTile = staticTilesRef.current[key];
+        const dynamicTile = gameState.dynamicTiles[key] || {};
+        return {
+          ...staticTile,
+          ...dynamicTile,
+          id: key,
+        };
+      })
+      .sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y);
+  }, [gameState.dynamicTiles]);
 
   return (
     <div className="app-container">
@@ -596,35 +670,32 @@ function App() {
       <div>
         <div className="map-scroll-container" ref={mapScrollRef}>
           <div className="map-grid">
-            {gameState?.tiles &&
-              Object.values(gameState.tiles)
-                .sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y)
-                .map((tile) => (
-                  <div
-                    key={tile.id}
-                    className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${
-                      tile.is_capital && tile.owner === gameState?.userNation?.id ? 'capital-highlight' : ''
-                    } ${getTileBorderClasses(tile)} ${selectedTile?.id === tile.id ? 'selected-tile' : ''}`}
-                    data-x={tile.x}
-                    data-y={tile.y}
-                    title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
-                      tile.resource || 'None'
-                    }, Owner: ${tile.owner_nation_name}, Building: ${tile.building ?? 'None'}`}
-                    style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
-                    onClick={() => {
-                      setShowBottomMenu(true);
-                      setSelectedTile(tile);
-                    }}
-                  >
-                    {tile.is_capital && (
-                      <img
-                        src="/icons/building.svg"
-                        alt="Capital Building"
-                        className="capital-icon"
-                      />
-                    )}
-                  </div>
-                ))}
+            {renderedTiles.map((tile) => (
+              <div
+                key={tile.id}
+                className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${
+                  tile.is_capital && tile.owner === gameState?.userNation?.id ? 'capital-highlight' : ''
+                } ${getTileBorderClasses(tile)} ${selectedTile?.id === tile.id ? 'selected-tile' : ''}`}
+                data-x={tile.x}
+                data-y={tile.y}
+                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
+                  tile.resource || 'None'
+                }, Owner: ${tile.owner_nation_name || 'None'}, Building: ${tile.building || 'None'}`}
+                style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
+                onClick={() => {
+                  setShowBottomMenu(true);
+                  setSelectedTile(tile);
+                }}
+              >
+                {tile.is_capital && (
+                  <img
+                    src="/icons/building.svg"
+                    alt="Capital Building"
+                    className="capital-icon"
+                  />
+                )}
+              </div>
+            ))}
           </div>
         </div>
         {showMainMenu && (
@@ -661,9 +732,9 @@ function App() {
               selectedTile={selectedTile}
               userNation={gameState?.userNation}
               setError={setError}
-              fetchTiles={fetchGameState}
+              fetchTiles={build_static_tiles}
               setSelectedTile={setSelectedTile}
-              tiles={gameState?.tiles}
+              tiles={gameState?.dynamicTiles}
             />
             <div
               className="close-menu"
@@ -703,7 +774,9 @@ function App() {
         </div>
       </div>
 
-      {gameState === null && !error && <div className="loading-message">Loading map data...</div>}
+      {Object.keys(staticTilesRef.current).length === 0 && !error && (
+        <div className="loading-message">Loading map data...</div>
+      )}
       <Analytics />
     </div>
   );
