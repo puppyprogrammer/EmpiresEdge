@@ -29,7 +29,7 @@ function App() {
   const [error, setError] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isGameStateLoaded, setIsGameStateLoaded] = useState(false); // New state to gate modal
+  const [isInitialized, setIsInitialized] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -87,7 +87,7 @@ function App() {
         console.error('Failed to fetch game state:', { ...gameStateRes.error });
         setError(`Failed to load map data: ${gameStateRes.error.message}. Please try refreshing or disabling ad blockers.`);
         setLoading(false);
-        setIsGameStateLoaded(true);
+        setIsInitialized(true);
         return;
       }
 
@@ -98,7 +98,7 @@ function App() {
         });
         setError('Incomplete map data received. Please try refreshing.');
         setLoading(false);
-        setIsGameStateLoaded(true);
+        setIsInitialized(true);
         return;
       }
 
@@ -106,7 +106,7 @@ function App() {
         console.error('Failed to update resources:', { ...resourcesRes.error });
         setError('Failed to update resources: ' + resourcesRes.error.message);
         setLoading(false);
-        setIsGameStateLoaded(true);
+        setIsInitialized(true);
         return;
       }
 
@@ -142,25 +142,21 @@ function App() {
           : { lumber: 0, oil: 0, ore: 0 },
         version: gameStateRes.data.version,
       };
-      console.log('initializeGameState: Before setting states', {
+      console.log('initializeGameState: Setting states', {
         userNation: newState.userNation,
-        hasNation: !!resourcesRes.data,
+        showNationModal: !resourcesRes.data,
       });
       setGameState(newState);
       lastNationRef.current = newState.userNation;
       lastResourcesRef.current = newState.resources;
       setShowNationModal(!resourcesRes.data);
-      console.log('initializeGameState: After setting states', {
-        userNation: newState.userNation,
-        showNationModal: !resourcesRes.data,
-      });
       setLoading(false);
-      setIsGameStateLoaded(true);
+      setIsInitialized(true);
     } catch (err) {
       console.error('Error in initializeGameState:', { ...err });
       setError(`Error loading game data: ${err.message}. Please try refreshing or disabling ad blockers.`);
       setLoading(false);
-      setIsGameStateLoaded(true);
+      setIsInitialized(true);
     }
   };
 
@@ -175,18 +171,100 @@ function App() {
           await initializeGameState();
         } else {
           setLoading(false);
-          setIsGameStateLoaded(true);
+          setIsInitialized(true);
         }
       } catch (err) {
         console.error('Error checking session:', { ...err });
         setError(`Error initializing app: ${err.message}. Please try refreshing.`);
         setLoading(false);
-        setIsGameStateLoaded(true);
+        setIsInitialized(true);
       }
     }
 
     checkSessionAndInitialize();
   }, []);
+
+  // Update single tile
+  const updateSingleTile = async (x, y) => {
+    try {
+      const { data: tileData, error: tileError } = await supabase
+        .from('tiles')
+        .select('x, y, owner, building, is_capital')
+        .eq('x', x)
+        .eq('y', y)
+        .single();
+      if (tileError) {
+        console.error('Failed to fetch tile:', { ...tileError });
+        setError('Failed to update tile: ' + tileError.message);
+        return;
+      }
+
+      let owner_nation_name = 'None';
+      if (tileData.owner) {
+        const { data: nationData, error: nationError } = await supabase
+          .from('nations')
+          .select('name')
+          .eq('id', tileData.owner)
+          .single();
+        if (nationError) {
+          console.error('Failed to fetch nation name:', { ...nationError });
+        } else {
+          owner_nation_name = nationData.name || 'None';
+        }
+      }
+
+      const key = `${tileData.x}_${tileData.y}`;
+      setGameState((prevState) => {
+        const currentTile = prevState.dynamicTiles[key] || {};
+        if (
+          currentTile.owner === tileData.owner &&
+          currentTile.building === tileData.building &&
+          currentTile.is_capital === tileData.is_capital &&
+          currentTile.owner_nation_name === owner_nation_name
+        ) {
+          console.log('updateSingleTile: No changes needed for tile:', { x, y, building: tileData.building });
+          return prevState;
+        }
+        console.log('updateSingleTile: Updating gameState for tile:', { x, y, building: tileData.building });
+        return {
+          ...prevState,
+          dynamicTiles: {
+            ...prevState.dynamicTiles,
+            [key]: {
+              owner: tileData.owner || null,
+              building: tileData.building || null,
+              owner_nation_name,
+              nations: tileData.owner && prevState.nations[tileData.owner] ? prevState.nations[tileData.owner] : null,
+              is_capital: tileData.is_capital || false,
+            },
+          },
+        };
+      });
+
+      if (selectedTile?.x === x && selectedTile?.y === y) {
+        const newTile = {
+          ...staticTilesRef.current[key],
+          ...tileData,
+          id: key,
+          owner_nation_name,
+        };
+        if (
+          selectedTile.owner === newTile.owner &&
+          selectedTile.building === newTile.building &&
+          selectedTile.is_capital === newTile.is_capital &&
+          selectedTile.owner_nation_name === newTile.owner_nation_name
+        ) {
+          console.log('updateSingleTile: No changes needed for selectedTile:', { x, y });
+          return;
+        }
+        console.log('updateSingleTile: Updating selectedTile:', { ...newTile });
+        setSelectedTile(newTile);
+      }
+    } catch (err) {
+      console.error('Error updating single tile:', { ...err });
+      setError('Error updating tile: ' + err.message);
+    }
+  };
 
   // Resource tick
   useEffect(() => {
@@ -256,7 +334,7 @@ function App() {
             lastResourcesRef.current = newResources;
             return newState;
           });
-          console.log('updateResources: Ensuring showNationModal is false for existing nation');
+          console.log('updateResources: Setting showNationModal to false');
           setShowNationModal(false);
         } else {
           setGameState((prevState) => {
@@ -426,7 +504,7 @@ function App() {
         setShowBottomMenu(false);
         setSelectedTile(null);
         setLoading(false);
-        setIsGameStateLoaded(true);
+        setIsInitialized(true);
       } else {
         initializeGameState();
       }
@@ -638,7 +716,7 @@ function App() {
       setShowBottomMenu(false);
       setSelectedTile(null);
       setLoading(false);
-      setIsGameStateLoaded(true);
+      setIsInitialized(true);
     } catch (err) {
       console.error('Error logging out:', { ...err });
       setError('Failed to log out: ' + err.message);
@@ -720,11 +798,16 @@ function App() {
       .sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y);
   }, [gameState.dynamicTiles, loading]);
 
+  // Log modal rendering conditions
   useEffect(() => {
-    if (!loading && isGameStateLoaded && showNationModal) {
-      console.log('Nation modal rendering:', { showNationModal, userNation: gameState.userNation });
+    if (!loading && isInitialized) {
+      console.log('Modal rendering check:', {
+        showNationModal,
+        userNationIsNull: gameState.userNation === null,
+        userNation: gameState.userNation,
+      });
     }
-  }, [loading, isGameStateLoaded, showNationModal, gameState.userNation]);
+  }, [loading, isInitialized, showNationModal, gameState.userNation]);
 
   if (loading) {
     return (
@@ -868,7 +951,7 @@ function App() {
         </div>
       )}
 
-      {!loading && isGameStateLoaded && showNationModal && (
+      {!loading && isInitialized && showNationModal && gameState.userNation === null && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Create Your Nation</h2>
