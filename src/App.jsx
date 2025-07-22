@@ -99,15 +99,6 @@ function App() {
   }, [session?.user?.id]);
 
   useEffect(() => {
-    if (!gameState?.userNation || !gameState?.tiles || !mapScrollRef.current) {
-      console.log('Map centering skipped: missing data', {
-        userNation: !!gameState?.userNation,
-        tiles: !!gameState?.tiles,
-        mapScrollRef: !!mapScrollRef.current,
-      });
-      return;
-    }
-
     const capitalTile = Object.values(gameState.tiles).find(
       (tile) => tile.x === gameState.userNation.capital_tile_x && tile.y === gameState.userNation.capital_tile_y && tile.is_capital
     );
@@ -123,62 +114,29 @@ function App() {
     const capitalPixelX = capitalTile.x * TILE_SIZE;
     const capitalPixelY = capitalTile.y * TILE_SIZE;
 
-    let timeoutId = null;
+    console.log('Centering map on:', {
+      capitalTile,
+      capitalPixelX,
+      capitalPixelY,
+      clientWidth: container.clientWidth,
+      clientHeight: container.clientHeight,
+    });
 
-    const centerMap = () => {
-      console.log('Centering map on:', {
-        capitalTile,
-        capitalPixelX,
-        capitalPixelY,
-        clientWidth: container.clientWidth,
-        clientHeight: container.clientHeight,
+    container.scrollTo({
+      left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
+      top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
+      behavior: 'smooth',
+    });
+
+    const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
+    if (tileEl) {
+      tileEl.classList.add('capital-highlight');
+    } else {
+      console.log('Capital tile element not found in DOM:', {
+        x: capitalTile.x,
+        y: capitalTile.y,
       });
-
-      container.scrollTo({
-        left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
-        top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
-        behavior: 'smooth',
-      });
-
-      const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
-      if (tileEl) {
-        tileEl.classList.add('capital-highlight');
-      } else {
-        console.log('Capital tile element not found in DOM:', {
-          x: capitalTile.x,
-          y: capitalTile.y,
-        });
-      }
-    };
-
-    const resetTimer = () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      timeoutId = setTimeout(centerMap, 10000); // 10 seconds delay
-    };
-
-    // Initial centering after 10 seconds
-    resetTimer();
-
-    // Reset timer on user interaction
-    const handleInteraction = () => {
-      console.log('User interaction detected, resetting centering timer');
-      resetTimer();
-    };
-
-    container.addEventListener('scroll', handleInteraction);
-    container.addEventListener('mousedown', handleInteraction);
-    container.addEventListener('touchstart', handleInteraction);
-
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      container.removeEventListener('scroll', handleInteraction);
-      container.removeEventListener('mousedown', handleInteraction);
-      container.removeEventListener('touchstart', handleInteraction);
-    };
+    }
   }, [gameState?.userNation, gameState?.tiles]);
 
   async function fetchGameState() {
