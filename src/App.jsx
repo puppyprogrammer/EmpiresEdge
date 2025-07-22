@@ -40,81 +40,95 @@ function App() {
   const [selectedPage, setSelectedPage] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
 
-  async function initializeGameState() {
-    try {
-      setLoading(true);
-      const [gameStateRes, resourcesRes] = await Promise.all([
-        supabase.rpc('fetch_game_state'),
-        session?.user?.id
-          ? supabase.rpc('update_resources', { user_id: session.user.id }).single()
-          : Promise.resolve({ data: null, error: null }),
-      ]);
-
-      if (gameStateRes.error) {
-        console.error('Failed to fetch game state:', gameStateRes.error);
-        setError(`Failed to load map data: ${gameStateRes.error.message}. Please try refreshing or disabling ad blockers.`);
-        setLoading(false);
-        return;
-      }
-
-      if (!gameStateRes.data?.tiles || !gameStateRes.data?.nations) {
-        console.warn('Incomplete game state data:', {
-          tiles: !!gameStateRes.data?.tiles,
-          nations: !!gameStateRes.data?.nations,
-        });
-        setError('Incomplete map data received. Please try refreshing.');
-        setLoading(false);
-        return;
-      }
-
-      if (resourcesRes.error && resourcesRes.error.code !== 'PGRST116') {
-        console.error('Failed to update resources:', resourcesRes.error);
-        setError('Failed to update resources: ' + resourcesRes.error.message);
-        setLoading(false);
-        return;
-      }
-
-      const staticTiles = {};
-      const dynamicTiles = {};
-      gameStateRes.data.tiles.forEach((tile) => {
-        staticTiles[`${tile.x}_${tile.y}`] = {
-          x: tile.x,
-          y: tile.y,
-          type: tile.type,
-          resource: tile.resource || null,
-        };
-        dynamicTiles[`${tile.x}_${tile.y}`] = {
-          owner: tile.owner || null,
-          building: tile.building || null,
-          owner_nation_name: tile.owner && gameStateRes.data.nations[tile.owner] ? gameStateRes.data.nations[tile.owner].name || 'None' : 'None',
-          nations: tile.owner && gameStateRes.data.nations[tile.owner] ? gameStateRes.data.nations[tile.owner] : null,
-          is_capital: tile.is_capital || false,
-        };
-      });
-
-      staticTilesRef.current = staticTiles;
-      setGameState((prev) => ({
-        ...prev,
-        dynamicTiles,
-        nations: gameStateRes.data.nations,
-        userNation: resourcesRes.data || gameStateRes.data.user_nation,
-        resources: resourcesRes.data
-          ? { lumber: resourcesRes.data.lumber || 0, oil: resourcesRes.data.oil || 0, ore: resourcesRes.data.ore || 0 }
-          : { lumber: 0, oil: 0, ore: 0 },
-        version: gameStateRes.data.version,
-      }));
-      setShowNationModal(!resourcesRes.data);
-      setLoading(false);
-    } catch (err) {
-      console.error('Error in initializeGameState:', err);
-      setError(`Error loading game data: ${err.message}. Please try refreshing or disabling ad blockers.`);
-      setLoading(false);
-    }
-  }
-
+  // Initialize session and game state in correct order
   useEffect(() => {
-    if (!session?.user?.id) return;
+    async function checkSessionAndInitialize() {
+      try {
+        setLoading(true);
+        const { data } = await supabase.auth.getSession();
+        setSession(data.session);
 
+        if (data.session) {
+          // Fetch game state and user nation
+          const [gameStateRes, resourcesRes] = await Promise.all([
+            supabase.rpc('fetch_game_state'),
+            supabase.rpc('update_resources', { user_id: data.session.user.id }).single(),
+          ]);
+
+          if (gameStateRes.error) {
+            console.error('Failed to fetch game state:', gameStateRes.error);
+            setError(`Failed to load map data: ${gameStateRes.error.message}. Please try refreshing or disabling ad blockers.`);
+            setLoading(false);
+            return;
+          }
+
+          if (!gameStateRes.data?.tiles || !gameStateRes.data?.nations) {
+            console.warn('Incomplete game state data:', {
+              tiles: !!gameStateRes.data?.tiles,
+              nations: !!gameStateRes.data?.nations,
+            });
+            setError('Incomplete map data received. Please try refreshing.');
+            setLoading(false);
+            return;
+          }
+
+          if (resourcesRes.error && resourcesRes.error.code !== 'PGRST116') {
+            console.error('Failed to update resources:', resourcesRes.error);
+            setError('Failed to update resources: ' + resourcesRes.error.message);
+            setLoading(false);
+            return;
+          }
+
+          const staticTiles = {};
+          const dynamicTiles = {};
+          gameStateRes.data.tiles.forEach((tile) => {
+            if (typeof tile.x !== 'number' || typeof tile.y !== 'number') {
+              console.warn('Invalid tile data:', tile);
+              return;
+            }
+            staticTiles[`${tile.x}_${tile.y}`] = {
+              x: tile.x,
+              y: tile.y,
+              type: tile.type,
+              resource: tile.resource || null,
+            };
+            dynamicTiles[`${tile.x}_${tile.y}`] = {
+              owner: tile.owner || null,
+              building: tile.building || null,
+              owner_nation_name: tile.owner && gameStateRes.data.nations[tile.owner] ? gameStateRes.data.nations[tile.owner].name || 'None' : 'None',
+              nations: tile.owner && gameStateRes.data.nations[tile.owner] ? gameStateRes.data.nations[tile.owner] : null,
+              is_capital: tile.is_capital || false,
+            };
+          });
+
+          staticTilesRef.current = staticTiles;
+          setGameState({
+            dynamicTiles,
+            nations: gameStateRes.data.nations,
+            userNation: resourcesRes.data || null,
+            resources: resourcesRes.data
+              ? { lumber: resourcesRes.data.lumber || 0, oil: resourcesRes.data.oil || 0, ore: resourcesRes.data.ore || 0 }
+              : { lumber: 0, oil: 0, ore: 0 },
+            version: gameStateRes.data.version,
+          });
+          setShowNationModal(!resourcesRes.data); // Only show modal if no nation exists
+        }
+        setLoading(false);
+      } catch (err) {
+        console.error('Error initializing app:', err);
+        setError(`Error loading game data: ${err.message}. Please try refreshing or disabling ad blockers.`);
+        setLoading(false);
+      }
+    }
+
+    checkSessionAndInitialize();
+  }, []);
+
+  // Resource tick and database listeners
+  useEffect(() => {
+    if (!session?.user?.id || loading) return;
+
+    // Resource tick
     const updateResources = async () => {
       try {
         const { data, error } = await supabase
@@ -162,39 +176,10 @@ function App() {
       }
     };
 
+    updateResources(); // Initial call
     const interval = setInterval(updateResources, 3000);
-    return () => clearInterval(interval);
-  }, [session?.user?.id]);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      if (data.session) {
-        initializeGameState();
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
-        initializeGameState();
-      } else {
-        setGameState({
-          dynamicTiles: {},
-          nations: {},
-          userNation: null,
-          resources: { lumber: 0, oil: 0, ore: 0 },
-          version: null,
-        });
-        staticTilesRef.current = {};
-        setShowNationModal(false);
-        setShowMainMenu(false);
-        setShowBottomMenu(false);
-        setSelectedTile(null);
-        setLoading(false);
-      }
-    });
-
+    // Database listener
     const ownership_building_tile_update = supabase
       .channel('game_state_changes')
       .on(
@@ -240,13 +225,38 @@ function App() {
       .subscribe();
 
     return () => {
-      if (subscription) subscription.unsubscribe();
+      clearInterval(interval);
       supabase.removeChannel(ownership_building_tile_update);
     };
+  }, [session?.user?.id, loading]);
+
+  // Auth state change listener
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (!session) {
+        setGameState({
+          dynamicTiles: {},
+          nations: {},
+          userNation: null,
+          resources: { lumber: 0, oil: 0, ore: 0 },
+          version: null,
+        });
+        staticTilesRef.current = {};
+        setShowNationModal(false);
+        setShowMainMenu(false);
+        setShowBottomMenu(false);
+        setSelectedTile(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  // Map centering
   useEffect(() => {
-    if (!gameState?.userNation || !Object.keys(gameState.dynamicTiles).length || !mapScrollRef.current) {
+    if (!gameState?.userNation || !Object.keys(gameState.dynamicTiles).length || !mapScrollRef.current || loading) {
       return;
     }
 
@@ -305,7 +315,7 @@ function App() {
       container.removeEventListener('mousedown', handleInteraction);
       container.removeEventListener('touchstart', handleInteraction);
     };
-  }, [gameState?.userNation, gameState?.dynamicTiles]);
+  }, [gameState?.userNation, gameState?.dynamicTiles, loading]);
 
   async function handleStartGame() {
     if (!session?.user?.id) {
@@ -361,6 +371,7 @@ function App() {
         return;
       }
 
+      setShowNationModal(false);
       await initializeGameState();
       setNationName('');
     } catch (err) {
@@ -381,7 +392,6 @@ function App() {
       } else {
         setLoginEmail('');
         setLoginPassword('');
-        initializeGameState();
         setShowMainMenu(false);
         setShowBottomMenu(false);
         setSelectedTile(null);
@@ -496,25 +506,46 @@ function App() {
   const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
   const renderedTiles = useMemo(() => {
+    if (loading) return [];
     return Object.keys(staticTilesRef.current)
       .map((key) => {
         const staticTile = staticTilesRef.current[key];
         const dynamicTile = gameState.dynamicTiles[key] || {};
-        return {
+        const tile = {
           ...staticTile,
           ...dynamicTile,
           id: key,
         };
+        if (typeof tile.x !== 'number' || typeof tile.y !== 'number') {
+          console.warn('Invalid tile in renderedTiles:', tile);
+        }
+        return tile;
       })
       .sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y);
-  }, [gameState.dynamicTiles]);
+  }, [gameState.dynamicTiles, loading]);
+
+  if (loading) {
+    return (
+      <div className="loading-screen" style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: '#1a1a1a',
+        color: 'white',
+        fontSize: '1.5rem',
+      }}>
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">
       <header className="app-header">
         <div className="header-left">
           <img src="/icons/building.svg" alt="Empire's Edge" className="header-icon" />
-          {session?.user && gameState?.userNation && !loading && (
+          {session?.user && gameState?.userNation && (
             <div className="resource-tickers">
               <div className="resource-ticker">
                 <span className="resource-icon">🌲</span>
@@ -677,6 +708,7 @@ function App() {
                 }, Owner: ${tile.owner_nation_name || 'None'}, Building: ${tile.building || 'None'}`}
                 style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
                 onClick={() => {
+                  console.log('Selected tile:', tile);
                   setShowBottomMenu(true);
                   setSelectedTile(tile);
                 }}
@@ -768,9 +800,6 @@ function App() {
         </div>
       </div>
 
-      {(loading || Object.keys(staticTilesRef.current).length === 0) && !error && (
-        <div className="loading-message">Loading map data...</div>
-      )}
       <Analytics />
     </div>
   );
