@@ -93,7 +93,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
         timestamp: new Date().toISOString(),
       });
       await updateLastTickTime();
-      await updateSingleTile(selectedTile.x, selectedTile.y);
+      // Subscription handles state update, no need for updateSingleTile
     } catch (err) {
       console.log('Build road error, reverting to null:', { x: selectedTile.x, y: selectedTile.y });
       setSelectedTile({ ...selectedTile, building: null });
@@ -140,7 +140,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
         timestamp: new Date().toISOString(),
       });
       await updateLastTickTime();
-      await updateSingleTile(selectedTile.x, selectedTile.y);
+      // Subscription handles state update, no need for updateSingleTile
     } catch (err) {
       console.log('Build factory error, reverting to null:', { x: selectedTile.x, y: selectedTile.y });
       setSelectedTile({ ...selectedTile, building: null });
@@ -187,7 +187,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
         timestamp: new Date().toISOString(),
       });
       await updateLastTickTime();
-      await updateSingleTile(selectedTile.x, selectedTile.y);
+      // Subscription handles state update, no need for updateSingleTile
     } catch (err) {
       console.log('Build mine error, reverting to null:', { x: selectedTile.x, y: selectedTile.y });
       setSelectedTile({ ...selectedTile, building: null });
@@ -236,7 +236,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
         timestamp: new Date().toISOString(),
       });
       await updateLastTickTime();
-      await updateSingleTile(selectedTile.x, selectedTile.y);
+      // Subscription handles state update, no need for updateSingleTile
     } catch (err) {
       console.log('Delete building error, reverting to:', { x: selectedTile.x, y: selectedTile.y, building: selectedTile.building });
       setSelectedTile({ ...selectedTile, building: selectedTile.building });

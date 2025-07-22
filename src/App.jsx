@@ -72,11 +72,21 @@ function App() {
   // Update single tile function
   const updateSingleTile = async (tileId, updates) => {
     try {
-      console.log('updateSingleTile called:', { tileId, updates });
+      console.log('updateSingleTile called:', { tileId, updates, staticTileCount: Object.keys(staticTilesRef.current).length });
+      if (!tileId || !tileId.includes('_')) {
+        console.error('Invalid tileId format in updateSingleTile:', { tileId, expected: 'x_y', availableKeys: Object.keys(staticTilesRef.current).slice(0, 5) });
+        setError('Invalid tile ID format');
+        return;
+      }
       const { x, y } = staticTilesRef.current[tileId] || {};
       if (!x || !y) {
-        console.error('Invalid tileId in updateSingleTile:', { tileId });
-        setError('Invalid tile data');
+        console.error('Tile not found in staticTilesRef:', {
+          tileId,
+          x,
+          y,
+          staticKeys: Object.keys(staticTilesRef.current).slice(0, 5),
+        });
+        setError('Tile not found');
         return;
       }
 
@@ -195,20 +205,24 @@ function App() {
         return;
       }
 
-      // Retry update_resources if no nation data
+      // Retry update_resources up to 3 times
       let finalNationData = resourcesRes.data;
       if (!resourcesRes.data && session?.user?.id) {
         console.log('initializeGameState: Retrying update_resources to confirm nation status');
-        const { data: retryData, error: retryError } = await supabase
-          .rpc('update_resources', { user_id: session.user.id })
-          .single();
-        if (retryError && retryError.code !== 'PGRST116') {
-          console.error('Failed to retry update_resources:', { ...retryError });
-        } else if (retryData) {
-          console.log('initializeGameState: Retry successful, nation found:', { ...retryData });
-          finalNationData = retryData;
-        } else {
-          console.log('initializeGameState: Retry returned no nation data');
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          const { data: retryData, error: retryError } = await supabase
+            .rpc('update_resources', { user_id: session.user.id })
+            .single();
+          if (retryError && retryError.code !== 'PGRST116') {
+            console.error(`Retry ${attempt} failed to update resources:`, { ...retryError });
+          } else if (retryData) {
+            console.log(`initializeGameState: Retry ${attempt} successful, nation found:`, { ...retryData });
+            finalNationData = retryData;
+            break;
+          } else {
+            console.log(`initializeGameState: Retry ${attempt} returned no nation data`);
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
         }
       }
 
@@ -219,13 +233,14 @@ function App() {
           console.warn('Invalid tile data:', { ...tile });
           return;
         }
-        staticTiles[`${tile.x}_${tile.y}`] = {
+        const tileId = `${tile.x}_${tile.y}`;
+        staticTiles[tileId] = {
           x: tile.x,
           y: tile.y,
           type: tile.type,
           resource: tile.resource || null,
         };
-        dynamicTiles[`${tile.x}_${tile.y}`] = {
+        dynamicTiles[tileId] = {
           owner: tile.owner || null,
           building: tile.building || null,
           owner_nation_name: tile.owner && gameStateRes.data.nations[tile.owner] ? gameStateRes.data.nations[tile.owner].name || 'None' : 'None',
@@ -257,7 +272,7 @@ function App() {
       setLoading(false);
       setTimeout(() => {
         setIsInitialized(true);
-      }, 500);
+      }, 1000);
     } catch (err) {
       console.error('Error in initializeGameState:', { ...err });
       setError(`Error loading game data: ${err.message}. Please try refreshing or disabling ad blockers.`);
