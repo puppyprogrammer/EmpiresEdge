@@ -65,11 +65,11 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         user_nation_id: userNation.id,
         timestamp: new Date().toISOString(),
       });
-      const { error } = await supabase.rpc('build_road', {
-        user_id: userNation.id,
-        tile_x: selectedTile.x,
-        tile_y: selectedTile.y,
-      });
+      const { error } = await supabase
+        .from('tiles')
+        .update({ building: 'road' })
+        .match({ x: selectedTile.x, y: selectedTile.y, owner: userNation.id, is_capital: false })
+        .is('building', null);
       if (error) {
         setError('Failed to build road: ' + error.message);
         console.error('Road build error:', error);
@@ -107,11 +107,11 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         user_nation_id: userNation.id,
         timestamp: new Date().toISOString(),
       });
-      const { error } = await supabase.rpc('build_factory', {
-        user_id: userNation.id,
-        tile_x: selectedTile.x,
-        tile_y: selectedTile.y,
-      });
+      const { error } = await supabase
+        .from('tiles')
+        .update({ building: 'factory' })
+        .match({ x: selectedTile.x, y: selectedTile.y, owner: userNation.id, is_capital: false })
+        .is('building', null);
       if (error) {
         setError('Failed to build factory: ' + error.message);
         console.error('Factory build error:', error);
@@ -149,11 +149,11 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         user_nation_id: userNation.id,
         timestamp: new Date().toISOString(),
       });
-      const { error } = await supabase.rpc('build_mine', {
-        user_id: userNation.id,
-        tile_x: selectedTile.x,
-        tile_y: selectedTile.y,
-      });
+      const { error } = await supabase
+        .from('tiles')
+        .update({ building: 'mine' })
+        .match({ x: selectedTile.x, y: selectedTile.y, owner: userNation.id, is_capital: false })
+        .is('building', null);
       if (error) {
         setError('Failed to build mine: ' + error.message);
         console.error('Mine build error:', error);
@@ -192,11 +192,10 @@ function TileInformationPage({ selectedTile, userNation, setError, fetchTiles, s
         building: selectedTile.building,
         timestamp: new Date().toISOString(),
       });
-      const { error } = await supabase.rpc('delete_building', {
-        user_id: userNation.id,
-        tile_x: selectedTile.x,
-        tile_y: selectedTile.y,
-      });
+      const { error } = await supabase
+        .from('tiles')
+        .update({ building: null })
+        .match({ x: selectedTile.x, y: selectedTile.y, owner: userNation.id, is_capital: false });
       if (error) {
         setError('Failed to delete building: ' + error.message);
         console.error('Delete building error:', error);
