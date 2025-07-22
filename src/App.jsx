@@ -14,6 +14,8 @@ function App() {
   const mapScrollRef = useRef(null);
   const staticTilesRef = useRef({});
   const subscriptionRef = useRef(null);
+  const lastNationRef = useRef(null);
+  const lastResourcesRef = useRef({ lumber: 0, oil: 0, ore: 0 });
   const TILE_SIZE = 32;
   const renderCount = useRef(0);
 
@@ -127,7 +129,7 @@ function App() {
       });
 
       staticTilesRef.current = staticTiles;
-      setGameState({
+      const newState = {
         dynamicTiles,
         nations: gameStateRes.data.nations,
         userNation: resourcesRes.data || null,
@@ -135,7 +137,10 @@ function App() {
           ? { lumber: resourcesRes.data.lumber || 0, oil: resourcesRes.data.oil || 0, ore: resourcesRes.data.ore || 0 }
           : { lumber: 0, oil: 0, ore: 0 },
         version: gameStateRes.data.version,
-      });
+      };
+      setGameState(newState);
+      lastNationRef.current = newState.userNation;
+      lastResourcesRef.current = newState.resources;
       setShowNationModal(!resourcesRes.data);
       setLoading(false);
     } catch (err) {
@@ -225,16 +230,23 @@ function App() {
       });
 
       if (selectedTile?.x === x && selectedTile?.y === y) {
-        setSelectedTile((prev) => {
-          const newTile = {
-            ...staticTilesRef.current[key],
-            ...tileData,
-            id: key,
-            owner_nation_name,
-          };
-          console.log('updateSingleTile: Updating selectedTile:', { ...newTile });
-          return newTile;
-        });
+        const newTile = {
+          ...staticTilesRef.current[key],
+          ...tileData,
+          id: key,
+          owner_nation_name,
+        };
+        if (
+          selectedTile.owner === newTile.owner &&
+          selectedTile.building === newTile.building &&
+          selectedTile.is_capital === newTile.is_capital &&
+          selectedTile.owner_nation_name === newTile.owner_nation_name
+        ) {
+          console.log('updateSingleTile: No changes needed for selectedTile:', { x, y });
+          return;
+        }
+        console.log('updateSingleTile: Updating selectedTile:', { ...newTile });
+        setSelectedTile(newTile);
       }
     } catch (err) {
       console.error('Error updating single tile:', { ...err });
@@ -259,37 +271,55 @@ function App() {
         }
 
         if (data) {
+          const newResources = {
+            lumber: data.lumber || 0,
+            oil: data.oil || 0,
+            ore: data.ore || 0,
+          };
+          const newNation = {
+            id: data.id,
+            name: data.name,
+            color: data.color,
+            capital_tile_x: data.capital_tile_x,
+            capital_tile_y: data.capital_tile_y,
+            owner_id: data.owner_id,
+            lumber: data.lumber,
+            oil: data.oil,
+            ore: data.ore,
+          };
+
+          const resourcesUnchanged =
+            lastResourcesRef.current.lumber === newResources.lumber &&
+            lastResourcesRef.current.oil === newResources.oil &&
+            lastResourcesRef.current.ore === newResources.ore;
+          const nationUnchanged =
+            lastNationRef.current &&
+            lastNationRef.current.id === newNation.id &&
+            lastNationRef.current.name === newNation.name &&
+            lastNationRef.current.color === newNation.color &&
+            lastNationRef.current.capital_tile_x === newNation.capital_tile_x &&
+            lastNationRef.current.capital_tile_y === newNation.capital_tile_y &&
+            lastNationRef.current.owner_id === newNation.owner_id &&
+            lastNationRef.current.lumber === newNation.lumber &&
+            lastNationRef.current.oil === newNation.oil &&
+            lastNationRef.current.ore === newNation.ore;
+
+          if (resourcesUnchanged && nationUnchanged) {
+            console.log('updateResources: No changes, skipping setGameState');
+            return;
+          }
+
           setGameState((prevState) => {
-            if (
-              prevState.userNation?.lumber === data.lumber &&
-              prevState.userNation?.oil === data.oil &&
-              prevState.userNation?.ore === data.ore
-            ) {
-              console.log('updateResources: No resource changes, skipping setGameState');
-              return prevState;
-            }
             const newState = {
               ...prevState,
-              userNation: {
-                id: data.id,
-                name: data.name,
-                color: data.color,
-                capital_tile_x: data.capital_tile_x,
-                capital_tile_y: data.capital_tile_y,
-                owner_id: data.owner_id,
-                lumber: data.lumber,
-                oil: data.oil,
-                ore: data.ore,
-              },
-              resources: {
-                lumber: data.lumber || 0,
-                oil: data.oil || 0,
-                ore: data.ore || 0,
-              },
+              userNation: newNation,
+              resources: newResources,
             };
             console.log('setGameState called (resources):', {
               changed: Object.keys(newState).filter(k => newState[k] !== prevState[k]),
             });
+            lastNationRef.current = newNation;
+            lastResourcesRef.current = newResources;
             return newState;
           });
           setShowNationModal(false);
@@ -307,6 +337,8 @@ function App() {
             console.log('setGameState called (no data):', {
               changed: Object.keys(newState).filter(k => newState[k] !== prevState[k]),
             });
+            lastNationRef.current = null;
+            lastResourcesRef.current = { lumber: 0, oil: 0, ore: 0 };
             return newState;
           });
           setShowNationModal(true);
@@ -389,7 +421,7 @@ function App() {
                     building: payload.new.building || null,
                     owner_nation_name,
                     nations: payload.new.owner && prevState.nations[payload.new.owner] ? prevState.nations[payload.new.owner] : null,
-                    is_capital: payload.new.is_capital || false,
+                    is_capital: tileData.is_capital || false,
                   },
                 },
               };
@@ -399,20 +431,26 @@ function App() {
               return newState;
             });
             if (selectedTile?.x === payload.new.x && selectedTile?.y === payload.new.y) {
-              setSelectedTile((prev) => {
-                if (!prev) return prev;
-                const newTile = {
-                  ...staticTilesRef.current[key],
-                  owner: payload.new.owner || null,
-                  building: payload.new.building || null,
-                  owner_nation_name,
-                  nations: payload.new.owner && prevState.nations[payload.new.owner] ? prevState.nations[payload.new.owner] : null,
-                  is_capital: payload.new.is_capital || false,
-                  id: key,
-                };
-                console.log('Subscription: Updating selectedTile:', { ...newTile });
-                return newTile;
-              });
+              const newTile = {
+                ...staticTilesRef.current[key],
+                owner: payload.new.owner || null,
+                building: payload.new.building || null,
+                owner_nation_name,
+                nations: payload.new.owner && gameState.nations[payload.new.owner] ? gameState.nations[payload.new.owner] : null,
+                is_capital: payload.new.is_capital || false,
+                id: key,
+              };
+              if (
+                selectedTile.owner === newTile.owner &&
+                selectedTile.building === newTile.building &&
+                selectedTile.is_capital === newTile.is_capital &&
+                selectedTile.owner_nation_name === newTile.owner_nation_name
+              ) {
+                console.log('Subscription: No changes needed for selectedTile:', { x: payload.new.x, y: payload.new.y });
+                return;
+              }
+              console.log('Subscription: Updating selectedTile:', { ...newTile });
+              setSelectedTile(newTile);
             }
           } catch (err) {
             console.error('Error in tile subscription:', { ...err });
@@ -445,6 +483,8 @@ function App() {
           version: null,
         });
         staticTilesRef.current = {};
+        lastNationRef.current = null;
+        lastResourcesRef.current = { lumber: 0, oil: 0, ore: 0 };
         setShowNationModal(false);
         setShowMainMenu(false);
         setShowBottomMenu(false);
@@ -460,48 +500,55 @@ function App() {
 
   // Map centering
   useEffect(() => {
-    if (!gameState?.userNation || !Object.keys(gameState.dynamicTiles).length || !mapScrollRef.current || loading) {
+    if (!gameState?.userNation || !mapScrollRef.current || loading) {
       return;
     }
 
-    const capitalTile = Object.values(gameState.dynamicTiles).find(
-      (tile) =>
-        staticTilesRef.current[`${gameState.userNation.capital_tile_x}_${gameState.userNation.capital_tile_y}`] &&
-        tile.is_capital &&
-        gameState.userNation.capital_tile_x === staticTilesRef.current[`${gameState.userNation.capital_tile_x}_${gameState.userNation.capital_tile_y}`].x &&
-        gameState.userNation.capital_tile_y === staticTilesRef.current[`${gameState.userNation.capital_tile_x}_${gameState.userNation.capital_tile_y}`].y
-    );
-    if (!capitalTile) {
+    const { capital_tile_x, capital_tile_y } = gameState.userNation;
+    const key = `${capital_tile_x}_${capital_tile_y}`;
+    const capitalTile = gameState.dynamicTiles[key];
+
+    if (!capitalTile || !staticTilesRef.current[key] || !capitalTile.is_capital) {
+      console.warn('Capital tile not found or invalid:', {
+        capitalTile,
+        key,
+        hasStaticTile: !!staticTilesRef.current[key],
+        isCapital: capitalTile?.is_capital,
+      });
       return;
     }
 
     const container = mapScrollRef.current;
-    const capitalPixelX = gameState.userNation.capital_tile_x * TILE_SIZE;
-    const capitalPixelY = gameState.userNation.capital_tile_y * TILE_SIZE;
+    const capitalPixelX = capital_tile_x * TILE_SIZE;
+    const capitalPixelY = capital_tile_y * TILE_SIZE;
 
+    console.log('Centering map on capital tile:', { x: capital_tile_x, y: capital_tile_y });
+    container.scrollTo({
+      left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
+      top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
+      behavior: 'smooth',
+    });
+
+    const tileEl = document.querySelector(`.tile[data-x="${capital_tile_x}"][data-y="${capital_tile_y}"]`);
+    if (tileEl) {
+      tileEl.classList.add('capital-highlight');
+    }
+
+    // Re-center on user interaction after 4 seconds
     let timeoutId = null;
-
-    const centerMap = () => {
-      container.scrollTo({
-        left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
-        top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
-        behavior: 'smooth',
-      });
-
-      const tileEl = document.querySelector(`.tile[data-x="${gameState.userNation.capital_tile_x}"][data-y="${gameState.userNation.capital_tile_y}"]`);
-      if (tileEl) {
-        tileEl.classList.add('capital-highlight');
-      }
-    };
-
     const resetTimer = () => {
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
-      timeoutId = setTimeout(centerMap, 4000);
+      timeoutId = setTimeout(() => {
+        console.log('Re-centering map on capital tile:', { x: capital_tile_x, y: capital_tile_y });
+        container.scrollTo({
+          left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
+          top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
+          behavior: 'smooth',
+        });
+      }, 4000);
     };
-
-    resetTimer();
 
     const handleInteraction = () => {
       resetTimer();
@@ -519,7 +566,7 @@ function App() {
       container.removeEventListener('mousedown', handleInteraction);
       container.removeEventListener('touchstart', handleInteraction);
     };
-  }, [gameState?.userNation, gameState?.dynamicTiles, loading]);
+  }, [gameState?.userNation, loading]);
 
   async function handleStartGame() {
     if (!session?.user?.id) {
@@ -646,6 +693,8 @@ function App() {
         version: null,
       });
       staticTilesRef.current = {};
+      lastNationRef.current = null;
+      lastResourcesRef.current = { lumber: 0, oil: 0, ore: 0 };
       setShowNationModal(false);
       setShowMainMenu(false);
       setShowBottomMenu(false);
@@ -874,7 +923,7 @@ function App() {
         </div>
       )}
 
-      {showNationModal && (
+      {!loading && showNationModal && gameState.userNation === null && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Create Your Nation</h2>
