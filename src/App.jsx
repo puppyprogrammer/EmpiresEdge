@@ -69,6 +69,84 @@ function App() {
     []
   );
 
+  // Update single tile function
+  const updateSingleTile = async (tileId, updates) => {
+    try {
+      console.log('updateSingleTile called:', { tileId, updates });
+      const { x, y } = staticTilesRef.current[tileId] || {};
+      if (!x || !y) {
+        console.error('Invalid tileId in updateSingleTile:', { tileId });
+        setError('Invalid tile data');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('tiles')
+        .update(updates)
+        .eq('x', x)
+        .eq('y', y)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to update tile in Supabase:', { ...error });
+        setError('Failed to update tile: ' + error.message);
+        return;
+      }
+
+      let owner_nation_name = 'None';
+      if (data.owner) {
+        const { data: nationData, error: nationError } = await supabase
+          .from('nations')
+          .select('name')
+          .eq('id', data.owner)
+          .single();
+        if (nationError) {
+          console.error('Failed to fetch nation name:', { ...nationError });
+        } else {
+          owner_nation_name = nationData.name || 'None';
+        }
+      }
+
+      setGameState((prevState) => {
+        const newState = {
+          ...prevState,
+          dynamicTiles: {
+            ...prevState.dynamicTiles,
+            [tileId]: {
+              ...prevState.dynamicTiles[tileId],
+              owner: data.owner || null,
+              building: data.building || null,
+              owner_nation_name,
+              nations: data.owner && prevState.nations[data.owner] ? prevState.nations[data.owner] : null,
+              is_capital: data.is_capital || false,
+            },
+          },
+        };
+        console.log('setGameState called (updateSingleTile):', {
+          changed: Object.keys(newState.dynamicTiles[tileId]).filter(
+            (k) => newState.dynamicTiles[tileId][k] !== prevState.dynamicTiles[tileId]?.[k]
+          ),
+        });
+        return newState;
+      });
+
+      if (selectedTile?.id === tileId) {
+        setSelectedTile((prev) => ({
+          ...prev,
+          owner: data.owner || null,
+          building: data.building || null,
+          owner_nation_name,
+          nations: data.owner && gameState.nations[data.owner] ? gameState.nations[data.owner] : null,
+          is_capital: data.is_capital || false,
+        }));
+      }
+    } catch (err) {
+      console.error('Error in updateSingleTile:', { ...err });
+      setError('Error updating tile: ' + err.message);
+    }
+  };
+
   useEffect(() => {
     console.log('App rendered, count:', (renderCount.current += 1));
   });
@@ -177,7 +255,6 @@ function App() {
       lastResourcesRef.current = newState.resources;
       setShowNationModal(!finalNationData);
       setLoading(false);
-      // Delay isInitialized to allow updateResources to sync
       setTimeout(() => {
         setIsInitialized(true);
       }, 500);
