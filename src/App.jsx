@@ -99,16 +99,37 @@ function App() {
   }, [session?.user?.id]);
 
   useEffect(() => {
-    if (!gameState?.userNation || !gameState?.tiles || !mapScrollRef.current) return;
+    if (!gameState?.userNation || !gameState?.tiles || !mapScrollRef.current) {
+      console.log('Map centering skipped: missing data', {
+        userNation: !!gameState?.userNation,
+        tiles: !!gameState?.tiles,
+        mapScrollRef: !!mapScrollRef.current,
+      });
+      return;
+    }
 
     const capitalTile = Object.values(gameState.tiles).find(
       (tile) => tile.x === gameState.userNation.capital_tile_x && tile.y === gameState.userNation.capital_tile_y && tile.is_capital
     );
-    if (!capitalTile) return;
+    if (!capitalTile) {
+      console.log('Capital tile not found:', {
+        capital_tile_x: gameState.userNation.capital_tile_x,
+        capital_tile_y: gameState.userNation.capital_tile_y,
+      });
+      return;
+    }
 
     const container = mapScrollRef.current;
-    const capitalPixelX = capitalTile.y * TILE_SIZE;
-    const capitalPixelY = capitalTile.x * TILE_SIZE;
+    const capitalPixelX = capitalTile.x * TILE_SIZE;
+    const capitalPixelY = capitalTile.y * TILE_SIZE;
+
+    console.log('Centering map on:', {
+      capitalTile,
+      capitalPixelX,
+      capitalPixelY,
+      clientWidth: container.clientWidth,
+      clientHeight: container.clientHeight,
+    });
 
     container.scrollTo({
       left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
@@ -119,6 +140,11 @@ function App() {
     const tileEl = document.querySelector(`.tile[data-x="${capitalTile.x}"][data-y="${capitalTile.y}"]`);
     if (tileEl) {
       tileEl.classList.add('capital-highlight');
+    } else {
+      console.log('Capital tile element not found in DOM:', {
+        x: capitalTile.x,
+        y: capitalTile.y,
+      });
     }
   }, [gameState?.userNation, gameState?.tiles]);
 
@@ -521,32 +547,34 @@ function App() {
         <div className="map-scroll-container" ref={mapScrollRef}>
           <div className="map-grid">
             {gameState?.tiles &&
-              Object.values(gameState.tiles).map((tile) => (
-                <div
-                  key={tile.id}
-                  className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${
-                    tile.is_capital && tile.owner === gameState?.userNation?.id ? 'capital-highlight' : ''
-                  } ${getTileBorderClasses(tile)} ${selectedTile?.id === tile.id ? 'selected-tile' : ''}`}
-                  data-x={tile.x}
-                  data-y={tile.y}
-                  title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
-                    tile.resource || 'None'
-                  }, Owner: ${tile.owner_nation_name}, Building: ${tile.building ?? 'None'}`}
-                  style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
-                  onClick={() => {
-                    setShowBottomMenu(true);
-                    setSelectedTile(tile);
-                  }}
-                >
-                  {tile.is_capital && (
-                    <img
-                      src="/icons/building.svg"
-                      alt="Capital Building"
-                      className="capital-icon"
-                    />
-                  )}
-                </div>
-              ))}
+              Object.values(gameState.tiles)
+                .sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y)
+                .map((tile) => (
+                  <div
+                    key={tile.id}
+                    className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${
+                      tile.is_capital && tile.owner === gameState?.userNation?.id ? 'capital-highlight' : ''
+                    } ${getTileBorderClasses(tile)} ${selectedTile?.id === tile.id ? 'selected-tile' : ''}`}
+                    data-x={tile.x}
+                    data-y={tile.y}
+                    title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
+                      tile.resource || 'None'
+                    }, Owner: ${tile.owner_nation_name}, Building: ${tile.building ?? 'None'}`}
+                    style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
+                    onClick={() => {
+                      setShowBottomMenu(true);
+                      setSelectedTile(tile);
+                    }}
+                  >
+                    {tile.is_capital && (
+                      <img
+                        src="/icons/building.svg"
+                        alt="Capital Building"
+                        className="capital-icon"
+                      />
+                    )}
+                  </div>
+                ))}
           </div>
         </div>
         {showMainMenu && (
