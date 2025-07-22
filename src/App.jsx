@@ -408,23 +408,34 @@ function App() {
 
     const borders = [];
     const adjacentTiles = [
-      { dx: -1, dy: 0, side: 'top' },    // Tile above -> border-top
-      { dx: 1, dy: 0, side: 'right' },   // Tile below -> border-right
-      { dx: 0, dy: 1, side: 'bottom' },  // Tile to right -> border-bottom
-      { dx: 0, dy: -1, side: 'left' },   // Tile to left -> border-left
+      { dx: -1, dy: 0, side: 'top' },    // Tile above (x - 1, y)
+      { dx: 1, dy: 0, side: 'bottom' },  // Tile below (x + 1, y)
+      { dx: 0, dy: 1, side: 'right' },   // Tile to right (x, y + 1)
+      { dx: 0, dy: -1, side: 'left' },   // Tile to left (x, y - 1)
     ];
 
-    console.log(`Checking borders for tile (${tile.x}, ${tile.y}), owner: ${tile.owner}`);
+    // Alternative mapping for testing (uncomment to try):
+    /*
+    const adjacentTiles = [
+      { dx: -1, dy: 0, side: 'top' },    // Tile above -> border-top
+      { dx: 1, dy: 0, side: 'left' },    // Tile below -> border-left
+      { dx: 0, dy: 1, side: 'bottom' },  // Tile to right -> border-bottom
+      { dx: 0, dy: -1, side: 'right' },  // Tile to left -> border-right
+    ];
+    */
+
+    console.log(`Checking borders for tile (${tile.x}, ${tile.y}), owner: ${tile.owner}, nation: ${tile.owner_nation_name}`);
     adjacentTiles.forEach(({ dx, dy, side }) => {
       const adjKey = `${tile.x + dx}_${tile.y + dy}`;
       const adjacentTile = gameState?.tiles[adjKey];
       const isDifferentOwner = !adjacentTile || adjacentTile.owner !== tile.owner;
-      console.log(`  ${side} neighbor (${tile.x + dx}, ${tile.y + dy}): exists=${!!adjacentTile}, owner=${adjacentTile?.owner || 'none'}, addBorder=${isDifferentOwner}`);
+      console.log(`  ${side} neighbor (${tile.x + dx}, ${tile.y + dy}): exists=${!!adjacentTile}, owner=${adjacentTile?.owner || 'none'}, nation=${adjacentTile?.owner_nation_name || 'none'}, addBorder=${isDifferentOwner}`);
       if (isDifferentOwner) {
         borders.push(`border-${side}`);
       }
     });
 
+    console.log(`Tile (${tile.x}, ${tile.y}) borders: ${borders.join(' ')}`);
     return borders.join(' ');
   }
 
