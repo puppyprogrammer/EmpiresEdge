@@ -1,11 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-function TileInformationPage({ selectedTile, userNation, setError, setSelectedTile, tiles, updateSingleTile }) {
+function TileInformationPage({ selectedTile, userNation, setError, setSelectedTile, tiles, updateSingleTile, supabase }) {
   const isOwnTile = selectedTile && userNation && selectedTile.owner === userNation.id && !selectedTile.is_capital;
   const isProcessing = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -65,6 +60,8 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       return;
     }
     try {
+      // Optimistic update
+      setSelectedTile({ ...selectedTile, building: 'road' });
       console.log('Building road:', {
         tile_x: selectedTile.x,
         tile_y: selectedTile.y,
@@ -77,6 +74,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
         .match({ x: selectedTile.x, y: selectedTile.y, owner: userNation.id, is_capital: false })
         .is('building', null);
       if (error) {
+        setSelectedTile({ ...selectedTile, building: null }); // Revert on error
         setError('Failed to build road: ' + error.message);
         console.error('Road build error:', { ...error });
         return;
@@ -90,6 +88,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       await updateLastTickTime();
       await updateSingleTile(selectedTile.x, selectedTile.y);
     } catch (err) {
+      setSelectedTile({ ...selectedTile, building: null }); // Revert on error
       setError('Error building road: ' + err.message);
       console.error('Error building road:', { ...err });
     }
@@ -106,6 +105,8 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       return;
     }
     try {
+      // Optimistic update
+      setSelectedTile({ ...selectedTile, building: 'factory' });
       console.log('Building factory:', {
         tile_x: selectedTile.x,
         tile_y: selectedTile.y,
@@ -118,6 +119,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
         .match({ x: selectedTile.x, y: selectedTile.y, owner: userNation.id, is_capital: false })
         .is('building', null);
       if (error) {
+        setSelectedTile({ ...selectedTile, building: null }); // Revert on error
         setError('Failed to build factory: ' + error.message);
         console.error('Factory build error:', { ...error });
         return;
@@ -131,6 +133,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       await updateLastTickTime();
       await updateSingleTile(selectedTile.x, selectedTile.y);
     } catch (err) {
+      setSelectedTile({ ...selectedTile, building: null }); // Revert on error
       setError('Error building factory: ' + err.message);
       console.error('Error building factory:', { ...err });
     }
@@ -147,6 +150,8 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       return;
     }
     try {
+      // Optimistic update
+      setSelectedTile({ ...selectedTile, building: 'mine' });
       console.log('Building mine:', {
         tile_x: selectedTile.x,
         tile_y: selectedTile.y,
@@ -159,6 +164,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
         .match({ x: selectedTile.x, y: selectedTile.y, owner: userNation.id, is_capital: false })
         .is('building', null);
       if (error) {
+        setSelectedTile({ ...selectedTile, building: null }); // Revert on error
         setError('Failed to build mine: ' + error.message);
         console.error('Mine build error:', { ...error });
         return;
@@ -172,6 +178,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       await updateLastTickTime();
       await updateSingleTile(selectedTile.x, selectedTile.y);
     } catch (err) {
+      setSelectedTile({ ...selectedTile, building: null }); // Revert on error
       setError('Error building mine: ' + err.message);
       console.error('Error building mine:', { ...err });
     }
@@ -188,11 +195,14 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       return;
     }
     try {
+      // Optimistic update
+      const previousBuilding = selectedTile.building;
+      setSelectedTile({ ...selectedTile, building: null });
       console.log('Deleting building:', {
         tile_x: selectedTile.x,
         tile_y: selectedTile.y,
         user_nation_id: userNation.id,
-        building: selectedTile.building,
+        building: previousBuilding,
         timestamp: new Date().toISOString(),
       });
       const { error } = await supabase
@@ -200,6 +210,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
         .update({ building: null })
         .match({ x: selectedTile.x, y: selectedTile.y, owner: userNation.id, is_capital: false });
       if (error) {
+        setSelectedTile({ ...selectedTile, building: previousBuilding }); // Revert on error
         setError('Failed to delete building: ' + error.message);
         console.error('Delete building error:', { ...error });
         return;
@@ -208,12 +219,13 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
         tile_x: selectedTile.x,
         tile_y: selectedTile.y,
         user_nation_id: userNation.id,
-        building: selectedTile.building,
+        building: previousBuilding,
         timestamp: new Date().toISOString(),
       });
       await updateLastTickTime();
       await updateSingleTile(selectedTile.x, selectedTile.y);
     } catch (err) {
+      setSelectedTile({ ...selectedTile, building: selectedTile.building }); // Revert to current state
       setError('Error deleting building: ' + err.message);
       console.error('Error deleting building:', { ...err });
     }
@@ -248,6 +260,12 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
               <td className="tile-info-label">Resource</td>
               <td className="tile-info-value">
                 {selectedTile ? (selectedTile.resource || 'None') : 'None'}
+              </td>
+            </tr>
+            <tr>
+              <td className="tile-info-label">Building</td>
+              <td className="tile-info-value">
+                {selectedTile ? (selectedTile.building || 'None') : 'None'}
               </td>
             </tr>
           </tbody>
