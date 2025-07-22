@@ -431,16 +431,15 @@ function App() {
 
   function getTileBorderClasses(tile) {
     if (!tile.owner || !tile.nations || !tile.nations.color) {
-      console.log(`No borders for tile (${tile.x}, ${tile.y}): no owner or color`);
       return '';
     }
 
     const borders = [];
     const adjacentTiles = [
-      { dx: -1, dy: 0, side: 'top' },    // Tile above (x - 1, y)
-      { dx: 1, dy: 0, side: 'bottom' },  // Tile below (x + 1, y)
-      { dx: 0, dy: 1, side: 'right' },   // Tile to right (x, y + 1)
-      { dx: 0, dy: -1, side: 'left' },   // Tile to left (x, y - 1)
+      { dx: 0, dy: -1, side: 'top' },    // Tile above (x - 1, y)
+      { dx: 0, dy: 1, side: 'bottom' },  // Tile below (x + 1, y)
+      { dx: 1, dy: 0, side: 'right' },   // Tile to right (x, y + 1)
+      { dx: -1, dy: 0, side: 'left' },   // Tile to left (x, y - 1)
     ];
 
     // Alternative mapping for testing (uncomment to try):
