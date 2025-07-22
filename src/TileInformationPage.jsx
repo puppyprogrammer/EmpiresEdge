@@ -1,9 +1,20 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 
 function TileInformationPage({ selectedTile, userNation, setError, setSelectedTile, tiles, updateSingleTile, supabase }) {
   const isOwnTile = selectedTile && userNation && selectedTile.owner === userNation.id && !selectedTile.is_capital;
   const isProcessing = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
+  const renderCount = useRef(0); // Track renders
+
+  useEffect(() => {
+    console.log('TileInformationPage rendered, count:', (renderCount.current += 1), 'selectedTile:', {
+      id: selectedTile?.id,
+      x: selectedTile?.x,
+      y: selectedTile?.y,
+      building: selectedTile?.building,
+      isOwnTile,
+    });
+  });
 
   console.log('TileInformationPage render - selectedTile:', {
     id: selectedTile?.id,
@@ -60,7 +71,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       return;
     }
     try {
-      // Optimistic update
+      console.log('Optimistic update: Setting building to road for tile:', { x: selectedTile.x, y: selectedTile.y });
       setSelectedTile({ ...selectedTile, building: 'road' });
       console.log('Building road:', {
         tile_x: selectedTile.x,
@@ -74,7 +85,8 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
         .match({ x: selectedTile.x, y: selectedTile.y, owner: userNation.id, is_capital: false })
         .is('building', null);
       if (error) {
-        setSelectedTile({ ...selectedTile, building: null }); // Revert on error
+        console.log('Build road failed, reverting to null:', { x: selectedTile.x, y: selectedTile.y });
+        setSelectedTile({ ...selectedTile, building: null });
         setError('Failed to build road: ' + error.message);
         console.error('Road build error:', { ...error });
         return;
@@ -88,7 +100,8 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       await updateLastTickTime();
       await updateSingleTile(selectedTile.x, selectedTile.y);
     } catch (err) {
-      setSelectedTile({ ...selectedTile, building: null }); // Revert on error
+      console.log('Build road error, reverting to null:', { x: selectedTile.x, y: selectedTile.y });
+      setSelectedTile({ ...selectedTile, building: null });
       setError('Error building road: ' + err.message);
       console.error('Error building road:', { ...err });
     }
@@ -105,7 +118,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       return;
     }
     try {
-      // Optimistic update
+      console.log('Optimistic update: Setting building to factory for tile:', { x: selectedTile.x, y: selectedTile.y });
       setSelectedTile({ ...selectedTile, building: 'factory' });
       console.log('Building factory:', {
         tile_x: selectedTile.x,
@@ -119,7 +132,8 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
         .match({ x: selectedTile.x, y: selectedTile.y, owner: userNation.id, is_capital: false })
         .is('building', null);
       if (error) {
-        setSelectedTile({ ...selectedTile, building: null }); // Revert on error
+        console.log('Build factory failed, reverting to null:', { x: selectedTile.x, y: selectedTile.y });
+        setSelectedTile({ ...selectedTile, building: null });
         setError('Failed to build factory: ' + error.message);
         console.error('Factory build error:', { ...error });
         return;
@@ -133,7 +147,8 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       await updateLastTickTime();
       await updateSingleTile(selectedTile.x, selectedTile.y);
     } catch (err) {
-      setSelectedTile({ ...selectedTile, building: null }); // Revert on error
+      console.log('Build factory error, reverting to null:', { x: selectedTile.x, y: selectedTile.y });
+      setSelectedTile({ ...selectedTile, building: null });
       setError('Error building factory: ' + err.message);
       console.error('Error building factory:', { ...err });
     }
@@ -150,7 +165,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       return;
     }
     try {
-      // Optimistic update
+      console.log('Optimistic update: Setting building to mine for tile:', { x: selectedTile.x, y: selectedTile.y });
       setSelectedTile({ ...selectedTile, building: 'mine' });
       console.log('Building mine:', {
         tile_x: selectedTile.x,
@@ -164,7 +179,8 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
         .match({ x: selectedTile.x, y: selectedTile.y, owner: userNation.id, is_capital: false })
         .is('building', null);
       if (error) {
-        setSelectedTile({ ...selectedTile, building: null }); // Revert on error
+        console.log('Build mine failed, reverting to null:', { x: selectedTile.x, y: selectedTile.y });
+        setSelectedTile({ ...selectedTile, building: null });
         setError('Failed to build mine: ' + error.message);
         console.error('Mine build error:', { ...error });
         return;
@@ -178,7 +194,8 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       await updateLastTickTime();
       await updateSingleTile(selectedTile.x, selectedTile.y);
     } catch (err) {
-      setSelectedTile({ ...selectedTile, building: null }); // Revert on error
+      console.log('Build mine error, reverting to null:', { x: selectedTile.x, y: selectedTile.y });
+      setSelectedTile({ ...selectedTile, building: null });
       setError('Error building mine: ' + err.message);
       console.error('Error building mine:', { ...err });
     }
@@ -195,7 +212,7 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       return;
     }
     try {
-      // Optimistic update
+      console.log('Optimistic update: Setting building to null for tile:', { x: selectedTile.x, y: selectedTile.y });
       const previousBuilding = selectedTile.building;
       setSelectedTile({ ...selectedTile, building: null });
       console.log('Deleting building:', {
@@ -210,7 +227,8 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
         .update({ building: null })
         .match({ x: selectedTile.x, y: selectedTile.y, owner: userNation.id, is_capital: false });
       if (error) {
-        setSelectedTile({ ...selectedTile, building: previousBuilding }); // Revert on error
+        console.log('Delete building failed, reverting to:', { x: selectedTile.x, y: selectedTile.y, building: previousBuilding });
+        setSelectedTile({ ...selectedTile, building: previousBuilding });
         setError('Failed to delete building: ' + error.message);
         console.error('Delete building error:', { ...error });
         return;
@@ -225,7 +243,8 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
       await updateLastTickTime();
       await updateSingleTile(selectedTile.x, selectedTile.y);
     } catch (err) {
-      setSelectedTile({ ...selectedTile, building: selectedTile.building }); // Revert to current state
+      console.log('Delete building error, reverting to:', { x: selectedTile.x, y: selectedTile.y, building: selectedTile.building });
+      setSelectedTile({ ...selectedTile, building: selectedTile.building });
       setError('Error deleting building: ' + err.message);
       console.error('Error deleting building:', { ...err });
     }
@@ -265,7 +284,14 @@ function TileInformationPage({ selectedTile, userNation, setError, setSelectedTi
             <tr>
               <td className="tile-info-label">Building</td>
               <td className="tile-info-value">
-                {selectedTile ? (selectedTile.building || 'None') : 'None'}
+                {selectedTile ? (
+                  <span style={{ display: 'flex', alignItems: 'center' }}>
+                    {selectedTile.building || 'None'}
+                    {selectedTile.building === 'road' && <span style={{ marginLeft: '8px' }}>🛣️</span>}
+                    {selectedTile.building === 'factory' && <span style={{ marginLeft: '8px' }}>🏭</span>}
+                    {selectedTile.building === 'mine' && <span style={{ marginLeft: '8px' }}>⛏️</span>}
+                  </span>
+                ) : 'None'}
               </td>
             </tr>
           </tbody>

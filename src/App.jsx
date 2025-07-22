@@ -15,6 +15,7 @@ function App() {
   const mapScrollRef = useRef(null);
   const staticTilesRef = useRef({});
   const TILE_SIZE = 32;
+  const renderCount = useRef(0); // Track renders
 
   const [gameState, setGameState] = useState({
     dynamicTiles: {},
@@ -39,6 +40,11 @@ function App() {
   const [showBottomMenu, setShowBottomMenu] = useState(false);
   const [selectedPage, setSelectedPage] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
+
+  // Log renders for debugging
+  useEffect(() => {
+    console.log('App rendered, count:', (renderCount.current += 1));
+  });
 
   // Initialize game state
   const initializeGameState = async () => {
@@ -141,7 +147,6 @@ function App() {
   // Update single tile
   const updateSingleTile = async (x, y) => {
     try {
-      // Fetch tile data without join
       const { data: tileData, error: tileError } = await supabase
         .from('tiles')
         .select('x, y, owner, building, is_capital')
@@ -154,7 +159,6 @@ function App() {
         return;
       }
 
-      // Fetch nation name if owner exists
       let owner_nation_name = 'None';
       if (tileData.owner) {
         const { data: nationData, error: nationError } = await supabase
@@ -170,26 +174,43 @@ function App() {
       }
 
       const key = `${tileData.x}_${tileData.y}`;
-      setGameState((prevState) => ({
-        ...prevState,
-        dynamicTiles: {
-          ...prevState.dynamicTiles,
-          [key]: {
-            owner: tileData.owner || null,
-            building: tileData.building || null,
-            owner_nation_name,
-            nations: tileData.owner && prevState.nations[tileData.owner] ? prevState.nations[tileData.owner] : null,
-            is_capital: tileData.is_capital || false,
+      setGameState((prevState) => {
+        const currentTile = prevState.dynamicTiles[key] || {};
+        if (
+          currentTile.owner === tileData.owner &&
+          currentTile.building === tileData.building &&
+          currentTile.is_capital === tileData.is_capital &&
+          currentTile.owner_nation_name === owner_nation_name
+        ) {
+          console.log('updateSingleTile: No changes needed for tile:', { x, y, building: tileData.building });
+          return prevState; // Skip update if no changes
+        }
+        console.log('updateSingleTile: Updating gameState for tile:', { x, y, building: tileData.building });
+        return {
+          ...prevState,
+          dynamicTiles: {
+            ...prevState.dynamicTiles,
+            [key]: {
+              owner: tileData.owner || null,
+              building: tileData.building || null,
+              owner_nation_name,
+              nations: tileData.owner && prevState.nations[tileData.owner] ? prevState.nations[tileData.owner] : null,
+              is_capital: tileData.is_capital || false,
+            },
           },
-        },
-      }));
+        };
+      });
 
       if (selectedTile?.x === x && selectedTile?.y === y) {
-        setSelectedTile({
-          ...staticTilesRef.current[key],
-          ...tileData,
-          id: key,
-          owner_nation_name,
+        setSelectedTile((prev) => {
+          const newTile = {
+            ...staticTilesRef.current[key],
+            ...tileData,
+            id: key,
+            owner_nation_name,
+          };
+          console.log('updateSingleTile: Updating selectedTile:', { ...newTile });
+          return newTile;
         });
       }
     } catch (err) {
@@ -275,7 +296,17 @@ function App() {
               }
             }
             setGameState((prevState) => {
-              if (!prevState) return prevState; // Safeguard against undefined prevState
+              const currentTile = prevState.dynamicTiles[key] || {};
+              if (
+                currentTile.owner === payload.new.owner &&
+                currentTile.building === payload.new.building &&
+                currentTile.is_capital === payload.new.is_capital &&
+                currentTile.owner_nation_name === owner_nation_name
+              ) {
+                console.log('Subscription: No changes needed for tile:', { x: payload.new.x, y: payload.new.y, building: payload.new.building });
+                return prevState; // Skip update if no changes
+              }
+              console.log('Subscription: Updating gameState for tile:', { x: payload.new.x, y: payload.new.y, building: payload.new.building });
               return {
                 ...prevState,
                 dynamicTiles: {
@@ -291,14 +322,18 @@ function App() {
               };
             });
             if (selectedTile?.x === payload.new.x && selectedTile?.y === payload.new.y) {
-              setSelectedTile({
-                ...staticTilesRef.current[key],
-                owner: payload.new.owner || null,
-                building: payload.new.building || null,
-                owner_nation_name,
-                nations: payload.new.owner && gameState.nations[payload.new.owner] ? gameState.nations[payload.new.owner] : null,
-                is_capital: payload.new.is_capital || false,
-                id: key,
+              setSelectedTile((prev) => {
+                const newTile = {
+                  ...staticTilesRef.current[key],
+                  owner: payload.new.owner || null,
+                  building: payload.new.building || null,
+                  owner_nation_name,
+                  nations: payload.new.owner && prevState.nations[payload.new.owner] ? prevState.nations[payload.new.owner] : null,
+                  is_capital: payload.new.is_capital || false,
+                  id: key,
+                };
+                console.log('Subscription: Updating selectedTile:', { ...newTile });
+                return newTile;
               });
             }
           } catch (err) {
@@ -852,6 +887,7 @@ function App() {
               setSelectedTile={setSelectedTile}
               tiles={gameState?.dynamicTiles}
               updateSingleTile={updateSingleTile}
+              supabase={supabase} // Pass supabase client
             />
             <div
               className="close-menu"
