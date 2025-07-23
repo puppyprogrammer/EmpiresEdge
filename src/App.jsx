@@ -759,7 +759,6 @@ function App() {
     }).map(({ dir }) => dir);
 
     const count = roadNeighbors.length;
-    console.log('getRoadShape:', { tileId: tile.id, roadNeighbors, count });
 
     if (count === 0) {
       return <circle cx="16" cy="16" r="4" fill="#808080" />;
