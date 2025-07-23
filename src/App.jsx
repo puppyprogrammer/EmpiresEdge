@@ -171,7 +171,7 @@ function App() {
     console.log('initializeGameState: Starting');
     try {
       setLoading(true);
-      const gameStateRes = await supabase.rpc('fetch_public_game_state'); // Use new public RPC
+      const gameStateRes = await supabase.rpc('fetch_game_state'); // Use new public RPC
 
       if (gameStateRes.error) {
         console.error('Failed to fetch game state:', { ...gameStateRes.error });
