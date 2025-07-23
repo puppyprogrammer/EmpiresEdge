@@ -185,6 +185,19 @@ body, html {
   margin: -1px;
 }
 
+/* ... Other existing styles ... */
+
+/* Tile styles */
+.tile {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  box-sizing: border-box;
+  position: relative;
+  transition: filter 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  margin: -1px;
+}
+
 .tile:hover {
   filter: brightness(80%);
 }
@@ -193,16 +206,20 @@ body, html {
   filter: brightness(60%);
 }
 
+.tile.grass {
+  background-color: #22c55e; /* Green for plains tiles */
+}
+
 .tile.plains {
-  background-color: #22c55e;
+  background-color: #22c55e; /* Keep for backward compatibility or direct plains rendering */
 }
 
 .tile.forest {
-  background-color: #166534;
+  background-color: #166534; /* Dark green for forest */
 }
 
 .tile.mountain {
-  background-color: #6b7280;
+  background-color: #6b7280; /* Gray for mountain */
 }
 
 .tile.border-top {
@@ -239,6 +256,8 @@ body, html {
   width: 24px;
   height: 24px;
 }
+
+/* ... Keep all other existing styles from your original index.css ... */
 
 @keyframes glow {
   0%, 100% {
