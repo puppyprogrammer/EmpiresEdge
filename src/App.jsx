@@ -5,6 +5,7 @@ import { User, LogOut } from 'lucide-react';
 import RankingsPage from './RankingsPage';
 import OnlinePlayersPage from './OnlinePlayersPage';
 import TileInformationPage from './TileInformationPage';
+import { findCapitalTile } from './helpers/gameLogic/findCapitalTile.js';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
@@ -644,67 +645,67 @@ function App() {
 
   async function handleStartGame() {
     if (!session?.user?.id) {
-      setError('No user session available. Please log in again.');
-      return;
+        setError('No user session available. Please log in again.');
+        return;
     }
 
     if (!nationName.trim()) {
-      setError('Nation name is required');
-      return;
+        setError('Nation name is required');
+        return;
     }
 
     if (!Object.keys(staticTilesRef.current).length) {
-      setError('Map data not loaded. Please try again.');
-      return;
+        setError('Map data not loaded. Please try again.');
+        return;
     }
 
     try {
-      const { data: existingNation, error: nameCheckError } = await supabase
+        const { data: existingNation, error: nameCheckError } = await supabase
         .from('nations')
         .select('id')
         .eq('name', nationName.trim())
         .single();
 
-      if (nameCheckError && nameCheckError.code !== 'PGRST116') {
+        if (nameCheckError && nameCheckError.code !== 'PGRST116') {
         setError('Failed to check nation name: ' + nameCheckError.message);
         return;
-      }
+        }
 
-      if (existingNation) {
+        if (existingNation) {
         setError('Nation name "' + nationName.trim() + '" is already taken. Please choose another.');
         return;
-      }
+        }
 
-      const capitalTile = findCapitalTile();
-      if (!capitalTile) {
-        setError('No available tile to place capital.');
-        return;
-      }
+        const capitalTile = findCapitalTile(staticTilesRef.current, gameState.dynamicTiles);
+        if (!capitalTile) {
+          setError('No available tile to place capital.');
+          return;
+        }
 
-      const { data: nationData, error: insertError } = await supabase
+        const { data: nationData, error: insertError } = await supabase
         .rpc('create_nation', {
-          user_id: session.user.id,
-          nation_name: nationName.trim(),
-          nation_color: nationColor,
-          capital_x: capitalTile.x,
-          capital_y: capitalTile.y,
+            user_id: session.user.id,
+            nation_name: nationName.trim(),
+            nation_color: nationColor,
+            capital_x: capitalTile.x,
+            capital_y: capitalTile.y,
         })
         .single();
 
-      if (insertError) {
+        if (insertError) {
         setError('Failed to create nation: ' + insertError.message);
         return;
-      }
+        }
 
-      console.log('handleStartGame: Hiding nation modal after creation');
-      setShowNationModal(false);
-      await initializeGameState();
-      setNationName('');
+        console.log('handleStartGame: Hiding nation modal after creation');
+        setShowNationModal(false);
+        await initializeGameState();
+        setNationName('');
     } catch (err) {
-      console.error('Error creating nation:', { ...err });
-      setError('Error creating nation: ' + err.message);
+        console.error('Error creating nation:', { ...err });
+        setError('Error creating nation: ' + err.message);
     }
-  }
+    }
 
   async function handleLogin(e) {
     e.preventDefault();
