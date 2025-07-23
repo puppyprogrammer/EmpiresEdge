@@ -14,7 +14,8 @@ export function findCapitalTile(staticTilesRef, dynamicTiles) {
   );
   console.log('findCapitalTile: Found', capitalTiles.length, 'existing capital tiles');
 
-  const minDistance = 3;
+  const minDistance = 2; // Reduced from 3 to allow more candidates
+  const validTypes = ['land', 'forest', 'grass']; // Include more types
   const candidates = Object.values(staticTilesRef).filter((tile) => {
     // Validate tile properties
     if (
@@ -29,8 +30,8 @@ export function findCapitalTile(staticTilesRef, dynamicTiles) {
       return false;
     }
 
-    if (tile.type !== 'land') {
-      console.warn('findCapitalTile: Skipping tile due to non-land type', {
+    if (!validTypes.includes(tile.type)) {
+      console.warn('findCapitalTile: Skipping tile due to invalid type', {
         tile: { x: tile.x, y: tile.y, type: tile.type },
       });
       return false;
@@ -73,9 +74,17 @@ export function findCapitalTile(staticTilesRef, dynamicTiles) {
     return true;
   });
 
-  console.log('findCapitalTile: Found', candidates.length, 'candidate tiles');
+  console.log('findCapitalTile: Found', candidates.length, 'candidate tiles', {
+    sampleCandidates: candidates.slice(0, 5).map(t => ({ x: t.x, y: t.y, type: t.type })),
+  });
   if (candidates.length === 0) {
-    console.error('findCapitalTile: No valid tiles found for capital placement');
+    console.error('findCapitalTile: No valid tiles found for capital placement', {
+      validTypes,
+      minDistance,
+      totalTiles: Object.keys(staticTilesRef).length,
+      landTiles: Object.values(staticTilesRef).filter(t => validTypes.includes(t.type)).length,
+      unownedTiles: Object.values(staticTilesRef).filter(t => !dynamicTiles[`${t.x}_${t.y}`]?.owner).length,
+    });
     return null;
   }
 

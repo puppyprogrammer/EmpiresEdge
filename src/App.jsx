@@ -53,7 +53,7 @@ function App() {
     return JSON.parse(nationsString);
   }, [gameState.nations]);
 
-  // Debounce setSelectedTile to reduce renders from rapid clicks
+  // Debounce function
   const debounce = (fn, delay) => {
     let timeoutId;
     return (...args) => {
@@ -62,6 +62,7 @@ function App() {
     };
   };
 
+  // Debounce setSelectedTile to reduce renders from rapid clicks
   const debouncedSetSelectedTile = useCallback(
     debounce((tile) => {
       console.log('setSelectedTile called:', { ...tile });
@@ -445,6 +446,42 @@ function App() {
       supabase.removeChannel(subscriptionRef.current);
     }
 
+    let tileUpdates = [];
+    const flushUpdates = debounce(() => {
+      if (tileUpdates.length === 0) return;
+      setGameState((prevState) => {
+        if (!prevState) {
+          console.warn('prevState is undefined in subscription');
+          return prevState;
+        }
+        const newDynamicTiles = { ...prevState.dynamicTiles };
+        tileUpdates.forEach(({ key, owner, building, owner_nation_name, is_capital }) => {
+          const currentTile = newDynamicTiles[key] || {};
+          if (
+            currentTile.owner === owner &&
+            currentTile.building === building &&
+            currentTile.is_capital === is_capital &&
+            currentTile.owner_nation_name === owner_nation_name
+          ) {
+            return;
+          }
+          newDynamicTiles[key] = {
+            owner,
+            building,
+            owner_nation_name,
+            nations: owner && prevState.nations[owner] ? prevState.nations[owner] : null,
+            is_capital,
+          };
+        });
+        const newState = { ...prevState, dynamicTiles: newDynamicTiles };
+        console.log('setGameState called (subscription):', {
+          changedTiles: tileUpdates.map(u => u.key),
+        });
+        tileUpdates = [];
+        return newState;
+      });
+    }, 500);
+
     const ownership_building_tile_update = supabase
       .channel('game_state_changes')
       .on(
@@ -467,48 +504,14 @@ function App() {
                 owner_nation_name = nationData.name || 'None';
               }
             }
-            setGameState((prevState) => {
-              if (!prevState) {
-                console.warn('prevState is undefined in subscription');
-                return prevState;
-              }
-              const currentTile = prevState.dynamicTiles[key] || {};
-              if (
-                currentTile.owner === payload.new.owner &&
-                currentTile.building === payload.new.building &&
-                currentTile.is_capital === payload.new.is_capital &&
-                currentTile.owner_nation_name === owner_nation_name
-              ) {
-                console.log('Subscription: No changes needed for tile:', {
-                  x: payload.new.x,
-                  y: payload.new.y,
-                  building: payload.new.building,
-                });
-                return prevState;
-              }
-              console.log('Subscription: Updating gameState for tile:', {
-                x: payload.new.x,
-                y: payload.new.y,
-                building: payload.new.building,
-              });
-              const newState = {
-                ...prevState,
-                dynamicTiles: {
-                  ...prevState.dynamicTiles,
-                  [key]: {
-                    owner: payload.new.owner || null,
-                    building: payload.new.building || null,
-                    owner_nation_name,
-                    nations: payload.new.owner && prevState.nations[payload.new.owner] ? prevState.nations[payload.new.owner] : null,
-                    is_capital: payload.new.is_capital || false,
-                  },
-                },
-              };
-              console.log('setGameState called (subscription):', {
-                changed: Object.keys(newState).filter(k => newState[k] !== prevState[k]),
-              });
-              return newState;
+            tileUpdates.push({
+              key,
+              owner: payload.new.owner || null,
+              building: payload.new.building || null,
+              owner_nation_name,
+              is_capital: payload.new.is_capital || false,
             });
+            flushUpdates();
             if (selectedTile?.x === payload.new.x && selectedTile?.y === payload.new.y) {
               const newTile = {
                 ...staticTilesRef.current[key],
@@ -546,8 +549,9 @@ function App() {
     return () => {
       console.log('Cleaning up subscription');
       supabase.removeChannel(ownership_building_tile_update);
+      flushUpdates.clear();
     };
-  }, [session?.user?.id, loading]);
+  }, [session?.user?.id, loading, gameState.nations]);
 
   // Auth state change listener with debouncing
   useEffect(() => {
@@ -738,31 +742,7 @@ function App() {
     }
   }
 
-  function getTileBorderClasses(tile) {
-    if (!tile.owner || !tile.nations || !tile.nations.color) {
-      return '';
-    }
-
-    const borders = [];
-    const adjacentTiles = [
-      { dx: 0, dy: -1, side: 'top' },
-      { dx: 0, dy: 1, side: 'bottom' },
-      { dx: 1, dy: 0, side: 'right' },
-      { dx: -1, dy: 0, side: 'left' },
-    ];
-
-    adjacentTiles.forEach(({ dx, dy, side }) => {
-      const adjKey = `${tile.x + dx}_${tile.y + dy}`;
-      const adjacentTile = gameState.dynamicTiles[adjKey];
-      const isDifferentOwner = !adjacentTile || adjacentTile.owner !== tile.owner;
-      if (isDifferentOwner) {
-        borders.push(`border-${side}`);
-      }
-    });
-    return borders.join(' ');
-  }
-
-  function getRoadShape(tile) {
+  const getRoadShape = useCallback((tile) => {
     if (!tile.building || tile.building !== 'road') return null;
 
     const adjacentTiles = [
@@ -872,6 +852,30 @@ function App() {
         </>
       );
     }
+  }, [gameState.dynamicTiles]);
+
+  function getTileBorderClasses(tile) {
+    if (!tile.owner || !tile.nations || !tile.nations.color) {
+      return '';
+    }
+
+    const borders = [];
+    const adjacentTiles = [
+      { dx: 0, dy: -1, side: 'top' },
+      { dx: 0, dy: 1, side: 'bottom' },
+      { dx: 1, dy: 0, side: 'right' },
+      { dx: -1, dy: 0, side: 'left' },
+    ];
+
+    adjacentTiles.forEach(({ dx, dy, side }) => {
+      const adjKey = `${tile.x + dx}_${tile.y + dy}`;
+      const adjacentTile = gameState.dynamicTiles[adjKey];
+      const isDifferentOwner = !adjacentTile || adjacentTile.owner !== tile.owner;
+      if (isDifferentOwner) {
+        borders.push(`border-${side}`);
+      }
+    });
+    return borders.join(' ');
   }
 
   function tilesWithinDistance(centerTile, distance, tilesMap) {
@@ -895,9 +899,11 @@ function App() {
         };
         if (typeof tile.x !== 'number' || typeof tile.y !== 'number') {
           console.warn('Invalid tile in renderedTiles:', { ...tile });
+          return null;
         }
         return tile;
       })
+      .filter(tile => tile !== null)
       .sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y);
   }, [gameState.dynamicTiles, loading]);
 
@@ -1087,7 +1093,7 @@ function App() {
             {renderedTiles.map((tile) => (
               <div
                 key={tile.id}
-                className={`tile ${tile.type === 'land' ? 'grass' : tile.type} ${
+                className={`tile ${tile.type === 'plains' ? 'grass' : tile.type} ${
                   tile.is_capital && tile.owner === gameState?.userNation?.id ? 'capital-highlight' : ''
                 } ${getTileBorderClasses(tile)} ${selectedTile?.id === tile.id ? 'selected-tile' : ''}`}
                 data-x={tile.x}
