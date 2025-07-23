@@ -171,12 +171,7 @@ function App() {
     console.log('initializeGameState: Starting');
     try {
       setLoading(true);
-      const [gameStateRes, resourcesRes] = await Promise.all([
-        supabase.rpc('fetch_game_state'),
-        session?.user?.id
-          ? supabase.rpc('update_resources', { user_id: session.user.id }).single()
-          : Promise.resolve({ data: null, error: null }),
-      ]);
+      const gameStateRes = await supabase.rpc('fetch_game_state');
 
       if (gameStateRes.error) {
         console.error('Failed to fetch game state:', { ...gameStateRes.error });
@@ -197,31 +192,32 @@ function App() {
         return;
       }
 
-      if (resourcesRes.error && resourcesRes.error.code !== 'PGRST116') {
-        console.error('Failed to update resources:', { ...resourcesRes.error });
-        setError('Failed to update resources: ' + resourcesRes.error.message);
-        setLoading(false);
-        setIsInitialized(true);
-        return;
-      }
-
-      // Retry update_resources up to 3 times
-      let finalNationData = resourcesRes.data;
-      if (!resourcesRes.data && session?.user?.id) {
-        console.log('initializeGameState: Retrying update_resources to confirm nation status');
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          const { data: retryData, error: retryError } = await supabase
-            .rpc('update_resources', { user_id: session.user.id })
-            .single();
-          if (retryError && retryError.code !== 'PGRST116') {
-            console.error(`Retry ${attempt} failed to update resources:`, { ...retryError });
-          } else if (retryData) {
-            console.log(`initializeGameState: Retry ${attempt} successful, nation found:`, { ...retryData });
-            finalNationData = retryData;
-            break;
-          } else {
-            console.log(`initializeGameState: Retry ${attempt} returned no nation data`);
-            await new Promise((resolve) => setTimeout(resolve, 100));
+      let finalNationData = null;
+      if (session?.user?.id) {
+        const { data: resourcesData, error: resourcesError } = await supabase
+          .rpc('update_resources', { user_id: session.user.id })
+          .single();
+        if (resourcesError && resourcesError.code !== 'PGRST116') {
+          console.error('Failed to update resources:', { ...resourcesError });
+          setError('Failed to update resources: ' + resourcesError.message);
+        } else if (resourcesData) {
+          finalNationData = resourcesData;
+        } else {
+          console.log('initializeGameState: Retrying update_resources to confirm nation status');
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            const { data: retryData, error: retryError } = await supabase
+              .rpc('update_resources', { user_id: session.user.id })
+              .single();
+            if (retryError && retryError.code !== 'PGRST116') {
+              console.error(`Retry ${attempt} failed to update resources:`, { ...retryError });
+            } else if (retryData) {
+              console.log(`initializeGameState: Retry ${attempt} successful, nation found:`, { ...retryData });
+              finalNationData = retryData;
+              break;
+            } else {
+              console.log(`initializeGameState: Retry ${attempt} returned no nation data`);
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            }
           }
         }
       }
@@ -261,14 +257,14 @@ function App() {
       };
       console.log('initializeGameState: Setting states', {
         userNation: newState.userNation,
-        showNationModal: !finalNationData,
-        resourcesResData: resourcesRes.data,
-        finalNationData: finalNationData,
+        showNationModal: !finalNationData && !!session,
+        tileCount: Object.keys(newState.dynamicTiles).length,
+        nationCount: Object.keys(newState.nations).length,
       });
       setGameState(newState);
       lastNationRef.current = newState.userNation;
       lastResourcesRef.current = newState.resources;
-      setShowNationModal(!finalNationData);
+      setShowNationModal(!finalNationData && !!session);
       setLoading(false);
       setTimeout(() => {
         setIsInitialized(true);
@@ -292,12 +288,7 @@ function App() {
         setLoading(true);
         const { data } = await supabase.auth.getSession();
         setSession(data.session);
-        if (data.session) {
-          await initializeGameState();
-        } else {
-          setLoading(false);
-          setIsInitialized(true);
-        }
+        await initializeGameState();
       } catch (err) {
         console.error('Error checking session:', { ...err });
         setError(`Error initializing app: ${err.message}.`);
@@ -478,7 +469,7 @@ function App() {
                     building: payload.new.building || null,
                     owner_nation_name,
                     nations: payload.new.owner && prevState.nations[payload.new.owner] ? prevState.nations[payload.new.owner] : null,
-                    is_capital: payload.new.is_capital || false,
+                    is_capital: data.is_capital || false,
                   },
                 },
               };
@@ -538,24 +529,20 @@ function App() {
       timeoutId = setTimeout(async () => {
         setSession(session);
         if (!session) {
-          console.log('onAuthStateChange: No session, resetting state');
-          setGameState({
-            dynamicTiles: {},
-            nations: {},
+          console.log('onAuthStateChange: No session, resetting user-specific state');
+          setGameState((prevState) => ({
+            ...prevState,
             userNation: null,
             resources: { lumber: 0, oil: 0, ore: 0 },
-            version: null,
-          });
-          staticTilesRef.current = {};
+          }));
           lastNationRef.current = null;
           lastResourcesRef.current = { lumber: 0, oil: 0, ore: 0 };
           setShowNationModal(false);
           setShowMainMenu(false);
           setShowBottomMenu(false);
           setSelectedTile(null);
-          setLoading(false);
-          setIsInitialized(true);
           hasInitialized.current = false;
+          await initializeGameState();
         } else {
           await initializeGameState();
         }
@@ -760,23 +747,19 @@ function App() {
     try {
       await supabase.auth.signOut();
       setSession(null);
-      setGameState({
-        dynamicTiles: {},
-        nations: {},
+      setGameState((prevState) => ({
+        ...prevState,
         userNation: null,
         resources: { lumber: 0, oil: 0, ore: 0 },
-        version: null,
-      });
-      staticTilesRef.current = {};
+      }));
       lastNationRef.current = null;
       lastResourcesRef.current = { lumber: 0, oil: 0, ore: 0 };
       setShowNationModal(false);
       setShowMainMenu(false);
       setShowBottomMenu(false);
       setSelectedTile(null);
-      setLoading(false);
-      setIsInitialized(true);
       hasInitialized.current = false;
+      await initializeGameState();
     } catch (err) {
       console.error('Error logging out:', { ...err });
       setError('Failed to log out: ' + err.message);
@@ -985,9 +968,10 @@ function App() {
         showNationModal,
         userNationIsNull: gameState.userNation === null,
         userNation: gameState.userNation,
+        tileCount: Object.keys(gameState.dynamicTiles).length,
       });
     }
-  }, [loading, isInitialized, showNationModal, gameState.userNation]);
+  }, [loading, isInitialized, showNationModal, gameState.userNation, gameState.dynamicTiles]);
 
   if (loading) {
     return (
