@@ -469,7 +469,7 @@ function App() {
                     building: payload.new.building || null,
                     owner_nation_name,
                     nations: payload.new.owner && prevState.nations[payload.new.owner] ? prevState.nations[payload.new.owner] : null,
-                    is_capital: data.is_capital || false,
+                    is_capital: payload.new.is_capital || false,
                   },
                 },
               };
