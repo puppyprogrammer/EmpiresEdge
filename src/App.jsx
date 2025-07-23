@@ -9,9 +9,7 @@ import { findCapitalTile } from './helpers/gameLogic/findCapitalTile.js';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  global: { headers: { Accept: 'application/json' } },
-});
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 function App() {
   const mapScrollRef = useRef(null);
@@ -201,35 +199,21 @@ function App() {
 
       let finalNationData = null;
       if (session?.user?.id) {
-        console.log('initializeGameState: Checking nation for user:', session.user.id);
-        const { data: resourcesData, error: resourcesError } = await supabase
-          .rpc('update_resources', { user_id: session.user.id })
-          .single();
-        if (resourcesError && resourcesError.code !== 'PGRST116') {
-          console.error('Failed to update resources:', { ...resourcesError });
-          setError('Failed to update resources: ' + resourcesError.message);
-        } else if (resourcesData) {
-          console.log('initializeGameState: Nation found:', { ...resourcesData });
-          finalNationData = resourcesData;
-        } else {
-          console.log('initializeGameState: Retrying update_resources to confirm nation status');
-          for (let attempt = 1; attempt <= 3; attempt++) {
-            const { data: retryData, error: retryError } = await supabase
-              .rpc('update_resources', { user_id: session.user.id })
-              .single();
-            if (retryError && retryError.code !== 'PGRST116') {
-              console.error(`Retry ${attempt} failed to update resources:`, { ...retryError });
-            } else if (retryData) {
-              console.log(`initializeGameState: Retry ${attempt} successful, nation found:`, { ...retryData });
-              finalNationData = retryData;
-              break;
-            } else {
-              console.log(`initializeGameState: Retry ${attempt} returned no nation data`);
-              await new Promise((resolve) => setTimeout(resolve, 100));
-            }
-          }
-        }
+      console.log('initializeGameState: Checking nation for user:', session.user.id);
+      const { data: resourcesData, error: resourcesError } = await supabase
+        .rpc('update_resources', { user_id: session.user.id });
+
+      if (resourcesError) {
+        console.error('Failed to update resources:', { ...resourcesError });
+        setError('Failed to update resources: ' + resourcesError.message);
+      } else if (resourcesData && resourcesData.length > 0) {
+        console.log('initializeGameState: Nation found:', { ...resourcesData[0] });
+        finalNationData = resourcesData[0];
+      } else {
+        console.log('initializeGameState: No nation found, showing modal');
+        setShowNationModal(true);
       }
+    }
 
       const staticTiles = {};
       const dynamicTiles = {};
@@ -328,86 +312,75 @@ function App() {
     }
 
     const updateResources = async () => {
-      try {
-        console.log('updateResources: Starting for user:', session.user.id);
-        const { data, error } = await supabase
-          .rpc('update_resources', { user_id: session.user.id })
-          .single();
+    try {
+      console.log('updateResources: Starting for user:', session.user.id);
+      const { data, error } = await supabase
+        .rpc('update_resources', { user_id: session.user.id });
 
-        if (error) {
-          console.error('Failed to update resources:', { ...error });
-          if (error.code === 'PGRST116') {
-            console.log('updateResources: No nation found, showing modal');
-            setShowNationModal(true);
-          } else {
-            setError('Failed to update resources: ' + error.message);
-          }
+      if (error) {
+        console.error('Failed to update resources:', { ...error });
+        if (error.code === 'PGRST116') {
+          console.log('updateResources: No nation found, showing modal');
+          setShowNationModal(true);
+        } else {
+          setError('Failed to update resources: ' + error.message);
+        }
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const newNation = data[0];
+        const newResources = {
+          lumber: newNation.lumber || 0,
+          oil: newNation.oil || 0,
+          ore: newNation.ore || 0,
+        };
+
+        const resourcesUnchanged =
+          lastResourcesRef.current.lumber === newResources.lumber &&
+          lastResourcesRef.current.oil === newResources.oil &&
+          lastResourcesRef.current.ore === newResources.ore;
+        const nationUnchanged =
+          lastNationRef.current &&
+          lastNationRef.current.id === newNation.id &&
+          lastNationRef.current.name === newNation.name &&
+          lastNationRef.current.color === newNation.color &&
+          lastNationRef.current.capital_tile_x === newNation.capital_tile_x &&
+          lastNationRef.current.capital_tile_y === newNation.capital_tile_y &&
+          lastNationRef.current.owner_id === newNation.owner_id &&
+          lastNationRef.current.lumber === newNation.lumber &&
+          lastNationRef.current.oil === newNation.oil &&
+          lastNationRef.current.ore === newNation.ore;
+
+        if (resourcesUnchanged && nationUnchanged) {
+          console.log('updateResources: No changes, skipping setGameState');
           return;
         }
 
-        if (data) {
-          const newResources = {
-            lumber: data.lumber || 0,
-            oil: data.oil || 0,
-            ore: data.ore || 0,
+        setGameState((prevState) => {
+          const newState = {
+            ...prevState,
+            userNation: newNation,
+            resources: newResources,
           };
-          const newNation = {
-            id: data.id,
-            name: data.name,
-            color: data.color,
-            capital_tile_x: data.capital_tile_x,
-            capital_tile_y: data.capital_tile_y,
-            owner_id: data.owner_id,
-            lumber: data.lumber,
-            oil: data.oil,
-            ore: data.ore,
-          };
-
-          const resourcesUnchanged =
-            lastResourcesRef.current.lumber === newResources.lumber &&
-            lastResourcesRef.current.oil === newResources.oil &&
-            lastResourcesRef.current.ore === newResources.ore;
-          const nationUnchanged =
-            lastNationRef.current &&
-            lastNationRef.current.id === newNation.id &&
-            lastNationRef.current.name === newNation.name &&
-            lastNationRef.current.color === newNation.color &&
-            lastNationRef.current.capital_tile_x === newNation.capital_tile_x &&
-            lastNationRef.current.capital_tile_y === newNation.capital_tile_y &&
-            lastNationRef.current.owner_id === newNation.owner_id &&
-            lastNationRef.current.lumber === newNation.lumber &&
-            lastNationRef.current.oil === newNation.oil &&
-            lastNationRef.current.ore === newNation.ore;
-
-          if (resourcesUnchanged && nationUnchanged) {
-            console.log('updateResources: No changes, skipping setGameState');
-            return;
-          }
-
-          setGameState((prevState) => {
-            const newState = {
-              ...prevState,
-              userNation: newNation,
-              resources: newResources,
-            };
-            console.log('setGameState called (resources):', {
-              changed: Object.keys(newState).filter(k => newState[k] !== prevState[k]),
-            });
-            lastNationRef.current = newNation;
-            lastResourcesRef.current = newResources;
-            return newState;
+          console.log('setGameState called (resources):', {
+            changed: Object.keys(newState).filter(k => newState[k] !== prevState[k]),
           });
-          console.log('updateResources: Setting showNationModal to false');
-          setShowNationModal(false);
-        } else {
-          console.log('updateResources: No nation data returned, showing modal');
-          setShowNationModal(true);
-        }
-      } catch (err) {
-        console.error('Error in updateResources:', { ...err });
-        setError('Failed to update resources: ' + err.message);
+          lastNationRef.current = newNation;
+          lastResourcesRef.current = newResources;
+          return newState;
+        });
+        console.log('updateResources: Setting showNationModal to false');
+        setShowNationModal(false);
+      } else {
+        console.log('updateResources: No nation data returned, showing modal');
+        setShowNationModal(true);
       }
-    };
+    } catch (err) {
+      console.error('Error in updateResources:', { ...err });
+      setError('Failed to update resources: ' + err.message);
+    }
+  };
 
     updateResources();
     if (gameState.userNation) {
