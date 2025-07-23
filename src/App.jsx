@@ -171,11 +171,13 @@ function App() {
     console.log('initializeGameState: Starting');
     try {
       setLoading(true);
-      const gameStateRes = await supabase.rpc('fetch_game_state');
+      const gameStateRes = await supabase.rpc('fetch_public_game_state'); // Use new public RPC
 
       if (gameStateRes.error) {
         console.error('Failed to fetch game state:', { ...gameStateRes.error });
-        setError(`Failed to load map data: ${gameStateRes.error.message}. Please try refreshing or disabling ad blockers.`);
+        if (session) {
+          setError(`Failed to load map data: ${gameStateRes.error.message}. Please try refreshing or disabling ad blockers.`);
+        } // Silently fail for unauthenticated users
         setLoading(false);
         setIsInitialized(true);
         return;
@@ -186,7 +188,9 @@ function App() {
           tiles: !!gameStateRes.data?.tiles,
           nations: !!gameStateRes.data?.nations,
         });
-        setError('Incomplete map data received. Please try refreshing.');
+        if (session) {
+          setError('Incomplete map data received. Please try refreshing.');
+        }
         setLoading(false);
         setIsInitialized(true);
         return;
@@ -271,7 +275,9 @@ function App() {
       }, 1000);
     } catch (err) {
       console.error('Error in initializeGameState:', { ...err });
-      setError(`Error loading game data: ${err.message}. Please try refreshing or disabling ad blockers.`);
+      if (session) {
+        setError(`Error loading game data: ${err.message}. Please try refreshing or disabling ad blockers.`);
+      }
       setLoading(false);
       setIsInitialized(true);
     }
@@ -291,7 +297,9 @@ function App() {
         await initializeGameState();
       } catch (err) {
         console.error('Error checking session:', { ...err });
-        setError(`Error initializing app: ${err.message}.`);
+        if (session) {
+          setError(`Error initializing app: ${err.message}.`);
+        }
         setLoading(false);
         setIsInitialized(true);
       }
@@ -528,7 +536,8 @@ function App() {
       }
       timeoutId = setTimeout(async () => {
         setSession(session);
-        if (!session) {
+        console.log('Session set:', { userId: session?.user?.id });
+        if (!session && !hasInitialized.current) {
           console.log('onAuthStateChange: No session, resetting user-specific state');
           setGameState((prevState) => ({
             ...prevState,
@@ -541,9 +550,8 @@ function App() {
           setShowMainMenu(false);
           setShowBottomMenu(false);
           setSelectedTile(null);
-          hasInitialized.current = false;
           await initializeGameState();
-        } else {
+        } else if (session && !hasInitialized.current) {
           await initializeGameState();
         }
       }, 300);
@@ -561,73 +569,78 @@ function App() {
 
   // Map centering
   useEffect(() => {
-    if (!gameState?.userNation || !mapScrollRef.current || loading) {
+    if (loading || !mapScrollRef.current || Object.keys(gameState.dynamicTiles).length === 0) {
       return;
     }
 
-    const { capital_tile_x, capital_tile_y } = gameState.userNation;
-    const key = `${capital_tile_x}_${capital_tile_y}`;
-    const capitalTile = gameState.dynamicTiles[key];
+    if (gameState?.userNation) {
+      const { capital_tile_x, capital_tile_y } = gameState.userNation;
+      const key = `${capital_tile_x}_${capital_tile_y}`;
+      const capitalTile = gameState.dynamicTiles[key];
 
-    if (!capitalTile || !staticTilesRef.current[key] || !capitalTile.is_capital) {
-      console.warn('Capital tile not found or invalid:', {
-        capitalTile,
-        key,
-        hasStaticTile: !!staticTilesRef.current[key],
-        isCapital: capitalTile?.is_capital,
-      });
-      return;
-    }
-
-    const container = mapScrollRef.current;
-    const capitalPixelX = capital_tile_x * TILE_SIZE;
-    const capitalPixelY = capital_tile_y * TILE_SIZE;
-
-    console.log('Centering map on capital tile:', { x: capital_tile_x, y: capital_tile_y });
-    container.scrollTo({
-      left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
-      top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
-      behavior: 'smooth',
-    });
-
-    const tileEl = document.querySelector(`.tile[data-x="${capital_tile_x}"][data-y="${capital_tile_y}"]`);
-    if (tileEl) {
-      tileEl.classList.add('capital-highlight');
-    }
-
-    // Re-center on user interaction after 4 seconds
-    let timeoutId = null;
-    const resetTimer = () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      timeoutId = setTimeout(() => {
-        console.log('Re-centering map on capital tile:', { x: capital_tile_x, y: capital_tile_y });
-        container.scrollTo({
-          left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
-          top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
-          behavior: 'smooth',
+      if (!capitalTile || !staticTilesRef.current[key] || !capitalTile.is_capital) {
+        console.warn('Capital tile not found or invalid:', {
+          capitalTile,
+          key,
+          hasStaticTile: !!staticTilesRef.current[key],
+          isCapital: capitalTile?.is_capital,
         });
-      }, 4000);
-    };
-
-    const handleInteraction = () => {
-      resetTimer();
-    };
-
-    container.addEventListener('scroll', handleInteraction);
-    container.addEventListener('mousedown', handleInteraction);
-    container.addEventListener('touchstart', handleInteraction);
-
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+        return;
       }
-      container.removeEventListener('scroll', handleInteraction);
-      container.removeEventListener('mousedown', handleInteraction);
-      container.removeEventListener('touchstart', handleInteraction);
-    };
-  }, [gameState?.userNation, loading]);
+
+      const container = mapScrollRef.current;
+      const capitalPixelX = capital_tile_x * TILE_SIZE;
+      const capitalPixelY = capital_tile_y * TILE_SIZE;
+
+      console.log('Centering map on capital tile:', { x: capital_tile_x, y: capital_tile_y });
+      container.scrollTo({
+        left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
+        top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
+        behavior: 'smooth',
+      });
+
+      const tileEl = document.querySelector(`.tile[data-x="${capital_tile_x}"][data-y="${capital_tile_y}"]`);
+      if (tileEl) {
+        tileEl.classList.add('capital-highlight');
+      }
+
+      // Re-center on user interaction after 4 seconds
+      let timeoutId = null;
+      const resetTimer = () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        timeoutId = setTimeout(() => {
+          console.log('Re-centering map on capital tile:', { x: capital_tile_x, y: capital_tile_y });
+          container.scrollTo({
+            left: capitalPixelX - (container.clientWidth / 2) + (TILE_SIZE / 2),
+            top: capitalPixelY - (container.clientHeight / 2) + (TILE_SIZE / 2),
+            behavior: 'smooth',
+          });
+        }, 4000);
+      };
+
+      const handleInteraction = () => {
+        resetTimer();
+      };
+
+      container.addEventListener('scroll', handleInteraction);
+      container.addEventListener('mousedown', handleInteraction);
+      container.addEventListener('touchstart', handleInteraction);
+
+      return () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        container.removeEventListener('scroll', handleInteraction);
+        container.removeEventListener('mousedown', handleInteraction);
+        container.removeEventListener('touchstart', handleInteraction);
+      };
+    } else {
+      console.log('Centering map at default position for unauthenticated user');
+      mapScrollRef.current.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+    }
+  }, [gameState?.userNation, loading, gameState.dynamicTiles]);
 
   async function handleStartGame() {
     if (!session?.user?.id) {
@@ -1096,7 +1109,7 @@ function App() {
         )}
       </header>
 
-      {error && (
+      {error && session && (
         <div
           className="error-box"
           style={{
