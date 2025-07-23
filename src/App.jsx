@@ -1105,11 +1105,15 @@ function App() {
                 onClick={() => debouncedSetSelectedTile(tile)}
               >
                 {tile.is_capital && (
-                  <img
-                    src="/icons/building.svg"
-                    alt="Capital Building"
-                    className="capital-icon"
-                  />
+                  <div className="capital-building">
+                    <div
+                      className="capital-flag"
+                      style={{
+                        backgroundColor: tile?.nations?.color || '#ccc'
+                      }}
+                      title={tile.owner_nation_name || 'Unknown'}
+                    />
+                  </div>
                 )}
                 {tile.building === 'road' && (
                   <svg

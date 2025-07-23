@@ -526,3 +526,28 @@ th, td {
 .tile.border-left {
   animation: border-glow 2s ease-in-out infinite;
 }
+
+.capital-building {
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(to bottom, #facc15 40%, #92400e 100%);
+  border: 2px solid #000;
+  border-radius: 3px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
+.capital-flag {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 8px;
+  height: 10px;
+  border-left: 2px solid black;
+  border-radius: 1px;
+  z-index: 2;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+}
