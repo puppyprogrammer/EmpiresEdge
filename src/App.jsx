@@ -9,7 +9,9 @@ import { findCapitalTile } from './helpers/gameLogic/findCapitalTile.js';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  global: { headers: { Accept: 'application/json' } },
+});
 
 function App() {
   const mapScrollRef = useRef(null);
@@ -172,13 +174,13 @@ function App() {
     console.log('initializeGameState: Starting');
     try {
       setLoading(true);
-      const gameStateRes = await supabase.rpc('fetch_game_state'); // Use new public RPC
+      const gameStateRes = await supabase.rpc('fetch_game_state');
 
       if (gameStateRes.error) {
         console.error('Failed to fetch game state:', { ...gameStateRes.error });
         if (session) {
           setError(`Failed to load map data: ${gameStateRes.error.message}. Please try refreshing or disabling ad blockers.`);
-        } // Silently fail for unauthenticated users
+        }
         setLoading(false);
         setIsInitialized(true);
         return;
@@ -311,17 +313,26 @@ function App() {
 
   // Resource tick
   useEffect(() => {
-    if (!session?.user?.id || loading) return;
+    if (!session?.user?.id || loading || gameState.userNation === null) {
+      console.log('updateResources: Skipping interval due to no session, loading, or no nation');
+      return;
+    }
 
     const updateResources = async () => {
       try {
+        console.log('updateResources: Starting for user:', session.user.id);
         const { data, error } = await supabase
           .rpc('update_resources', { user_id: session.user.id })
           .single();
 
-        if (error && error.code !== 'PGRST116') {
+        if (error) {
           console.error('Failed to update resources:', { ...error });
-          setError('Failed to update resources: ' + error.message);
+          if (error.code === 'PGRST116') {
+            console.log('updateResources: No nation found, showing modal');
+            setShowNationModal(true);
+          } else {
+            setError('Failed to update resources: ' + error.message);
+          }
           return;
         }
 
@@ -380,24 +391,7 @@ function App() {
           console.log('updateResources: Setting showNationModal to false');
           setShowNationModal(false);
         } else {
-          setGameState((prevState) => {
-            if (!prevState.userNation && prevState.resources.lumber === 0 && prevState.resources.oil === 0 && prevState.resources.ore === 0) {
-              console.log('updateResources: No nation and no resources, skipping setGameState');
-              return prevState;
-            }
-            const newState = {
-              ...prevState,
-              userNation: null,
-              resources: { lumber: 0, oil: 0, ore: 0 },
-            };
-            console.log('setGameState called (no data):', {
-              changed: Object.keys(newState).filter(k => newState[k] !== prevState[k]),
-            });
-            lastNationRef.current = null;
-            lastResourcesRef.current = { lumber: 0, oil: 0, ore: 0 };
-            return newState;
-          });
-          console.log('updateResources: Setting showNationModal to true');
+          console.log('updateResources: No nation data returned, showing modal');
           setShowNationModal(true);
         }
       } catch (err) {
@@ -412,7 +406,7 @@ function App() {
     return () => {
       clearInterval(interval);
     };
-  }, [session?.user?.id, loading]);
+  }, [session?.user?.id, loading, gameState.userNation]);
 
   // Database subscription
   useEffect(() => {
@@ -645,67 +639,84 @@ function App() {
 
   async function handleStartGame() {
     if (!session?.user?.id) {
-        setError('No user session available. Please log in again.');
-        return;
+      setError('No user session available. Please log in again.');
+      return;
     }
 
-    if (!nationName.trim()) {
-        setError('Nation name is required');
-        return;
+    const trimmedName = nationName.trim();
+    if (!trimmedName) {
+      setError('Nation name is required');
+      return;
+    }
+
+    // Validate nation name
+    if (trimmedName.length > 10) {
+      setError('Nation name must be 10 characters or less');
+      return;
+    }
+    if (!/^[a-zA-Z0-9\s]+$/.test(trimmedName)) {
+      setError('Nation name must contain only letters, numbers, and spaces');
+      return;
     }
 
     if (!Object.keys(staticTilesRef.current).length) {
-        setError('Map data not loaded. Please try again.');
-        return;
+      setError('Map data not loaded. Please try again.');
+      return;
     }
 
     try {
-        const { data: existingNation, error: nameCheckError } = await supabase
+      console.log('handleStartGame: Checking nation name:', trimmedName);
+      const { data: existingNation, error: nameCheckError } = await supabase
         .from('nations')
         .select('id')
-        .eq('name', nationName.trim())
-        .single();
+        .eq('name', trimmedName)
+        .maybeSingle();
 
-        if (nameCheckError && nameCheckError.code !== 'PGRST116') {
+      if (nameCheckError) {
+        console.error('Failed to check nation name:', nameCheckError);
         setError('Failed to check nation name: ' + nameCheckError.message);
         return;
-        }
+      }
 
-        if (existingNation) {
-        setError('Nation name "' + nationName.trim() + '" is already taken. Please choose another.');
+      if (existingNation) {
+        setError('Nation name "' + trimmedName + '" is already taken. Please choose another.');
         return;
-        }
+      }
 
-        const capitalTile = findCapitalTile(staticTilesRef.current, gameState.dynamicTiles);
-        if (!capitalTile) {
-          setError('No available tile to place capital.');
-          return;
-        }
+      console.log('handleStartGame: Starting capital tile selection');
+      const capitalTile = findCapitalTile(staticTilesRef.current, gameState.dynamicTiles);
+      if (!capitalTile) {
+        console.error('handleStartGame: No capital tile found');
+        setError('No available tile to place capital.');
+        return;
+      }
+      console.log('handleStartGame: Capital tile selected:', capitalTile);
 
-        const { data: nationData, error: insertError } = await supabase
+      const { data: nationData, error: insertError } = await supabase
         .rpc('create_nation', {
-            user_id: session.user.id,
-            nation_name: nationName.trim(),
-            nation_color: nationColor,
-            capital_x: capitalTile.x,
-            capital_y: capitalTile.y,
+          user_id: session.user.id,
+          nation_name: trimmedName,
+          nation_color: nationColor,
+          capital_x: capitalTile.x,
+          capital_y: capitalTile.y,
         })
         .single();
 
-        if (insertError) {
+      if (insertError) {
+        console.error('Failed to create nation:', insertError);
         setError('Failed to create nation: ' + insertError.message);
         return;
-        }
+      }
 
-        console.log('handleStartGame: Hiding nation modal after creation');
-        setShowNationModal(false);
-        await initializeGameState();
-        setNationName('');
+      console.log('handleStartGame: Hiding nation modal after creation');
+      setShowNationModal(false);
+      await initializeGameState();
+      setNationName('');
     } catch (err) {
-        console.error('Error creating nation:', { ...err });
-        setError('Error creating nation: ' + err.message);
+      console.error('Error creating nation:', { ...err });
+      setError('Error creating nation: ' + err.message);
     }
-    }
+  }
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -824,12 +835,8 @@ function App() {
     console.log('getRoadShape:', { tileId: tile.id, roadNeighbors, count });
 
     if (count === 0) {
-      // Isolated road: small circle
-      return (
-        <circle cx="16" cy="16" r="4" fill="#808080" />
-      );
+      return <circle cx="16" cy="16" r="4" fill="#808080" />;
     } else if (count === 1) {
-      // Single neighbor: straight line
       const dir = roadNeighbors[0];
       if (dir === 'top') {
         return <line x1="16" y1="0" x2="16" y2="16" stroke="#808080" strokeWidth="4" />;
@@ -841,13 +848,11 @@ function App() {
         return <line x1="0" y1="16" x2="16" y2="16" stroke="#808080" strokeWidth="4" />;
       }
     } else if (count === 2) {
-      // Two neighbors: straight line or curve
       if (roadNeighbors.includes('top') && roadNeighbors.includes('bottom')) {
         return <line x1="16" y1="0" x2="16" y2="32" stroke="#808080" strokeWidth="4" />;
       } else if (roadNeighbors.includes('left') && roadNeighbors.includes('right')) {
         return <line x1="0" y1="16" x2="32" y2="16" stroke="#808080" strokeWidth="4" />;
       } else {
-        // Curve (e.g., top and right)
         const [dir1, dir2] = roadNeighbors;
         let startX, startY, endX, endY, controlX, controlY;
         if (roadNeighbors.includes('top')) {
@@ -882,7 +887,6 @@ function App() {
         );
       }
     } else if (count === 3) {
-      // T-shape
       const missingDir = ['top', 'bottom', 'left', 'right'].find(dir => !roadNeighbors.includes(dir));
       if (missingDir === 'top') {
         return (
@@ -914,7 +918,6 @@ function App() {
         );
       }
     } else {
-      // Crossroad (4 neighbors)
       return (
         <>
           <line x1="16" y1="0" x2="16" y2="32" stroke="#808080" strokeWidth="4" />
@@ -928,30 +931,6 @@ function App() {
     return Object.values(tilesMap).filter(
       (tile) => Math.abs(tile.x - centerTile.x) + Math.abs(tile.y - centerTile.y) <= distance
     );
-  }
-
-  function findCapitalTile() {
-    if (!Object.keys(staticTilesRef.current).length) {
-      return null;
-    }
-    const capitalTiles = Object.values(gameState.dynamicTiles).filter(
-      (tile) => tile.is_capital === true
-    );
-
-    const minDistance = 3;
-    const candidates = Object.values(staticTilesRef.current).filter((tile) => {
-      if (tile.x === undefined || tile.y === undefined) return false;
-      return capitalTiles.every(
-        (cap) => {
-          const staticTile = staticTilesRef.current[`${cap.x}_${cap.y}`];
-          return staticTile && Math.abs(tile.x - staticTile.x) + Math.abs(tile.y - staticTile.y) >= minDistance;
-        }
-      );
-    });
-
-    if (candidates.length === 0) return null;
-    const idx = Math.floor(Math.random() * candidates.length);
-    return candidates[idx];
   }
 
   const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
