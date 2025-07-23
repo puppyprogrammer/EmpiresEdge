@@ -201,6 +201,7 @@ function App() {
 
       let finalNationData = null;
       if (session?.user?.id) {
+        console.log('initializeGameState: Checking nation for user:', session.user.id);
         const { data: resourcesData, error: resourcesError } = await supabase
           .rpc('update_resources', { user_id: session.user.id })
           .single();
@@ -208,6 +209,7 @@ function App() {
           console.error('Failed to update resources:', { ...resourcesError });
           setError('Failed to update resources: ' + resourcesError.message);
         } else if (resourcesData) {
+          console.log('initializeGameState: Nation found:', { ...resourcesData });
           finalNationData = resourcesData;
         } else {
           console.log('initializeGameState: Retrying update_resources to confirm nation status');
@@ -273,9 +275,7 @@ function App() {
       lastResourcesRef.current = newState.resources;
       setShowNationModal(!finalNationData && !!session);
       setLoading(false);
-      setTimeout(() => {
-        setIsInitialized(true);
-      }, 1000);
+      setIsInitialized(true);
     } catch (err) {
       console.error('Error in initializeGameState:', { ...err });
       if (session) {
@@ -296,6 +296,7 @@ function App() {
       try {
         setLoading(true);
         const { data } = await supabase.auth.getSession();
+        console.log('checkSessionAndInitialize: Session retrieved:', { userId: data.session?.user?.id });
         setSession(data.session);
         await initializeGameState();
       } catch (err) {
@@ -311,10 +312,18 @@ function App() {
     checkSessionAndInitialize();
   }, []);
 
+  // Ensure nation modal is shown when no nation exists
+  useEffect(() => {
+    if (!loading && isInitialized && session?.user?.id && gameState.userNation === null) {
+      console.log('Nation modal trigger: Setting showNationModal to true');
+      setShowNationModal(true);
+    }
+  }, [loading, isInitialized, session, gameState.userNation]);
+
   // Resource tick
   useEffect(() => {
-    if (!session?.user?.id || loading || gameState.userNation === null) {
-      console.log('updateResources: Skipping interval due to no session, loading, or no nation');
+    if (!session?.user?.id || loading) {
+      console.log('updateResources: Skipping due to no session or loading');
       return;
     }
 
@@ -401,11 +410,16 @@ function App() {
     };
 
     updateResources();
-    const interval = setInterval(updateResources, 3000);
-
-    return () => {
-      clearInterval(interval);
-    };
+    if (gameState.userNation) {
+      console.log('updateResources: Starting interval for user with nation');
+      const interval = setInterval(updateResources, 3000);
+      return () => {
+        console.log('updateResources: Clearing interval');
+        clearInterval(interval);
+      };
+    } else {
+      console.log('updateResources: No nation, skipping interval');
+    }
   }, [session?.user?.id, loading, gameState.userNation]);
 
   // Database subscription
