@@ -429,9 +429,6 @@ th, td {
   width: 60px;
 }
 
-.tile-info-value {
-}
-
 .building-options {
   display: flex;
   width: 100%;
@@ -492,4 +489,40 @@ th, td {
 .delete-building-option span {
   font-size: 0.65rem;
   color: #f87171;
+}
+
+.tile.border-top {
+  border-top: 2px solid var(--nation-color, #808080);
+  box-shadow: 0 -1px 6px 1px var(--nation-color, #808080);
+}
+
+.tile.border-right {
+  border-right: 2px solid var(--nation-color, #808080);
+  box-shadow: 1px 0 6px 1px var(--nation-color, #808080);
+}
+
+.tile.border-bottom {
+  border-bottom: 2px solid var(--nation-color, #808080);
+  box-shadow: 0 1px 6px 1px var(--nation-color, #808080);
+}
+
+.tile.border-left {
+  border-left: 2px solid var(--nation-color, #808080);
+  box-shadow: -1px 0 6px 1px var(--nation-color, #808080);
+}
+
+@keyframes border-glow {
+  0%, 100% {
+    box-shadow: 0 0 6px 1px var(--nation-color, #808080);
+  }
+  50% {
+    box-shadow: 0 0 12px 2px var(--nation-color, #808080);
+  }
+}
+
+.tile.border-top,
+.tile.border-right,
+.tile.border-bottom,
+.tile.border-left {
+  animation: border-glow 2s ease-in-out infinite;
 }
