@@ -14,8 +14,8 @@ export function findCapitalTile(staticTilesRef, dynamicTiles) {
   );
   console.log('findCapitalTile: Found', capitalTiles.length, 'existing capital tiles');
 
-  const minDistance = 5;
-  const validTypes = ['land', 'forest', 'grass'];
+  const minDistance = 10;
+  const validTypes = ['mountain', 'forest', 'plains'];
 
   const candidates = Object.values(staticTilesRef).filter((tile) => {
     if (
