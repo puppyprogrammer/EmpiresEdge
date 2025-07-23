@@ -1105,16 +1105,21 @@ function App() {
                 onClick={() => debouncedSetSelectedTile(tile)}
               >
                 {tile.is_capital && (
-                  <div className="capital-building">
-                    <div
-                      className="capital-flag"
-                      style={{
-                        backgroundColor: tile?.nations?.color || '#ccc'
-                      }}
-                      title={tile.owner_nation_name || 'Unknown'}
-                    />
-                  </div>
+                  <span
+                    className="building-icon"
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      fontSize: '18px',
+                    }}
+                    title={tile.owner_nation_name || 'Unknown'}
+                  >
+                    🏰
+                  </span>
                 )}
+
                 {tile.building === 'road' && (
                   <svg
                     width={TILE_SIZE}
