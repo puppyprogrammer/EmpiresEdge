@@ -28,6 +28,9 @@ function App() {
     userNation: null,
     resources: { lumber: 0, oil: 0, ore: 0 },
     version: null,
+    tileTypes: {},
+    resourceTypes: {},
+    buildingTypes: {},
   });
   const [error, setError] = useState(null);
   const [session, setSession] = useState(null);
@@ -193,6 +196,38 @@ function App() {
 
     try {
       setLoading(true);
+
+      // Fetch lookup tables
+      const { data: tileTypesData, error: ttError } = await supabase.from('tile_types').select('*');
+      if (ttError) {
+        console.error('Failed to fetch tile_types:', { ...ttError });
+        setError('Failed to load tile types: ' + ttError.message);
+        setLoading(false);
+        setIsInitialized(true);
+        return;
+      }
+      const tileTypes = tileTypesData.reduce((acc, t) => { acc[t.id] = t; return acc; }, {});
+
+      const { data: resourceTypesData, error: rtError } = await supabase.from('resources').select('*');
+      if (rtError) {
+        console.error('Failed to fetch resources:', { ...rtError });
+        setError('Failed to load resources: ' + rtError.message);
+        setLoading(false);
+        setIsInitialized(true);
+        return;
+      }
+      const resourceTypes = resourceTypesData.reduce((acc, r) => { acc[r.id] = r; return acc; }, {});
+
+      const { data: buildingTypesData, error: btError } = await supabase.from('buildings').select('*');
+      if (btError) {
+        console.error('Failed to fetch buildings:', { ...btError });
+        setError('Failed to load buildings: ' + btError.message);
+        setLoading(false);
+        setIsInitialized(true);
+        return;
+      }
+      const buildingTypes = buildingTypesData.reduce((acc, b) => { acc[b.id] = b; return acc; }, {});
+
       const gameStateRes = await supabase.rpc('fetch_game_state');
 
       if (gameStateRes.error) {
@@ -283,6 +318,9 @@ function App() {
           ? { lumber: finalNationData.lumber || 0, oil: finalNationData.oil || 0, ore: finalNationData.ore || 0 }
           : { lumber: 0, oil: 0, ore: 0 },
         version: gameStateRes.data.version,
+        tileTypes,
+        resourceTypes,
+        buildingTypes,
       };
       console.log('initializeGameState: Setting states', {
         userNation: newState.userNation,
@@ -741,8 +779,22 @@ function App() {
     }
   }
 
+  const getTileTypeClass = (typeName) => {
+  if (!typeName) return 'unknown-tile';
+  return typeName === 'plain' ? 'grass' : typeName;
+};
+
+  const getBuildingName = (buildingId) => {
+    return gameState.buildingTypes[buildingId]?.name || null;
+  };
+
+  const getResourceName = (resourceId) => {
+    return gameState.resourceTypes[resourceId]?.name || null;
+  };
+
   const getRoadShape = useCallback((tile) => {
-    if (!tile.building || tile.building !== 'road') return null;
+    const buildingName = getBuildingName(tile.building);
+    if (!buildingName || buildingName !== 'road') return null;
 
     const adjacentTiles = [
       { dx: 0, dy: -1, dir: 'top' },
@@ -754,7 +806,7 @@ function App() {
     const roadNeighbors = adjacentTiles.filter(({ dx, dy }) => {
       const adjKey = `${tile.x + dx}_${tile.y + dy}`;
       const adjTile = gameState.dynamicTiles[adjKey];
-      return adjTile && adjTile.building === 'road';
+      return adjTile && getBuildingName(adjTile.building) === 'road';
     }).map(({ dir }) => dir);
 
     const count = roadNeighbors.length;
@@ -850,7 +902,7 @@ function App() {
         </>
       );
     }
-  }, [gameState.dynamicTiles]);
+  }, [gameState.dynamicTiles, gameState.buildingTypes]);
 
   function getTileBorderClasses(tile) {
     if (!tile.owner || !tile.nations || !tile.nations.color) {
@@ -1092,14 +1144,14 @@ function App() {
             {renderedTiles.map((tile) => (
               <div
                 key={tile.id}
-                className={`tile ${tile.type === 'plains' ? 'grass' : tile.type} ${
+                className={`tile ${getTileTypeClass(tile.type)} ${
                   tile.is_capital && tile.owner === gameState?.userNation?.id ? 'capital-highlight' : ''
                 } ${getTileBorderClasses(tile)} ${selectedTile?.id === tile.id ? 'selected-tile' : ''}`}
                 data-x={tile.x}
                 data-y={tile.y}
-                title={`(${tile.x}, ${tile.y}) Type: ${tile.type}, Resource: ${
-                  tile.resource || 'None'
-                }, Owner: ${tile.owner_nation_name || 'None'}, Building: ${tile.building || 'None'}`}
+                title={`(${tile.x}, ${tile.y}) Type: ${gameState.tileTypes[tile.type]?.name || 'Unknown'}, Resource: ${
+                  getResourceName(tile.resource) || 'None'
+                }, Owner: ${tile.owner_nation_name || 'None'}, Building: ${getBuildingName(tile.building) || 'None'}`}
                 style={tile.owner && tile.nations && tile.nations.color ? { '--nation-color': tile.nations.color } : {}}
                 onClick={() => debouncedSetSelectedTile(tile)}
               >
@@ -1119,7 +1171,7 @@ function App() {
                   </span>
                 )}
 
-                {tile.building === 'road' && (
+                {getBuildingName(tile.building) === 'road' && (
                   <svg
                     width={TILE_SIZE}
                     height={TILE_SIZE}
@@ -1129,12 +1181,12 @@ function App() {
                     {getRoadShape(tile)}
                   </svg>
                 )}
-                {tile.building === 'factory' && (
+                {getBuildingName(tile.building) === 'factory' && (
                   <span className="building-icon" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
                     🏭
                   </span>
                 )}
-                {tile.building === 'mine' && (
+                {getBuildingName(tile.building) === 'mine' && (
                   <span className="building-icon" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
                     ⛏️
                   </span>
