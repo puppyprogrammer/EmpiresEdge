@@ -724,9 +724,13 @@ function App() {
     }
   }
 
-  const getTileTypeClass = (typeId) => {
-    return gameState.tileTypes[typeId]?.name || 'unknown';
+  const tileTypeMap = {
+    1: 'plain',
+    2: 'forest',
+    3: 'mountain',
   };
+  const getTileTypeClass = (typeId) => tileTypeMap[typeId] || 'unknown';
+
 
   const getBuildingName = (buildingId) => {
     return gameState.buildingTypes[buildingId]?.name || null;
