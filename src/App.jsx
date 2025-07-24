@@ -724,13 +724,25 @@ function App() {
     }
   }
 
-  const getTileTypeClass = (typeId) => {
+  const getTileCssClass = (tile) => {
     const tileTypeMap = {
       1: 'plain',
       2: 'forest',
       3: 'mountain',
     };
-    return tileTypeMap[typeId] || 'unknown';
+
+    const result = tileTypeMap[tile.type];
+
+    if (!result) {
+      console.warn('Unknown tile type:', {
+        id: tile.id,
+        coords: `(${tile.x}, ${tile.y})`,
+        typeId: tile.type,
+        fullTile: tile,
+      });
+    }
+
+    return result || 'unknown';
   };
 
 
