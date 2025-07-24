@@ -64,6 +64,7 @@ function App() {
 
   const debouncedSetSelectedTile = useCallback(
     debounce((tile) => {
+      console.log('setSelectedTile called:', { ...tile });
       setSelectedTile(tile);
       setShowBottomMenu(true);
     }, 100),
@@ -88,7 +89,6 @@ function App() {
   };
 
   // --- INITIALIZE GAME STATE ---
-  // Now calls the helper, which you must import (as you already do)
   const handleInit = () => {
     initializeGameState({
       supabase,
@@ -108,13 +108,16 @@ function App() {
   // --- SESSION INIT ---
   useEffect(() => {
     (async () => {
-      if (hasInitialized.current) return;
+      if (hasInitialized.current) {
+        console.log('checkSessionAndInitialize: Already initialized, skipping');
+        return;
+      }
       setLoading(true);
       const { data } = await supabase.auth.getSession();
+      console.log('checkSessionAndInitialize: Session retrieved:', { userId: data.session?.user?.id });
       setSession(data.session);
       handleInit();
     })();
-    // eslint-disable-next-line
   }, []);
 
   // --- RESOURCE REFRESH INTERVAL ---
@@ -370,6 +373,7 @@ function App() {
   // --- MAP CENTERING ---
   useEffect(() => {
     if (loading || !mapScrollRef.current || Object.keys(gameState.dynamicTiles).length === 0) {
+      console.log('Map centering skipped: loading or no dynamic tiles');
       return;
     }
 
@@ -522,16 +526,21 @@ function App() {
   // --- RENDERED TILES MEMO ---
   const renderedTiles = useMemo(() => {
     if (loading) return [];
-    return Object.keys(staticTilesRef.current)
+    const tiles = Object.keys(staticTilesRef.current)
       .map((key) => {
         const staticTile = staticTilesRef.current[key];
         const dynamicTile = gameState.dynamicTiles[key] || {};
         const tile = { ...staticTile, ...dynamicTile, id: key };
-        if (typeof tile.x !== 'number' || typeof tile.y !== 'number') return null;
+        if (typeof tile.x !== 'number' || typeof tile.y !== 'number') {
+          console.warn('Invalid tile in renderedTiles:', { ...tile });
+          return null;
+        }
         return tile;
       })
       .filter(tile => tile !== null)
       .sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y);
+    console.log('Rendered tiles length:', tiles.length);
+    return tiles;
   }, [gameState.dynamicTiles, loading]);
 
   // --- UI RENDER (ALL PRESENTATION MOVED TO RENDER HELPER) ---
