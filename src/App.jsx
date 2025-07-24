@@ -306,10 +306,39 @@ function App() {
     }
   };
 
+  // Session check and initial load
   useEffect(() => {
-    const tickLoop = async () => {
-      if (!session?.user?.id || loading) return;
+    async function checkSessionAndInitialize() {
+      if (hasInitialized.current) {
+        console.log('checkSessionAndInitialize: Already initialized, skipping');
+        return;
+      }
+      try {
+        setLoading(true);
+        const { data } = await supabase.auth.getSession();
+        console.log('checkSessionAndInitialize: Session retrieved:', { userId: data.session?.user?.id });
+        setSession(data.session);
+        await initializeGameState();
+      } catch (err) {
+        console.error('Error checking session:', { ...err });
+        if (session) {
+          setError(`Error initializing app: ${err.message}.`);
+        }
+        setLoading(false);
+        setIsInitialized(true);
+      }
+    }
 
+    checkSessionAndInitialize();
+  }, []);
+
+  useEffect(() => {
+    if (!session?.user?.id || loading) {
+      console.log('updateResources: Skipping due to no session or loading');
+      return;
+    }
+
+    const updateResources = async () => {
       try {
         const { data: nationData, error: nationError } = await supabase
           .from('nations')
@@ -323,64 +352,54 @@ function App() {
           return;
         }
 
-        const { data, error } = await supabase.rpc('update_resources', {
-          user_id: session.user.id,
-        });
+        const { data, error } = await supabase
+          .rpc('update_resources', { user_id: session.user.id });
 
-        if (error) {
-          setError('Failed to update resources: ' + error.message);
+        if (error || !data?.length) {
+          console.error('updateResources: RPC failed or returned nothing');
           return;
         }
 
-        if (data && data.length > 0) {
-          const newNation = data[0];
-          const newResources = {
-            lumber: newNation.lumber || 0,
-            oil: newNation.oil || 0,
-            ore: newNation.ore || 0,
-          };
+        const newNation = data[0];
+        const newResources = {
+          lumber: newNation.lumber || 0,
+          oil: newNation.oil || 0,
+          ore: newNation.ore || 0,
+        };
 
-          const resourcesUnchanged =
-            lastResourcesRef.current.lumber === newResources.lumber &&
-            lastResourcesRef.current.oil === newResources.oil &&
-            lastResourcesRef.current.ore === newResources.ore;
+        const nationUnchanged =
+          lastNationRef.current?.id === newNation.id &&
+          lastNationRef.current?.lumber === newNation.lumber &&
+          lastNationRef.current?.oil === newNation.oil &&
+          lastNationRef.current?.ore === newNation.ore;
 
-          const nationUnchanged =
-            lastNationRef.current?.id === newNation.id &&
-            lastNationRef.current?.name === newNation.name &&
-            lastNationRef.current?.color === newNation.color &&
-            lastNationRef.current?.capital_tile_x === newNation.capital_tile_x &&
-            lastNationRef.current?.capital_tile_y === newNation.capital_tile_y &&
-            lastNationRef.current?.owner_id === newNation.owner_id &&
-            lastNationRef.current?.lumber === newNation.lumber &&
-            lastNationRef.current?.oil === newNation.oil &&
-            lastNationRef.current?.ore === newNation.ore;
-
-          if (!resourcesUnchanged || !nationUnchanged) {
-            setGameState((prev) => {
-              const updated = {
-                ...prev,
-                userNation: newNation,
-                resources: newResources,
-              };
-              lastNationRef.current = newNation;
-              lastResourcesRef.current = newResources;
-              return updated;
-            });
-            setShowNationModal(false);
-          }
+        if (!nationUnchanged) {
+          setGameState((prev) => {
+            const updated = {
+              ...prev,
+              userNation: newNation,
+              resources: newResources,
+            };
+            lastNationRef.current = newNation;
+            lastResourcesRef.current = newResources;
+            return updated;
+          });
         }
       } catch (err) {
-        setError('Error in updateResources: ' + err.message);
+        console.error('updateResources: Failed with error', err.message);
       }
     };
 
-    tickLoop();
-    const interval = setInterval(tickLoop, 3000);
-    return () => clearInterval(interval);
+    updateResources(); // immediate run
+
+    console.log('updateResources: Starting stable interval');
+    const interval = setInterval(updateResources, 3000);
+
+    return () => {
+      console.log('updateResources: Clearing interval');
+      clearInterval(interval);
+    };
   }, [session?.user?.id, loading]);
-
-
 
   // Database subscription
   useEffect(() => {
@@ -799,7 +818,7 @@ function App() {
   }, [gameState.dynamicTiles]);
 
   function getTileBorderClasses(tile) {
-    if (!tile || !tile.owner || !tile.nations || !tile.nations.color) {
+    if (!tile.owner || !tile.nations || !tile.nations.color) {
       return '';
     }
 
@@ -819,7 +838,6 @@ function App() {
         borders.push(`border-${side}`);
       }
     });
-
     return borders.join(' ');
   }
 
