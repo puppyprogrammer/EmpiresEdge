@@ -206,7 +206,7 @@ body, html {
   filter: brightness(60%);
 }
 
-.tile.plain {
+.tile.grass {
   background-color: #22c55e; /* Keep for backward compatibility or direct plains rendering */
 }
 
