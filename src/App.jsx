@@ -150,9 +150,9 @@ function App() {
 
   // --- TILE HELPER FUNCTIONS ---
   const getTileTypeClass = (typeId) => {
-    const name = gameState.tileTypes[typeId]?.name || '';
+    const name = gameState.tileTypes[typeId]?.name || 'unknown';
     console.log('getTileTypeClass:', { typeId, name, tileTypes: gameState.tileTypes });
-    return name === 'plain' ? 'grass' : name;
+    return name === 'plain' ? 'grass' : name; // Updated to match "plain" from database
   };
 
   const getBuildingName = (buildingId) => {
@@ -797,11 +797,22 @@ function App() {
     if (tiles.length > 0) {
       console.log('First tile example:', tiles[0]);
       console.log('Tile types available:', gameState.tileTypes);
+      console.log('Sample tile type lookup (type 1):', gameState.tileTypes[1]);
+      console.log('Sample tile type lookup (type 2):', gameState.tileTypes[2]);
     } else {
       console.log('No tiles to render. Check if staticTilesRef or dynamicTiles are populated.');
     }
     return tiles;
   }, [gameState.dynamicTiles, loading, gameState.tileTypes]);
+
+  // --- LOG TILE TYPES AFTER INITIALIZATION ---
+  useEffect(() => {
+    if (isInitialized && !loading) {
+      console.log('Game state initialized. Tile types:', gameState.tileTypes);
+      console.log('Dynamic tiles count:', Object.keys(gameState.dynamicTiles).length);
+      console.log('Static tiles count:', Object.keys(staticTilesRef.current).length);
+    }
+  }, [isInitialized, loading, gameState.tileTypes, gameState.dynamicTiles]);
 
   // --- UI RENDER ---
   return renderAppUI({
