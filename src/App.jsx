@@ -110,19 +110,8 @@ function App() {
         return;
       }
 
-      let owner_nation_name = 'None';
-      if (data.owner) {
-        const { data: nationData, error: nationError } = await supabase
-          .from('nations')
-          .select('name')
-          .eq('id', data.owner)
-          .single();
-        if (nationError) {
-          console.error('Failed to fetch nation name:', { ...nationError });
-        } else {
-          owner_nation_name = nationData.name || 'None';
-        }
-      }
+      const owner_nation_name = data.owner ? gameState.nations[data.owner]?.name || 'None' : 'None';
+      const nations = data.owner ? gameState.nations[data.owner] : null;
 
       setGameState((prevState) => {
         const newState = {
@@ -134,7 +123,7 @@ function App() {
               owner: data.owner || null,
               building: data.building || null,
               owner_nation_name,
-              nations: data.owner && prevState.nations[data.owner] ? prevState.nations[data.owner] : null,
+              nations,
               is_capital: data.is_capital || false,
             },
           },
@@ -153,7 +142,7 @@ function App() {
           owner: data.owner || null,
           building: data.building || null,
           owner_nation_name,
-          nations: data.owner && gameState.nations[data.owner] ? gameState.nations[data.owner] : null,
+          nations,
           is_capital: data.is_capital || false,
         }));
       }
@@ -196,38 +185,6 @@ function App() {
 
     try {
       setLoading(true);
-
-      // Fetch lookup tables
-      const { data: tileTypesData, error: ttError } = await supabase.from('tile_types').select('*');
-      if (ttError) {
-        console.error('Failed to fetch tile_types:', { ...ttError });
-        setError('Failed to load tile types: ' + ttError.message);
-        setLoading(false);
-        setIsInitialized(true);
-        return;
-      }
-      const tileTypes = tileTypesData.reduce((acc, t) => { acc[t.id] = t; return acc; }, {});
-
-      const { data: resourceTypesData, error: rtError } = await supabase.from('resources').select('*');
-      if (rtError) {
-        console.error('Failed to fetch resources:', { ...rtError });
-        setError('Failed to load resources: ' + rtError.message);
-        setLoading(false);
-        setIsInitialized(true);
-        return;
-      }
-      const resourceTypes = resourceTypesData.reduce((acc, r) => { acc[r.id] = r; return acc; }, {});
-
-      const { data: buildingTypesData, error: btError } = await supabase.from('buildings').select('*');
-      if (btError) {
-        console.error('Failed to fetch buildings:', { ...btError });
-        setError('Failed to load buildings: ' + btError.message);
-        setLoading(false);
-        setIsInitialized(true);
-        return;
-      }
-      const buildingTypes = buildingTypesData.reduce((acc, b) => { acc[b.id] = b; return acc; }, {});
-
       const gameStateRes = await supabase.rpc('fetch_game_state');
 
       if (gameStateRes.error) {
@@ -303,8 +260,8 @@ function App() {
         dynamicTiles[tileId] = {
           owner: tile.owner || null,
           building: tile.building || null,
-          owner_nation_name: tile.owner && gameStateRes.data.nations[tile.owner] ? gameStateRes.data.nations[tile.owner].name || 'None' : 'None',
-          nations: tile.owner && gameStateRes.data.nations[tile.owner] ? gameStateRes.data.nations[tile.owner] : null,
+          owner_nation_name: tile.owner_nation_name || 'None',
+          nations: tile.nations || null,
           is_capital: tile.is_capital || false,
         };
       });
@@ -318,9 +275,9 @@ function App() {
           ? { lumber: finalNationData.lumber || 0, oil: finalNationData.oil || 0, ore: finalNationData.ore || 0 }
           : { lumber: 0, oil: 0, ore: 0 },
         version: gameStateRes.data.version,
-        tileTypes,
-        resourceTypes,
-        buildingTypes,
+        tileTypes: gameStateRes.data.tileTypes,
+        resourceTypes: gameStateRes.data.resources,
+        buildingTypes: gameStateRes.data.buildings,
       };
       console.log('initializeGameState: Setting states', {
         userNation: newState.userNation,
@@ -524,23 +481,11 @@ function App() {
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'tiles' },
-        async (payload) => {
+        (payload) => {
           try {
             console.log('Tile update received:', { ...payload.new });
             const key = `${payload.new.x}_${payload.new.y}`;
-            let owner_nation_name = 'None';
-            if (payload.new.owner) {
-              const { data: nationData, error: nationError } = await supabase
-                .from('nations')
-                .select('name')
-                .eq('id', payload.new.owner)
-                .single();
-              if (nationError) {
-                console.error('Failed to fetch nation name in subscription:', { ...nationError });
-              } else {
-                owner_nation_name = nationData.name || 'None';
-              }
-            }
+            const owner_nation_name = payload.new.owner ? gameState.nations[payload.new.owner]?.name || 'None' : 'None';
             tileUpdates.push({
               key,
               owner: payload.new.owner || null,
@@ -698,7 +643,7 @@ function App() {
         }
         container.removeEventListener('scroll', handleInteraction);
         container.removeEventListener('mousedown', handleInteraction);
-        container.addEventListener('touchstart', handleInteraction);
+        container.removeEventListener('touchstart', handleInteraction);
       };
     } else {
       console.log('Centering map at default position for unauthenticated user');
@@ -779,10 +724,10 @@ function App() {
     }
   }
 
-  const getTileTypeClass = (typeName) => {
-  if (!typeName) return 'unknown-tile';
-  return typeName === 'plain' ? 'grass' : typeName;
-};
+  const getTileTypeClass = (typeId) => {
+    const name = gameState.tileTypes[typeId]?.name || '';
+    return name === 'plains' ? 'grass' : name;
+  };
 
   const getBuildingName = (buildingId) => {
     return gameState.buildingTypes[buildingId]?.name || null;
