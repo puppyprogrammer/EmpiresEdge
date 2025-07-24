@@ -71,6 +71,258 @@ function App() {
     []
   );
 
+  // --- UPDATE SINGLE TILE ---
+  const updateSingleTile = async (tileId, updates) => {
+    try {
+      console.log('updateSingleTile called:', { tileId, updates, staticTileCount: Object.keys(staticTilesRef.current).length });
+      if (!tileId || !tileId.includes('_')) {
+        console.error('Invalid tileId format in updateSingleTile:', { tileId, expected: 'x_y', availableKeys: Object.keys(staticTilesRef.current).slice(0, 5) });
+        setError('Invalid tile ID format');
+        return;
+      }
+      const { x, y } = staticTilesRef.current[tileId] || {};
+      if (!x || !y) {
+        console.error('Tile not found in staticTilesRef:', {
+          tileId,
+          x,
+          y,
+          staticKeys: Object.keys(staticTilesRef.current).slice(0, 5),
+        });
+        setError('Tile not found');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('tiles')
+        .update(updates)
+        .eq('x', x)
+        .eq('y', y)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to update tile in Supabase:', { ...error });
+        setError('Failed to update tile: ' + error.message);
+        return;
+      }
+
+      const owner_nation_name = data.owner ? gameState.nations[data.owner]?.name || 'None' : 'None';
+      const nations = data.owner ? gameState.nations[data.owner] : null;
+
+      setGameState((prevState) => {
+        const newState = {
+          ...prevState,
+          dynamicTiles: {
+            ...prevState.dynamicTiles,
+            [tileId]: {
+              ...prevState.dynamicTiles[tileId],
+              owner: data.owner || null,
+              building: data.building || null,
+              owner_nation_name,
+              nations,
+              is_capital: data.is_capital || false,
+            },
+          },
+        };
+        console.log('setGameState called (updateSingleTile):', {
+          changed: Object.keys(newState.dynamicTiles[tileId]).filter(
+            (k) => newState.dynamicTiles[tileId][k] !== prevState.dynamicTiles[tileId]?.[k]
+          ),
+        });
+        return newState;
+      });
+
+      if (selectedTile?.id === tileId) {
+        setSelectedTile((prev) => ({
+          ...prev,
+          owner: data.owner || null,
+          building: data.building || null,
+          owner_nation_name,
+          nations,
+          is_capital: data.is_capital || false,
+        }));
+      }
+    } catch (err) {
+      console.error('Error in updateSingleTile:', { ...err });
+      setError('Error updating tile: ' + err.message);
+    }
+  };
+
+  // --- TILE HELPER FUNCTIONS ---
+  const getTileTypeClass = (typeId) => {
+    const name = gameState.tileTypes[typeId]?.name || '';
+    console.log('getTileTypeClass:', { typeId, name, tileTypes: gameState.tileTypes });
+    return name === 'plains' ? 'grass' : name;
+  };
+
+  const getBuildingName = (buildingId) => {
+    const name = gameState.buildingTypes[buildingId]?.name || null;
+    console.log('getBuildingName:', { buildingId, name, buildingTypes: gameState.buildingTypes });
+    return name;
+  };
+
+  const getResourceName = (resourceId) => {
+    const name = gameState.resourceTypes[resourceId]?.name || null;
+    console.log('getResourceName:', { resourceId, name, resourceTypes: gameState.resourceTypes });
+    return name;
+  };
+
+  const getTileBorderClasses = (tile) => {
+    if (!tile.owner || !tile.nations || !tile.nations.color) {
+      return '';
+    }
+
+    const borders = [];
+    const adjacentTiles = [
+      { dx: 0, dy: -1, side: 'top' },
+      { dx: 0, dy: 1, side: 'bottom' },
+      { dx: 1, dy: 0, side: 'right' },
+      { dx: -1, dy: 0, side: 'left' },
+    ];
+
+    adjacentTiles.forEach(({ dx, dy, side }) => {
+      const adjKey = `${tile.x + dx}_${tile.y + dy}`;
+      const adjacentTile = gameState.dynamicTiles[adjKey];
+      const isDifferentOwner = !adjacentTile || adjacentTile.owner !== tile.owner;
+      if (isDifferentOwner) {
+        borders.push(`border-${side}`);
+      }
+    });
+    console.log('getTileBorderClasses:', { tileId: tile.id, borders });
+    return borders.join(' ');
+  };
+
+  const getRoadShape = useCallback(
+    (tile) => {
+      const buildingName = getBuildingName(tile.building);
+      if (!buildingName || buildingName !== 'road') return null;
+
+      const adjacentTiles = [
+        { dx: 0, dy: -1, dir: 'top' },
+        { dx: 0, dy: 1, dir: 'bottom' },
+        { dx: 1, dy: 0, dir: 'right' },
+        { dx: -1, dy: 0, dir: 'left' },
+      ];
+
+      const roadNeighbors = adjacentTiles
+        .filter(({ dx, dy }) => {
+          const adjKey = `${tile.x + dx}_${tile.y + dy}`;
+          const adjTile = gameState.dynamicTiles[adjKey];
+          return adjTile && getBuildingName(adjTile.building) === 'road';
+        })
+        .map(({ dir }) => dir);
+
+      const count = roadNeighbors.length;
+      console.log('getRoadShape:', { tileId: tile.id, roadNeighbors, count });
+
+      if (count === 0) {
+        return <circle cx="16" cy="16" r="4" fill="#808080" />;
+      } else if (count === 1) {
+        const dir = roadNeighbors[0];
+        if (dir === 'top') {
+          return <line x1="16" y1="0" x2="16" y2="16" stroke="#808080" strokeWidth="4" />;
+        } else if (dir === 'bottom') {
+          return <line x1="16" y1="16" x2="16" y2="32" stroke="#808080" strokeWidth="4" />;
+        } else if (dir === 'right') {
+          return <line x1="16" y1="16" x2="32" y2="16" stroke="#808080" strokeWidth="4" />;
+        } else {
+          return <line x1="0" y1="16" x2="16" y2="16" stroke="#808080" strokeWidth="4" />;
+        }
+      } else if (count === 2) {
+        if (roadNeighbors.includes('top') && roadNeighbors.includes('bottom')) {
+          return <line x1="16" y1="0" x2="16" y2="32" stroke="#808080" strokeWidth="4" />;
+        } else if (roadNeighbors.includes('left') && roadNeighbors.includes('right')) {
+          return <line x1="0" y1="16" x2="32" y2="16" stroke="#808080" strokeWidth="4" />;
+        } else {
+          const [dir1, dir2] = roadNeighbors;
+          let startX, startY, endX, endY, controlX, controlY;
+          if (roadNeighbors.includes('top')) {
+            startX = 16;
+            startY = 0;
+            controlY = 12;
+            if (dir1 === 'right' || dir2 === 'right') {
+              endX = 32;
+              endY = 16;
+              controlX = 20;
+            } else {
+              endX = 0;
+              endY = 16;
+              controlX = 12;
+            }
+          } else if (roadNeighbors.includes('bottom')) {
+            startX = 16;
+            startY = 32;
+            controlY = 20;
+            if (dir1 === 'right' || dir2 === 'right') {
+              endX = 32;
+              endY = 16;
+              controlX = 20;
+            } else {
+              endX = 0;
+              endY = 16;
+              controlX = 12;
+            }
+          } else {
+            startX = 0;
+            startY = 16;
+            controlX = 12;
+            endX = 32;
+            endY = 16;
+            controlY = 20;
+          }
+          return (
+            <path
+              d={`M${startX},${startY} Q${controlX},${controlY} ${endX},${endY}`}
+              stroke="#808080"
+              strokeWidth="4"
+              fill="none"
+              strokeLinecap="round"
+            />
+          );
+        }
+      } else if (count === 3) {
+        const missingDir = ['top', 'bottom', 'left', 'right'].find((dir) => !roadNeighbors.includes(dir));
+        if (missingDir === 'top') {
+          return (
+            <>
+              <line x1="16" y1="16" x2="16" y2="32" stroke="#808080" strokeWidth="4" />
+              <line x1="0" y1="16" x2="32" y2="16" stroke="#808080" strokeWidth="4" />
+            </>
+          );
+        } else if (missingDir === 'bottom') {
+          return (
+            <>
+              <line x1="16" y1="0" x2="16" y2="16" stroke="#808080" strokeWidth="4" />
+              <line x1="0" y1="16" x2="32" y2="16" stroke="#808080" strokeWidth="4" />
+            </>
+          );
+        } else if (missingDir === 'right') {
+          return (
+            <>
+              <line x1="0" y1="16" x2="16" y2="16" stroke="#808080" strokeWidth="4" />
+              <line x1="16" y1="0" x2="16" y2="32" stroke="#808080" strokeWidth="4" />
+            </>
+          );
+        } else {
+          return (
+            <>
+              <line x1="16" y1="16" x2="32" y2="16" stroke="#808080" strokeWidth="4" />
+              <line x1="16" y1="0" x2="16" y2="32" stroke="#808080" strokeWidth="4" />
+            </>
+          );
+        }
+      } else {
+        return (
+          <>
+            <line x1="16" y1="0" x2="16" y2="32" stroke="#808080" strokeWidth="4" />
+            <line x1="0" y1="16" x2="32" y2="16" stroke="#808080" strokeWidth="4" />
+          </>
+        );
+      }
+    },
+    [gameState.dynamicTiles, gameState.buildingTypes]
+  );
+
   // --- START GAME WRAPPER ---
   const handleStartGameWrapper = () => {
     handleStartGame({
@@ -194,7 +446,7 @@ function App() {
               resources: newResources,
             };
             console.log('setGameState called (resources):', {
-              changed: Object.keys(newState).filter(k => newState[k] !== prevState[k]),
+              changed: Object.keys(newState).filter((k) => newState[k] !== prevState[k]),
             });
             lastNationRef.current = newNation;
             lastResourcesRef.current = newResources;
@@ -263,7 +515,7 @@ function App() {
         });
         const newState = { ...prevState, dynamicTiles: newDynamicTiles };
         console.log('setGameState called (subscription):', {
-          changedTiles: tileUpdates.map(u => u.key),
+          changedTiles: tileUpdates.map((u) => u.key),
         });
         tileUpdates = [];
         return newState;
@@ -539,18 +791,19 @@ function App() {
         }
         return tile;
       })
-      .filter(tile => tile !== null)
-      .sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y);
+      .filter((tile) => tile !== null)
+      .sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
     console.log('Rendered tiles length:', tiles.length);
     if (tiles.length > 0) {
       console.log('First tile example:', tiles[0]);
+      console.log('Tile types available:', gameState.tileTypes);
     } else {
       console.log('No tiles to render. Check if staticTilesRef or dynamicTiles are populated.');
     }
     return tiles;
-  }, [gameState.dynamicTiles, loading]);
+  }, [gameState.dynamicTiles, loading, gameState.tileTypes]);
 
-  // --- UI RENDER (ALL PRESENTATION MOVED TO RENDER HELPER) ---
+  // --- UI RENDER ---
   return renderAppUI({
     loading,
     isInitialized,
@@ -593,7 +846,12 @@ function App() {
     mapScrollRef,
     supabase,
     TILE_SIZE,
-    // Pass more handlers as needed!
+    updateSingleTile,
+    getTileTypeClass,
+    getTileBorderClasses,
+    getResourceName,
+    getBuildingName,
+    getRoadShape,
   });
 }
 
