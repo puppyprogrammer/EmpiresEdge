@@ -500,9 +500,7 @@ function App() {
   useEffect(() => {
     let timeoutId = null;
     const handleAuthChange = async (event, session) => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
+      if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(async () => {
         setSession(session);
         if (!session && !hasInitialized.current) {
@@ -533,18 +531,14 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (loading || !mapScrollRef.current || Object.keys(gameState.dynamicTiles).length === 0) {
-      return;
-    }
+    if (loading || !mapScrollRef.current || Object.keys(gameState.dynamicTiles).length === 0) return;
 
     if (gameState?.userNation) {
       const { capital_tile_x, capital_tile_y } = gameState.userNation;
       const key = `${capital_tile_x}_${capital_tile_y}`;
       const capitalTile = gameState.dynamicTiles[key];
 
-      if (!capitalTile || !staticTilesRef.current[key] || !capitalTile.is_capital) {
-        return;
-      }
+      if (!capitalTile || !staticTilesRef.current[key] || !capitalTile.is_capital) return;
 
       const container = mapScrollRef.current;
       const capitalPixelX = capital_tile_x * TILE_SIZE;
@@ -557,9 +551,7 @@ function App() {
       });
 
       const tileEl = document.querySelector(`.tile[data-x="${capital_tile_x}"][data-y="${capital_tile_y}"]`);
-      if (tileEl) {
-        tileEl.classList.add('capital-highlight');
-      }
+      if (tileEl) tileEl.classList.add('capital-highlight');
 
       let timeoutId = null;
       const resetTimer = () => {
