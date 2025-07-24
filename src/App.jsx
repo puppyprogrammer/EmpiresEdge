@@ -407,7 +407,7 @@ function App() {
       if (tileEl) {
         tileEl.classList.add('capital-highlight');
       } else {
-        console.warn('Capital tile element not found in DOM');
+        console.warn('Capital tile element not found in DOM', { capital_tile_x, capital_tile_y });
       }
 
       // Re-center on user interaction after 4 seconds
