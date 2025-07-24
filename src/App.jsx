@@ -406,6 +406,8 @@ function App() {
       const tileEl = document.querySelector(`.tile[data-x="${capital_tile_x}"][data-y="${capital_tile_y}"]`);
       if (tileEl) {
         tileEl.classList.add('capital-highlight');
+      } else {
+        console.warn('Capital tile element not found in DOM');
       }
 
       // Re-center on user interaction after 4 seconds
@@ -540,6 +542,11 @@ function App() {
       .filter(tile => tile !== null)
       .sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y);
     console.log('Rendered tiles length:', tiles.length);
+    if (tiles.length > 0) {
+      console.log('First tile example:', tiles[0]);
+    } else {
+      console.log('No tiles to render. Check if staticTilesRef or dynamicTiles are populated.');
+    }
     return tiles;
   }, [gameState.dynamicTiles, loading]);
 
