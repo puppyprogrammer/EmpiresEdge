@@ -854,7 +854,7 @@ function App() {
   }, [gameState.dynamicTiles]);
 
   function getTileBorderClasses(tile) {
-    if (!tile.owner || !tile.nations || !tile.nations.color) {
+    if (!tile || !tile.owner || !tile.nations || !tile.nations.color) {
       return '';
     }
 
@@ -874,8 +874,10 @@ function App() {
         borders.push(`border-${side}`);
       }
     });
+
     return borders.join(' ');
   }
+
 
   function tilesWithinDistance(centerTile, distance, tilesMap) {
     return Object.values(tilesMap).filter(
