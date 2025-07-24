@@ -306,127 +306,80 @@ function App() {
     }
   };
 
-  // Session check and initial load
   useEffect(() => {
-    async function checkSessionAndInitialize() {
-      if (hasInitialized.current) {
-        console.log('checkSessionAndInitialize: Already initialized, skipping');
-        return;
-      }
+    const tickLoop = async () => {
+      if (!session?.user?.id || loading) return;
+
       try {
-        setLoading(true);
-        const { data } = await supabase.auth.getSession();
-        console.log('checkSessionAndInitialize: Session retrieved:', { userId: data.session?.user?.id });
-        setSession(data.session);
-        await initializeGameState();
-      } catch (err) {
-        console.error('Error checking session:', { ...err });
-        if (session) {
-          setError(`Error initializing app: ${err.message}.`);
-        }
-        setLoading(false);
-        setIsInitialized(true);
-      }
-    }
+        const { data: nationData, error: nationError } = await supabase
+          .from('nations')
+          .select('id, name, color, capital_tile_x, capital_tile_y, owner_id, lumber, oil, ore')
+          .eq('owner_id', session.user.id)
+          .maybeSingle();
 
-    checkSessionAndInitialize();
-  }, []);
-
-useEffect(() => {
-  if (!session?.user?.id || loading) {
-    console.log('updateResources: Skipping due to no session or loading');
-    return;
-  }
-
-  const updateResources = async () => {
-    try {
-      console.log('updateResources: Starting for user:', session.user.id);
-
-      const { data: nationData, error: nationError } = await supabase
-        .from('nations')
-        .select('id, name, color, capital_tile_x, capital_tile_y, owner_id, lumber, oil, ore')
-        .eq('owner_id', session.user.id)
-        .maybeSingle();
-
-      if (nationError) {
-        console.error('updateResources: Failed to fetch nation:', nationError.message);
-        setError('Failed to fetch nation: ' + nationError.message);
-        setShowNationModal(true);
-        return;
-      }
-
-      if (!nationData) {
-        console.log('updateResources: No nation found, showing modal');
-        setShowNationModal(true);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .rpc('update_resources', { user_id: session.user.id });
-
-      if (error) {
-        console.error('updateResources: RPC failed:', error.message);
-        setError('Failed to update resources: ' + error.message);
-        return;
-      }
-
-      if (data && data.length > 0) {
-        const newNation = data[0];
-        const newResources = {
-          lumber: newNation.lumber || 0,
-          oil: newNation.oil || 0,
-          ore: newNation.ore || 0,
-        };
-
-        const unchanged =
-          lastNationRef.current?.id === newNation.id &&
-          lastNationRef.current?.lumber === newNation.lumber &&
-          lastNationRef.current?.oil === newNation.oil &&
-          lastNationRef.current?.ore === newNation.ore;
-
-        if (unchanged) {
-          console.log('updateResources: No changes, skipping setGameState');
+        if (nationError || !nationData) {
+          setShowNationModal(true);
+          setError(nationError?.message || 'Nation not found');
           return;
         }
 
-        setGameState((prev) => {
-          console.log('updateResources: Updating game state');
-          lastNationRef.current = newNation;
-          lastResourcesRef.current = newResources;
-          return {
-            ...prev,
-            userNation: newNation,
-            resources: newResources,
-          };
+        const { data, error } = await supabase.rpc('update_resources', {
+          user_id: session.user.id,
         });
 
-        if (showNationModal) {
-          console.log('updateResources: Closing nation modal');
-          setShowNationModal(false);
+        if (error) {
+          setError('Failed to update resources: ' + error.message);
+          return;
         }
-      } else {
-        console.log('updateResources: No nation data returned, showing modal');
-        setShowNationModal(true);
+
+        if (data && data.length > 0) {
+          const newNation = data[0];
+          const newResources = {
+            lumber: newNation.lumber || 0,
+            oil: newNation.oil || 0,
+            ore: newNation.ore || 0,
+          };
+
+          const resourcesUnchanged =
+            lastResourcesRef.current.lumber === newResources.lumber &&
+            lastResourcesRef.current.oil === newResources.oil &&
+            lastResourcesRef.current.ore === newResources.ore;
+
+          const nationUnchanged =
+            lastNationRef.current?.id === newNation.id &&
+            lastNationRef.current?.name === newNation.name &&
+            lastNationRef.current?.color === newNation.color &&
+            lastNationRef.current?.capital_tile_x === newNation.capital_tile_x &&
+            lastNationRef.current?.capital_tile_y === newNation.capital_tile_y &&
+            lastNationRef.current?.owner_id === newNation.owner_id &&
+            lastNationRef.current?.lumber === newNation.lumber &&
+            lastNationRef.current?.oil === newNation.oil &&
+            lastNationRef.current?.ore === newNation.ore;
+
+          if (!resourcesUnchanged || !nationUnchanged) {
+            setGameState((prev) => {
+              const updated = {
+                ...prev,
+                userNation: newNation,
+                resources: newResources,
+              };
+              lastNationRef.current = newNation;
+              lastResourcesRef.current = newResources;
+              return updated;
+            });
+            setShowNationModal(false);
+          }
+        }
+      } catch (err) {
+        setError('Error in updateResources: ' + err.message);
       }
-    } catch (err) {
-      console.error('updateResources: Unexpected error:', err);
-      setError('Failed to update resources: ' + err.message);
-    }
-  };
-
-  updateResources();
-
-  if (gameState.userNation) {
-    console.log('updateResources: Starting interval tick');
-    const interval = setInterval(updateResources, 3000);
-    return () => {
-      console.log('updateResources: Clearing interval');
-      clearInterval(interval);
     };
-  } else {
-    console.log('updateResources: No nation present, skipping interval');
-  }
-}, [session?.user?.id, loading, gameState.userNation?.id]);
+
+    tickLoop();
+    const interval = setInterval(tickLoop, 3000);
+    return () => clearInterval(interval);
+  }, [session?.user?.id, loading]);
+
 
 
   // Database subscription
