@@ -725,7 +725,7 @@ function App() {
   }
 
   const getTileTypeClass = (typeId) => {
-    return gameState.tileTypes[typeId]?.name || null;
+    return gameState.tileTypes[typeId]?.name || 'unknown';
   };
 
   const getBuildingName = (buildingId) => {
