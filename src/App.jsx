@@ -724,12 +724,14 @@ function App() {
     }
   }
 
-  const tileTypeMap = {
-    1: 'plain',
-    2: 'forest',
-    3: 'mountain',
+  const getTileTypeClass = (typeId) => {
+    const tileTypeMap = {
+      1: 'plain',
+      2: 'forest',
+      3: 'mountain',
+    };
+    return tileTypeMap[typeId] || 'unknown';
   };
-  const getTileTypeClass = (typeId) => tileTypeMap[typeId] || 'unknown';
 
 
   const getBuildingName = (buildingId) => {
