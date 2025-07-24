@@ -152,7 +152,7 @@ function App() {
   const getTileTypeClass = (typeId) => {
     const name = gameState.tileTypes[typeId]?.name || '';
     console.log('getTileTypeClass:', { typeId, name, tileTypes: gameState.tileTypes });
-    return name === 'plains' ? 'grass' : name;
+    return name === 'plain' ? 'grass' : name;
   };
 
   const getBuildingName = (buildingId) => {
