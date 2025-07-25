@@ -7,6 +7,7 @@ import { handleStartGame } from './helpers/gameLogic/handleStartGame.js';
 import { findCapitalTile } from './helpers/gameLogic/findCapitalTile.js';
 import { handleLogin, handleRegister, handleLogout } from './helpers/auth/authHandlers.js';
 import { getRoadShape as createGetRoadShape } from './helpers/gameLogic/getRoadShape.jsx';
+import { updateResourcesHelper } from './helpers/gameLogic/updateResources.js';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
@@ -208,73 +209,15 @@ function App() {
   useEffect(() => {
     if (!session?.user?.id || loading) return;
 
-    const updateResources = async () => {
-      try {
-        const { data: nationData, error: nationError } = await supabase
-          .from('nations')
-          .select('id, name, color, capital_tile_x, capital_tile_y, owner_id, lumber, oil, ore')
-          .eq('owner_id', session.user.id)
-          .maybeSingle();
-
-        if (nationError) {
-          setError('Failed to fetch nation: ' + nationError.message);
-          setShowNationModal(true);
-          return;
-        }
-
-        if (!nationData) {
-          setShowNationModal(true);
-          return;
-        }
-
-        const { data, error } = await supabase.rpc('update_resources', { user_id: session.user.id });
-
-        if (error) {
-          setError('Failed to update resources: ' + error.message);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          const newNation = data[0];
-          const newResources = {
-            lumber: newNation.lumber || 0,
-            oil: newNation.oil || 0,
-            ore: newNation.ore || 0,
-          };
-
-          const resourcesUnchanged =
-            lastResourcesRef.current.lumber === newResources.lumber &&
-            lastResourcesRef.current.oil === newResources.oil &&
-            lastResourcesRef.current.ore === newResources.ore;
-          const nationUnchanged =
-            lastNationRef.current &&
-            lastNationRef.current.id === newNation.id &&
-            lastNationRef.current.name === newNation.name &&
-            lastNationRef.current.color === newNation.color &&
-            lastNationRef.current.capital_tile_x === newNation.capital_tile_x &&
-            lastNationRef.current.capital_tile_y === newNation.capital_tile_y &&
-            lastNationRef.current.owner_id === newNation.owner_id &&
-            lastNationRef.current.lumber === newNation.lumber &&
-            lastNationRef.current.oil === newNation.oil &&
-            lastNationRef.current.ore === newNation.ore;
-
-          if (resourcesUnchanged && nationUnchanged) return;
-
-          setGameState((prevState) => ({
-            ...prevState,
-            userNation: newNation,
-            resources: newResources,
-          }));
-          lastNationRef.current = newNation;
-          lastResourcesRef.current = newResources;
-          setShowNationModal(false);
-        } else {
-          setShowNationModal(true);
-        }
-      } catch (err) {
-        setError('Failed to update resources: ' + err.message);
-      }
-    };
+    const updateResources = () => updateResourcesHelper({
+      supabase,
+      session,
+      setError,
+      setShowNationModal,
+      lastResourcesRef,
+      lastNationRef,
+      setGameState,
+    });
 
     updateResources();
     if (gameState.userNation) {
