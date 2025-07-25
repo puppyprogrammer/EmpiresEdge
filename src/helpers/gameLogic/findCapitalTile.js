@@ -16,16 +16,12 @@ export function findCapitalTile(staticTiles, dynamicTiles) {
   const existingCapitals = Object.values(dynamicTiles).filter(tile => tile.is_capital).map(tile => ({ x: tile.x, y: tile.y }));
   console.log('findCapitalTile: Found', existingCapitals.length, 'existing capital tiles');
 
-  // Valid land types for capital
-  const validTypes = ['mountain', 'forest', 'plains'];
-
-  // Collect candidate tiles: valid type, unowned, not capital
+  // Collect candidate tiles: unowned, not capital (tile type ignored)
   const candidates = Object.keys(staticTiles).map(key => {
     const staticTile = staticTiles[key];
     const dynamicTile = dynamicTiles[key] || { owner: null, is_capital: false };
     return { ...staticTile, owner: dynamicTile.owner, is_capital: dynamicTile.is_capital };
   }).filter(tile => 
-    validTypes.includes(tile.type) &&
     tile.owner === null &&
     !tile.is_capital
   );
@@ -33,9 +29,8 @@ export function findCapitalTile(staticTiles, dynamicTiles) {
   console.log('findCapitalTile: Found', candidates.length, 'candidate tiles', {
     sampleCandidates: candidates.slice(0, 5),
     landTiles: candidates.length,
-    minDistance: 10,
+    minDistance: 5,
     totalTiles: Object.keys(staticTiles).length,
-    validTypes,
   });
 
   if (candidates.length === 0) {
@@ -43,7 +38,7 @@ export function findCapitalTile(staticTiles, dynamicTiles) {
   }
 
   // Filter candidates that are at least minDistance from all existing capitals
-  const minDistance = 10;
+  const minDistance = 5;
   const validCandidates = candidates.filter(candidate => {
     return existingCapitals.every(capital => {
       const dist = Math.sqrt(Math.pow(candidate.x - capital.x, 2) + Math.pow(candidate.y - capital.y, 2));
