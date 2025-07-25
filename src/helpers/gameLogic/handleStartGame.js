@@ -216,6 +216,41 @@ export async function handleStartGame({
       return;
     }
 
+    // Claim the 8 surrounding tiles
+    const newNationId = nationData.id;
+    const offsets = [
+      { dx: -1, dy: -1 },
+      { dx: -1, dy: 0 },
+      { dx: -1, dy: 1 },
+      { dx: 0, dy: -1 },
+      { dx: 0, dy: 1 },
+      { dx: 1, dy: -1 },
+      { dx: 1, dy: 0 },
+      { dx: 1, dy: 1 },
+    ];
+
+    for (const { dx, dy } of offsets) {
+      const adjX = capitalTile.x + dx;
+      const adjY = capitalTile.y + dy;
+      const adjKey = `${adjX}_${adjY}`;
+
+      // Check if the tile exists and is unowned
+      if (staticTilesRef.current[adjKey] && (!localDynamicTiles[adjKey] || localDynamicTiles[adjKey].owner === null)) {
+        const { error: adjError } = await supabase
+          .from('tiles')
+          .update({ owner: newNationId })
+          .eq('x', adjX)
+          .eq('y', adjY);
+
+        if (adjError) {
+          console.error('handleStartGame: Failed to claim adjacent tile:', adjKey, { ...adjError });
+          // Optionally handle error, but continue to allow nation creation
+        } else {
+          console.log('handleStartGame: Claimed adjacent tile:', adjKey);
+        }
+      }
+    }
+
     console.log('handleStartGame: Nation created:', { ...nationData });
     console.log('handleStartGame: Hiding nation modal after creation');
     setShowNationModal(false);
