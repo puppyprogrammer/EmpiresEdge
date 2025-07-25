@@ -81,8 +81,25 @@ export async function handleStartGame({
   if (!Object.keys(staticTilesRef.current).length) {
     console.log('handleStartGame: Loading static map data');
     try {
+      // Load tile_types first to map IDs to names
+      const { data: tileTypesData, error: tileTypesError } = await supabase
+        .from('tile_types')
+        .select('id, name');
+
+      if (tileTypesError) {
+        console.error('handleStartGame: Failed to load tile types:', { ...tileTypesError });
+        setError('Failed to load tile types: ' + tileTypesError.message);
+        return;
+      }
+
+      const tileTypesMap = tileTypesData.reduce((acc, tt) => {
+        acc[tt.id] = tt.name;
+        return acc;
+      }, {});
+
+      // Load tiles
       const { data: staticData, error: staticError } = await supabase
-        .from('tiles')  // Corrected table name to 'tiles'
+        .from('tiles')
         .select('x, y, type, resource');  // Select only static columns
 
       if (staticError) {
@@ -97,14 +114,14 @@ export async function handleStartGame({
         return;
       }
 
-      // Populate the ref with tiles keyed by 'x_y'
+      // Populate the ref with tiles keyed by 'x_y', mapping type ID to name
       staticTilesRef.current = staticData.reduce((acc, tile) => {
         const key = `${tile.x}_${tile.y}`;
         acc[key] = {
           x: tile.x,
           y: tile.y,
-          type: tile.type,  // Static type
-          resource: tile.resource || null,  // Static resource, if applicable
+          type: tileTypesMap[tile.type] || 'unknown',  // Use string name instead of ID
+          resource: tile.resource || null,
         };
         return acc;
       }, {});
