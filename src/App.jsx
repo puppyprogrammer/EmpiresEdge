@@ -8,6 +8,7 @@ import { findCapitalTile } from './helpers/gameLogic/findCapitalTile.js';
 import { handleLogin, handleRegister, handleLogout } from './helpers/auth/authHandlers.js';
 import { getRoadShape as createGetRoadShape } from './helpers/gameLogic/getRoadShape.jsx';
 import { updateResourcesHelper } from './helpers/gameLogic/updateResources.js';
+import updateSingleTile from './helpers/gameLogic/updateSingleTile.jsx';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
@@ -67,64 +68,6 @@ function App() {
     }, 100),
     []
   );
-
-  const updateSingleTile = async (tileId, updates) => {
-    try {
-      if (!tileId || !tileId.includes('_')) {
-        setError('Invalid tile ID format');
-        return;
-      }
-      const { x, y } = staticTilesRef.current[tileId] || {};
-      if (!x || !y) {
-        setError('Tile not found');
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('tiles')
-        .update(updates)
-        .eq('x', x)
-        .eq('y', y)
-        .select()
-        .single();
-
-      if (error) {
-        setError('Failed to update tile: ' + error.message);
-        return;
-      }
-
-      const owner_nation_name = data.owner ? gameState.nations[data.owner]?.name || 'None' : 'None';
-      const nations = data.owner ? gameState.nations[data.owner] : null;
-
-      setGameState((prevState) => ({
-        ...prevState,
-        dynamicTiles: {
-          ...prevState.dynamicTiles,
-          [tileId]: {
-            ...prevState.dynamicTiles[tileId],
-            owner: data.owner || null,
-            building: data.building || null,
-            owner_nation_name,
-            nations,
-            is_capital: data.is_capital || false,
-          },
-        },
-      }));
-
-      if (selectedTile?.id === tileId) {
-        setSelectedTile((prev) => ({
-          ...prev,
-          owner: data.owner || null,
-          building: data.building || null,
-          owner_nation_name,
-          nations,
-          is_capital: data.is_capital || false,
-        }));
-      }
-    } catch (err) {
-      setError('Error updating tile: ' + err.message);
-    }
-  };
 
   const getTileTypeClass = (typeId) => {
     const name = gameState.tileTypes[typeId]?.name || 'unknown';
@@ -495,7 +438,7 @@ function App() {
     mapScrollRef,
     supabase,
     TILE_SIZE,
-    updateSingleTile,
+    updateSingleTile: (params) => updateSingleTile({ ...params, supabase }),
     getTileTypeClass,
     getTileBorderClasses,
     getResourceName,

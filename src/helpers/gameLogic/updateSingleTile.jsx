@@ -58,6 +58,12 @@ const updateSingleTile = async ({
       return;
     }
 
+    if (!data) {
+      console.warn('No data returned from tile update:', { tileId, updates });
+      setError('Tile update succeeded but no data returned');
+      return;
+    }
+
     // Update local state
     const owner_nation_name = data.owner ? gameState.nations[data.owner]?.name || 'None' : 'None';
     const nations = data.owner ? gameState.nations[data.owner] : null;
