@@ -234,8 +234,8 @@ export async function handleStartGame({
       const adjY = capitalTile.y + dy;
       const adjKey = `${adjX}_${adjY}`;
 
-      // Check if the tile exists and is unowned
-      if (staticTilesRef.current[adjKey] && (!localDynamicTiles[adjKey] || localDynamicTiles[adjKey].owner === null)) {
+      // Check if the tile exists and is unowned (null or 0)
+      if (staticTilesRef.current[adjKey] && (!localDynamicTiles[adjKey] || localDynamicTiles[adjKey].owner == null || localDynamicTiles[adjKey].owner === 0)) {
         const { error: adjError } = await supabase
           .from('tiles')
           .update({ owner: newNationId })
