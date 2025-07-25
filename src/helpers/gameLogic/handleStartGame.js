@@ -77,10 +77,47 @@ export async function handleStartGame({
     return;
   }
 
+  // Load static tiles if not already loaded
   if (!Object.keys(staticTilesRef.current).length) {
-    console.error('handleStartGame: Map data not loaded');
-    setError('Map data not loaded. Please try again.');
-    return;
+    console.log('handleStartGame: Loading static map data');
+    try {
+      const { data: staticData, error: staticError } = await supabase
+        .from('static_tiles')  // Adjust table name if different
+        .select('*');  // Select relevant columns, e.g., 'x, y, type, resource'
+
+      if (staticError) {
+        console.error('handleStartGame: Failed to load static tiles:', { ...staticError });
+        setError('Failed to load map data: ' + staticError.message);
+        return;
+      }
+
+      if (!staticData || staticData.length === 0) {
+        console.error('handleStartGame: No static tiles data returned');
+        setError('No map data available. Please try again later.');
+        return;
+      }
+
+      // Populate the ref with tiles keyed by 'x_y'
+      staticTilesRef.current = staticData.reduce((acc, tile) => {
+        const key = `${tile.x}_${tile.y}`;
+        acc[key] = {
+          x: tile.x,
+          y: tile.y,
+          type: tile.type,  // Assuming 'type' column exists
+          resource: tile.resource || null,  // If applicable
+          // Add other static properties as needed
+        };
+        return acc;
+      }, {});
+
+      console.log('handleStartGame: Static tiles loaded successfully', Object.keys(staticTilesRef.current).length);
+    } catch (err) {
+      console.error('handleStartGame: Error loading static tiles:', { ...err });
+      setError('Error loading map data: ' + err.message);
+      return;
+    }
+  } else {
+    console.log('handleStartGame: Static tiles already loaded');
   }
 
   try {
