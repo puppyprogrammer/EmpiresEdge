@@ -5,6 +5,7 @@ import initializeGameState from './helpers/gameLogic/initializeGameState';
 import renderAppUI from './helpers/gameLogic/renderAppUI.jsx';
 import { handleStartGame } from './helpers/gameLogic/handleStartGame.js';
 import { findCapitalTile } from './helpers/gameLogic/findCapitalTile.js';
+import { handleLogin, handleRegister, handleLogout } from './helpers/auth/authHandlers.js';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
@@ -582,76 +583,6 @@ function App() {
     }
   }, [gameState?.userNation, loading, gameState.dynamicTiles]);
 
-  async function handleLogin(e) {
-    e.preventDefault();
-    setError(null);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password: loginPassword,
-      });
-      if (error) {
-        setError(error.message);
-      } else {
-        setLoginEmail('');
-        setLoginPassword('');
-        setShowMainMenu(false);
-        setShowBottomMenu(false);
-        setSelectedTile(null);
-      }
-    } catch (err) {
-      setError('Failed to log in: ' + err.message);
-    }
-  }
-
-  async function handleRegister(e) {
-    e.preventDefault();
-    setError(null);
-    try {
-      const { error } = await supabase.auth.signUp({
-        email: registerEmail,
-        password: registerPassword,
-        options: { data: { username: registerUsername } },
-      });
-      if (error) {
-        setError(error.message);
-      } else {
-        alert('Registration successful! Please check your email to confirm.');
-        setRegisterEmail('');
-        setRegisterPassword('');
-        setRegisterUsername('');
-        setShowRegister(false);
-        setShowMainMenu(false);
-        setShowBottomMenu(false);
-        setSelectedTile(null);
-      }
-    } catch (err) {
-      setError('Failed to register: ' + err.message);
-    }
-  }
-
-  async function handleLogout() {
-    try {
-      await supabase.auth.signOut();
-      setSession(null);
-      setGameState((prevState) => ({
-        ...prevState,
-        userNation: null,
-        resources: { lumber: 0, oil: 0, ore: 0 },
-      }));
-      lastNationRef.current = null;
-      lastResourcesRef.current = { lumber: 0, oil: 0, ore: 0 };
-      setShowNationModal(false);
-      setShowMainMenu(false);
-      setShowBottomMenu(false);
-      setSelectedTile(null);
-      hasInitialized.current = false;
-      handleInit();
-    } catch (err) {
-      setError('Failed to log out: ' + err.message);
-    }
-  }
-
   const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
   const renderedTiles = useMemo(() => {
@@ -681,12 +612,37 @@ function App() {
     setNationColor,
     handleStartGameWrapper,
     showRegister,
-    handleLogin,
+    handleLogin: (e) => handleLogin({
+      e,
+      supabase,
+      loginEmail,
+      loginPassword,
+      setError,
+      setLoginEmail,
+      setLoginPassword,
+      setShowMainMenu,
+      setShowBottomMenu,
+      setSelectedTile,
+    }),
     loginEmail,
     setLoginEmail,
     loginPassword,
     setLoginPassword,
-    handleRegister,
+    handleRegister: (e) => handleRegister({
+      e,
+      supabase,
+      registerEmail,
+      registerPassword,
+      registerUsername,
+      setError,
+      setRegisterEmail,
+      setRegisterPassword,
+      setRegisterUsername,
+      setShowRegister,
+      setShowMainMenu,
+      setShowBottomMenu,
+      setSelectedTile,
+    }),
     registerEmail,
     setRegisterEmail,
     registerUsername,
@@ -695,7 +651,20 @@ function App() {
     setRegisterPassword,
     setShowRegister,
     setError,
-    handleLogout,
+    handleLogout: () => handleLogout({
+      supabase,
+      setSession,
+      setGameState,
+      lastNationRef,
+      lastResourcesRef,
+      setShowNationModal,
+      setShowMainMenu,
+      setShowBottomMenu,
+      setSelectedTile,
+      setError,
+      hasInitialized,
+      handleInit,
+    }),
     formatNumber,
     renderedTiles,
     selectedTile,
