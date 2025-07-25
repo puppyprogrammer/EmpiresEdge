@@ -16,8 +16,8 @@ export function findCapitalTile(staticTiles, dynamicTiles) {
   const existingCapitals = Object.values(dynamicTiles).filter(tile => tile.is_capital).map(tile => ({ x: tile.x, y: tile.y }));
   console.log('findCapitalTile: Found', existingCapitals.length, 'existing capital tiles');
 
-  // Valid land types for capital (corrected 'plains' to 'plain')
-  const validTypes = ['mountain', 'forest', 'plain'];
+  // Valid land types for capital
+  const validTypes = ['mountain', 'forest', 'plains'];
 
   // Collect candidate tiles: valid type, unowned, not capital
   const candidates = Object.keys(staticTiles).map(key => {
