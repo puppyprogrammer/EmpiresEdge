@@ -1,59 +1,45 @@
 // helpers/gameLogic/findCapitalTile.js
 
 /**
- * Finds a suitable tile for placing a new capital.
+ * Finds a suitable tile for placing a new capital using server RPC.
+ * @param {Object} supabase - Supabase client instance
  * @param {Object} staticTiles - Object containing static tile data keyed by 'x_y'
- * @param {Object} dynamicTiles - Object containing dynamic tile data keyed by 'x_y'
  * @returns {Object|null} The selected tile object or null if none found
  */
-export function findCapitalTile(staticTiles, dynamicTiles) {
-  console.log('findCapitalTile: Starting search for capital tile', {
-    staticTileCount: Object.keys(staticTiles).length,
-    dynamicTileCount: Object.keys(dynamicTiles).length,
-  });
+export async function findCapitalTile(supabase, staticTiles) {
+  try {
+    const { data, error } = await supabase.rpc('find_valid_capital_tile');
 
-  // Get all existing capital locations from dynamicTiles
-  const existingCapitals = Object.values(dynamicTiles).filter(tile => tile.is_capital).map(tile => ({ x: tile.x, y: tile.y }));
-  console.log('findCapitalTile: Found', existingCapitals.length, 'existing capital tiles');
+    if (error) {
+      console.error('findCapitalTile: Failed to call RPC', { ...error });
+      return null;
+    }
 
-  // Collect candidate tiles: unowned, not capital (tile type ignored)
-  const candidates = Object.keys(staticTiles).map(key => {
-    const staticTile = staticTiles[key];
-    const dynamicTile = dynamicTiles[key] || { owner: null, is_capital: false };
-    return { ...staticTile, owner: dynamicTile.owner, is_capital: dynamicTile.is_capital };
-  }).filter(tile => 
-    tile.owner === null &&
-    !tile.is_capital
-  );
+    if (!data || data.length === 0) {
+      console.log('findCapitalTile: No valid capital tile found from RPC');
+      return null;
+    }
 
-  console.log('findCapitalTile: Found', candidates.length, 'candidate tiles', {
-    sampleCandidates: candidates.slice(0, 5),
-    landTiles: candidates.length,
-    minDistance: 5,
-    totalTiles: Object.keys(staticTiles).length,
-  });
+    const { capital_x: x, capital_y: y } = data[0];
+    const key = `${x}_${y}`;
 
-  if (candidates.length === 0) {
+    if (!staticTiles[key]) {
+      console.error('findCapitalTile: Selected tile not found in staticTiles', { key });
+      return null;
+    }
+
+    const selected = {
+      ...staticTiles[key],
+      owner: null,
+      is_capital: false,
+      building: null,
+    };
+
+    console.log('findCapitalTile: Selected tile from RPC', selected);
+
+    return selected;
+  } catch (err) {
+    console.error('findCapitalTile: Error in RPC call', { ...err });
     return null;
   }
-
-  // Filter candidates that are at least minDistance from all existing capitals
-  const minDistance = 5;
-  const validCandidates = candidates.filter(candidate => {
-    return existingCapitals.every(capital => {
-      const dist = Math.sqrt(Math.pow(candidate.x - capital.x, 2) + Math.pow(candidate.y - capital.y, 2));
-      return dist >= minDistance;
-    });
-  });
-
-  if (validCandidates.length === 0) {
-    console.log('findCapitalTile: No valid tiles found after distance filter');
-    return null;
-  }
-
-  // Select a random valid candidate
-  const selected = validCandidates[Math.floor(Math.random() * validCandidates.length)];
-  console.log('findCapitalTile: Selected tile', selected);
-
-  return selected;
 }
