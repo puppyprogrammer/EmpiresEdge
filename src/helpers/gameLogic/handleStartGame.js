@@ -156,8 +156,36 @@ export async function handleStartGame({
       return;
     }
 
+    // Load dynamic tiles locally if not already in gameState
+    let localDynamicTiles = gameState.dynamicTiles;
+    if (!Object.keys(localDynamicTiles).length) {
+      console.log('handleStartGame: Loading dynamic tile data for capital selection');
+      const { data: dynamicData, error: dynamicError } = await supabase
+        .from('tiles')
+        .select('x, y, owner, is_capital, building');
+
+      if (dynamicError) {
+        console.error('handleStartGame: Failed to load dynamic tiles:', { ...dynamicError });
+        setError('Failed to load dynamic map data: ' + dynamicError.message);
+        return;
+      }
+
+      localDynamicTiles = dynamicData.reduce((acc, tile) => {
+        const key = `${tile.x}_${tile.y}`;
+        acc[key] = {
+          owner: tile.owner || null,
+          is_capital: tile.is_capital || false,
+          building: tile.building || null,
+          // Add owner_nation_name or other derived fields if needed by findCapitalTile
+        };
+        return acc;
+      }, {});
+
+      console.log('handleStartGame: Dynamic tiles loaded successfully', Object.keys(localDynamicTiles).length);
+    }
+
     console.log('handleStartGame: Starting capital tile selection');
-    const capitalTile = findCapitalTile(staticTilesRef.current, gameState.dynamicTiles);
+    const capitalTile = findCapitalTile(staticTilesRef.current, localDynamicTiles);
     if (!capitalTile) {
       console.error('handleStartGame: No capital tile found');
       setError('No available tile to place capital.');
