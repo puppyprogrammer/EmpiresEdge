@@ -9,6 +9,7 @@ import { handleLogin, handleRegister, handleLogout } from './helpers/auth/authHa
 import { getRoadShape as createGetRoadShape } from './helpers/gameLogic/getRoadShape.jsx';
 import { updateResourcesHelper } from './helpers/gameLogic/updateResources.js';
 import updateSingleTile from './helpers/gameLogic/updateSingleTile.jsx';
+import { getTileBorderClasses } from './helpers/gameLogic/getTileBorderClasses.js';
 
 const supabaseUrl = 'https://kbiaueussvcshwlvaabu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWF1ZXVzc3Zjc2h3bHZhYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NTU1MDYsImV4cCI6MjA2ODMzMTUwNn0.MJ82vub25xntWjRaK1hS_37KwdDeckPQkZDF4bzZC3U';
@@ -80,29 +81,6 @@ function App() {
 
   const getResourceName = (resourceId) => {
     return gameState.resourceTypes[resourceId]?.name || null;
-  };
-
-  const getTileBorderClasses = (tile) => {
-    if (!tile.owner || !tile.nations || !tile.nations.color) {
-      return '';
-    }
-
-    const borders = [];
-    const adjacentTiles = [
-      { dx: 0, dy: -1, side: 'top' },
-      { dx: 0, dy: 1, side: 'bottom' },
-      { dx: 1, dy: 0, side: 'right' },
-      { dx: -1, dy: 0, side: 'left' },
-    ];
-
-    adjacentTiles.forEach(({ dx, dy, side }) => {
-      const adjKey = `${tile.x + dx}_${tile.y + dy}`;
-      const adjacentTile = gameState.dynamicTiles[adjKey];
-      if (!adjacentTile || adjacentTile.owner !== tile.owner) {
-        borders.push(`border-${side}`);
-      }
-    });
-    return borders.join(' ');
   };
 
   const getRoadShape = createGetRoadShape(getBuildingName, gameState.dynamicTiles);
@@ -438,9 +416,19 @@ function App() {
     mapScrollRef,
     supabase,
     TILE_SIZE,
-    updateSingleTile: (params) => updateSingleTile({ ...params, supabase }),
+    updateSingleTile: (tileId, updates) => updateSingleTile({
+      tileId,
+      updates,
+      supabase,
+      staticTilesRef,
+      gameState,
+      setGameState,
+      selectedTile,
+      setSelectedTile,
+      setError,
+    }),
     getTileTypeClass,
-    getTileBorderClasses,
+    getTileBorderClasses: (tile) => getTileBorderClasses(tile, gameState.dynamicTiles),
     getResourceName,
     getBuildingName,
     getRoadShape,
