@@ -1,77 +1,62 @@
-export function findCapitalTile(staticTilesRef, dynamicTiles) {
+/**
+ * Finds a suitable tile for placing a new capital.
+ * @param {Object} staticTiles - Object containing static tile data keyed by 'x_y'
+ * @param {Object} dynamicTiles - Object containing dynamic tile data keyed by 'x_y'
+ * @returns {Object|null} The selected tile object or null if none found
+ */
+export function findCapitalTile(staticTiles, dynamicTiles) {
   console.log('findCapitalTile: Starting search for capital tile', {
-    staticTileCount: Object.keys(staticTilesRef).length,
+    staticTileCount: Object.keys(staticTiles).length,
     dynamicTileCount: Object.keys(dynamicTiles).length,
   });
 
-  if (!Object.keys(staticTilesRef).length) {
-    console.error('findCapitalTile: No static tiles available');
-    return null;
-  }
+  // Get all existing capital locations from dynamicTiles
+  const existingCapitals = Object.values(dynamicTiles).filter(tile => tile.is_capital).map(tile => ({ x: tile.x, y: tile.y }));
+  console.log('findCapitalTile: Found', existingCapitals.length, 'existing capital tiles');
 
-  const capitalTiles = Object.values(dynamicTiles).filter(
-    (tile) => tile.is_capital === true
-  );
-  console.log('findCapitalTile: Found', capitalTiles.length, 'existing capital tiles');
-
-  const minDistance = 10;
+  // Valid land types for capital
   const validTypes = ['mountain', 'forest', 'plains'];
 
-  const candidates = Object.values(staticTilesRef).filter((tile) => {
-    if (
-      typeof tile.x !== 'number' ||
-      typeof tile.y !== 'number'
-    ) {
-      console.warn('findCapitalTile: Skipping tile due to invalid coordinates', {
-        tile: { x: tile.x, y: tile.y, type: tile.type },
-      });
-      return false;
-    }
-
-    if (!validTypes.includes(tile.type)) {
-      return false;
-    }
-
-    // Check distance from all existing capitals
-    const isValidDistance = capitalTiles.every((cap) => {
-      if (typeof cap.x !== 'number' || typeof cap.y !== 'number') return true;
-
-      const distance = Math.abs(tile.x - cap.x) + Math.abs(tile.y - cap.y);
-      const isValid = distance >= minDistance;
-
-      if (!isValid) {
-        console.log('findCapitalTile: Tile too close to existing capital', {
-          tile: { x: tile.x, y: tile.y },
-          capital: { x: cap.x, y: cap.y },
-          distance,
-        });
-      }
-      return isValid;
-    });
-
-    return isValidDistance;
-  });
+  // Collect candidate tiles: valid type, unowned, not capital
+  const candidates = Object.keys(staticTiles).map(key => {
+    const staticTile = staticTiles[key];
+    const dynamicTile = dynamicTiles[key] || { owner: null, is_capital: false };
+    return { ...staticTile, owner: dynamicTile.owner, is_capital: dynamicTile.is_capital };
+  }).filter(tile => 
+    validTypes.includes(tile.type) &&
+    tile.owner === null &&
+    !tile.is_capital
+  );
 
   console.log('findCapitalTile: Found', candidates.length, 'candidate tiles', {
-    sampleCandidates: candidates.slice(0, 5).map(t => ({ x: t.x, y: t.y, type: t.type })),
+    sampleCandidates: candidates.slice(0, 5),
+    landTiles: candidates.length,
+    minDistance: 10,
+    totalTiles: Object.keys(staticTiles).length,
+    validTypes,
   });
 
   if (candidates.length === 0) {
-    console.error('findCapitalTile: No valid tiles found for capital placement', {
-      validTypes,
-      minDistance,
-      totalTiles: Object.keys(staticTilesRef).length,
-      landTiles: Object.values(staticTilesRef).filter(t => validTypes.includes(t.type)).length,
-    });
     return null;
   }
 
-  const idx = Math.floor(Math.random() * candidates.length);
-  const selectedTile = candidates[idx];
-  console.log('findCapitalTile: Selected tile', {
-    x: selectedTile.x,
-    y: selectedTile.y,
-    type: selectedTile.type,
+  // Filter candidates that are at least minDistance from all existing capitals
+  const minDistance = 10;
+  const validCandidates = candidates.filter(candidate => {
+    return existingCapitals.every(capital => {
+      const dist = Math.sqrt(Math.pow(candidate.x - capital.x, 2) + Math.pow(candidate.y - capital.y, 2));
+      return dist >= minDistance;
+    });
   });
-  return selectedTile;
+
+  if (validCandidates.length === 0) {
+    console.log('findCapitalTile: No valid tiles found after distance filter');
+    return null;
+  }
+
+  // Select a random valid candidate
+  const selected = validCandidates[Math.floor(Math.random() * validCandidates.length)];
+  console.log('findCapitalTile: Selected tile', selected);
+
+  return selected;
 }
