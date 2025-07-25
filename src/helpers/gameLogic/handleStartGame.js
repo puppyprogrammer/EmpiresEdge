@@ -248,6 +248,8 @@ export async function handleStartGame({
         } else {
           console.log('handleStartGame: Claimed adjacent tile:', adjKey);
         }
+      } else {
+        console.log('handleStartGame: Adjacent tile not claimable:', adjKey, { exists: !!staticTilesRef.current[adjKey], owner: localDynamicTiles[adjKey]?.owner });
       }
     }
 
