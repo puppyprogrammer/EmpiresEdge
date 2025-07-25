@@ -82,8 +82,8 @@ export async function handleStartGame({
     console.log('handleStartGame: Loading static map data');
     try {
       const { data: staticData, error: staticError } = await supabase
-        .from('static_tiles')  // Adjust table name if different
-        .select('*');  // Select relevant columns, e.g., 'x, y, type, resource'
+        .from('tiles')  // Corrected table name to 'tiles'
+        .select('x, y, type, resource');  // Select only static columns
 
       if (staticError) {
         console.error('handleStartGame: Failed to load static tiles:', { ...staticError });
@@ -103,9 +103,8 @@ export async function handleStartGame({
         acc[key] = {
           x: tile.x,
           y: tile.y,
-          type: tile.type,  // Assuming 'type' column exists
-          resource: tile.resource || null,  // If applicable
-          // Add other static properties as needed
+          type: tile.type,  // Static type
+          resource: tile.resource || null,  // Static resource, if applicable
         };
         return acc;
       }, {});
