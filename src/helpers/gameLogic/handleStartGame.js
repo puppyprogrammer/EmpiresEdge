@@ -12,6 +12,7 @@
  * @param {Function} params.initializeGameState - Function to initialize game state
  * @param {Function} params.findCapitalTile - Function to find a valid capital tile
  * @param {Object} params.supabase - Supabase client instance
+ * @param {Object} params.hasInitialized - Ref to track initialization (passed from App.jsx)
  */
 export async function handleStartGame({
   session,
@@ -25,6 +26,7 @@ export async function handleStartGame({
   initializeGameState,
   findCapitalTile,
   supabase,
+  hasInitialized,  // Add this to params
 }) {
   if (!session?.user?.id) {
     console.error('handleStartGame: No user session available');
@@ -218,6 +220,9 @@ export async function handleStartGame({
     console.log('handleStartGame: Hiding nation modal after creation');
     setShowNationModal(false);
     setNationName('');
+
+    // Force re-initialization to load new data
+    hasInitialized.current = false;
     await initializeGameState();
   } catch (err) {
     console.error('handleStartGame: Error creating nation:', { ...err });
